@@ -48,6 +48,8 @@ export default Counter;
 
 ## Installation
 
+> Requires Livewire 4.
+
 See **[INSTALL.md](INSTALL.md)** for full, copy-pasteable setup steps (it doubles as a guide an
 AI assistant can follow to wire Mesh into a host app). In short:
 

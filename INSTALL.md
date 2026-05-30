@@ -4,8 +4,8 @@ This guide is written as explicit, ordered steps. A human or an AI assistant can
 top-to-bottom to add Mesh to an existing Laravel + Livewire application. Each step says exactly
 what to change and why.
 
-> Assumptions: a working Laravel app with Livewire 3.5+ installed, Vite (the standard Laravel
-> setup), and Node available. If Livewire isn't installed yet, run `composer require livewire/livewire`
+> Assumptions: a working Laravel app with Livewire 4.0+ installed, Vite (the standard Laravel
+> setup), and Node available. If Livewire isn't installed yet, run `composer require "livewire/livewire:^4.0"`
 > first and confirm a Livewire component renders before continuing.
 
 ---
