@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire;
+namespace App\Mesh;
 
 use EthanBarlo\Mesh\MeshComponent;
 use Livewire\Attributes\Modelable;

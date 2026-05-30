@@ -17,7 +17,7 @@ with Livewire — the view layer is React.
 
 A Mesh feature is three small pieces: a PHP component, a React component, and a Blade tag.
 
-```php title="app/Livewire/ReactCounter.php"
+```php title="app/Mesh/ReactCounter.php"
 use EthanBarlo\Mesh\MeshComponent;
 use Livewire\Attributes\Modelable;
 
@@ -52,8 +52,15 @@ export default Counter;
 ```
 
 ```blade title="resources/views/..."
-<livewire:react-counter wire:model="count" />
+<mesh:react-counter wire:model="count" />
 ```
+
+<Callout title="app/Mesh and the <mesh:…> tag">
+  Mesh components live in `app/Mesh` (namespace `App\Mesh`) and are referenced with the
+  `<mesh:…>` tag, so they read distinctly from plain Livewire components. Scaffold one with
+  `php artisan make:mesh ReactCounter`. Existing `app/Livewire` components and `<livewire:…>`
+  tags continue to work — `<mesh:…>` is additive and opt-in.
+</Callout>
 
 ## How it works
 

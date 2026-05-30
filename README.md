@@ -7,7 +7,7 @@ what props to pass, and Mesh mounts that component into the page, keeping React 
 Livewire state in sync. State stays on the server with Livewire; the view layer is React.
 
 ```php
-// app/Livewire/ReactCounter.php
+// app/Mesh/ReactCounter.php
 use EthanBarlo\Mesh\MeshComponent;
 use Livewire\Attributes\Modelable;
 
@@ -43,8 +43,13 @@ export default Counter;
 ```
 
 ```blade
-<livewire:react-counter wire:model="count" />
+<mesh:react-counter wire:model="count" />
 ```
+
+Mesh components live in `app/Mesh` (namespace `App\Mesh`) and are referenced with the
+`<mesh:…>` tag, keeping them clearly distinct from plain Livewire components. Generate one with
+`php artisan make:mesh ReactCounter`. (Existing `app/Livewire` components and `<livewire:…>`
+tags keep working unchanged — the `<mesh:…>` convention is additive and opt-in.)
 
 ## Documentation
 

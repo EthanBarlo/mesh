@@ -1,0 +1,18 @@
+<?php
+
+namespace {{ namespace }};
+
+use EthanBarlo\Mesh\MeshComponent;
+
+class {{ class }} extends MeshComponent
+{
+    public function component(): string
+    {
+        return 'resources/js/components/{{ class }}.tsx';
+    }
+
+    public function props(): array
+    {
+        return [];
+    }
+}

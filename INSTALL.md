@@ -134,12 +134,16 @@ registerComponent('react', 'resources/js/components/Counter.tsx', Counter);
 export default Counter;
 ```
 
-## Step 7 — Create the Livewire (Mesh) component
+## Step 7 — Create the Mesh component
+
+Mesh components live in `app/Mesh` (namespace `App\Mesh`), keeping them distinct from plain
+Livewire components in `app/Livewire`. Scaffold one with `php artisan make:mesh ReactCounter`,
+or create it by hand:
 
 ```php
 <?php
 
-namespace App\Livewire;
+namespace App\Mesh;
 
 use EthanBarlo\Mesh\MeshComponent;
 use Livewire\Attributes\Modelable;
@@ -165,8 +169,11 @@ class ReactCounter extends MeshComponent
 ## Step 8 — Render it and run
 
 ```blade
-<livewire:react-counter wire:model="count" />
+<mesh:react-counter wire:model="count" />
 ```
+
+The `<mesh:…>` tag resolves to the matching class in `App\Mesh` (here `App\Mesh\ReactCounter`).
+Existing `<livewire:…>` tags keep working — `<mesh:…>` is additive.
 
 ```bash
 npm run dev      # or: npm run build
