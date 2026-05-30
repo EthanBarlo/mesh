@@ -1,0 +1,108 @@
+---
+title: React Hooks
+description: useWire, useEntangle, useErrorBag, and useLivewireComponent.
+---
+
+All hooks are exported from `@mesh/react` and must be called from within a component mounted by
+Mesh (they read the Livewire instance from React context).
+
+## `useEntangle`
+
+Two-way binding between React state and a Livewire property. Covered in depth in
+[State with useEntangle](/docs/guides/state).
+
+```ts
+function useEntangle<T = string>(
+    key: string,
+    live?: boolean
+): [T, React.Dispatch<React.SetStateAction<T>>];
+```
+
+| Parameter | Type      | Default | Description                                                            |
+| --------- | --------- | ------- | ---------------------------------------------------------------------- |
+| `key`     | `string`  | —       | The Livewire property name to sync with.                               |
+| `live`    | `boolean` | `false` | If `true`, commit on every change; if `false`, defer to next request.  |
+
+Returns a `[value, setValue]` tuple, like `useState`.
+
+```tsx
+const [count, setCount] = useEntangle<number>("count");
+```
+
+## `useWire`
+
+Returns the Livewire `$wire` object for the current component — your direct line to Livewire's
+runtime API.
+
+```ts
+function useWire<T = {}>(): Wire & T;
+```
+
+The type parameter lets you extend the `$wire` type with your component's own methods and
+properties:
+
+```tsx
+const wire = useWire<{ save: () => Promise<void> }>();
+
+await wire.$call("save");          // call a Livewire method
+wire.$set("name", "Ada", false);   // set a property
+const name = wire.$get("name");    // read a property
+wire.$dispatch("saved", { id });   // dispatch a Livewire event
+wire.$watch("name", (v) => {});    // observe a property
+```
+
+Commonly used members of `$wire`:
+
+| Member            | Description                                              |
+| ----------------- | -------------------------------------------------------- |
+| `$get(key)`       | Read a property's current value.                         |
+| `$set(key, v, live)` | Set a property (`live` controls immediate commit).    |
+| `$call(method, …)`| Call a Livewire method; returns a `Promise`.             |
+| `$watch(key, cb)` | Run `cb` whenever the property changes.                  |
+| `$dispatch(event, params)` | Dispatch a Livewire event.                      |
+| `$dispatchTo(component, event, params)` | Dispatch to a named component.     |
+| `$upload(name, file, …)` | Upload a file to a Livewire property.             |
+| `$refresh()`      | Re-render the component from the server.                 |
+
+<Callout>
+  `useEntangle` is just a thin wrapper over `useWire`. Reach for `useWire` directly when you need
+  to call server methods or dispatch events, not just bind a value.
+</Callout>
+
+## `useErrorBag`
+
+Returns the current validation error bag, refreshed after each Livewire request completes.
+
+```ts
+function useErrorBag(): Record<string, ErrorBagItem>;
+// ErrorBagItem = string[] | null
+```
+
+```tsx
+import { useErrorBag } from "@mesh/react";
+
+function Field() {
+    const errors = useErrorBag();
+    return errors.email ? <p className="error">{errors.email[0]}</p> : null;
+}
+```
+
+The bag maps property names to arrays of error messages (or `null`). It is read from the component
+snapshot and updated by hooking Livewire's `commit` lifecycle, so errors thrown by server-side
+validation appear automatically after the request that triggered them.
+
+## `useLivewireComponent`
+
+Low-level access to the raw Livewire component instance for advanced integrations.
+
+```ts
+function useLivewireComponent(): LivewireComponent;
+```
+
+```tsx
+const component = useLivewireComponent();
+component.$wire.$call("doSomething");
+```
+
+It throws if called outside a Mesh component. Most code should prefer `useWire` / `useEntangle`;
+use this only when you need the underlying instance (`el`, `id`, `snapshot`, `$wire`, …).

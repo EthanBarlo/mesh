@@ -1,0 +1,100 @@
+---
+title: Building Components
+description: Register React components, match build paths, and pass props from Livewire.
+---
+
+A Mesh component lives in two files that are linked by a single string: the **build path**. The PHP
+`component()` method returns it, and the matching `.tsx` file registers itself under the exact same
+string. Get this contract right and everything else follows.
+
+## Register every component
+
+Each Mesh component file must call `registerComponent` at module scope:
+
+```tsx title="resources/js/components/Counter.tsx"
+import { registerComponent } from "@mesh";
+
+function Counter(props) {
+    return <div>{/* ... */}</div>;
+}
+
+//                 renderer   build path (must match PHP component())   the component
+registerComponent("react", "resources/js/components/Counter.tsx", Counter);
+export default Counter;
+```
+
+The three arguments are:
+
+- **`renderer`** — the renderer `type` that should mount this component (`"react"` for the bundled
+  React renderer). See [Renderers](/docs/advanced/renderers).
+- **`name`** — the build path. This must be **byte-for-byte identical** to the string returned from
+  the PHP `component()` method.
+- **`component`** — the component itself.
+
+`registerComponent` adds an entry to the global `window.Mesh.components` map keyed by the build
+path. When Livewire initializes a Mesh component, Mesh looks the component up by that key.
+
+## The build-path contract
+
+```php title="app/Livewire/ReactCounter.php"
+public function component(): string
+{
+    return 'resources/js/components/Counter.tsx'; // ← must match registerComponent's 2nd arg
+}
+```
+
+```tsx title="resources/js/components/Counter.tsx"
+registerComponent("react", "resources/js/components/Counter.tsx", Counter); // ← same string
+```
+
+<Callout type="warn">
+  If these two strings differ in any way, the asset loads but the component never registers under
+  the key Mesh is looking for, and you'll see a `did not register` error in the console.
+</Callout>
+
+## Add the file to Vite's input
+
+Mesh lazy-loads each component's compiled asset on demand, so Vite must build it as an entry
+point. Add every Mesh component file to the `input` array in `vite.config.js`:
+
+```js title="vite.config.js"
+laravel({
+    input: [
+        'resources/css/app.css',
+        'resources/js/app.ts',
+        'resources/js/components/Counter.tsx', // ← each Mesh component
+    ],
+}),
+```
+
+A file that isn't in `input` is never built, so its asset URL 404s and the component can't register.
+
+## Passing props
+
+The PHP `props()` method returns the props passed to your React component. They must be
+**JSON-serializable** — they travel through `data-mesh-props` as a JSON string.
+
+```php
+public function props(): array
+{
+    return [
+        'initialCount' => $this->count,
+        'label'        => 'Clicks',
+    ];
+}
+```
+
+```tsx
+function Counter({ initialCount, label }: { initialCount: number; label: string }) {
+    // ...
+}
+```
+
+When a Livewire request changes the output of `props()`, Mesh diffs the new props against the
+last-rendered ones and, if they changed, pushes them into the mounted component **without
+remounting** — so any local React state survives the update.
+
+<Callout title="Props vs. entangled state">
+  Use `props()` for read-only values flowing **from** the server. To bind a value in **both**
+  directions, use [`useEntangle`](/docs/guides/state) instead.
+</Callout>

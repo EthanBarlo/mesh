@@ -1,0 +1,105 @@
+---
+title: Renderers
+description: How Mesh stays framework-agnostic, and how to write your own renderer.
+---
+
+Mesh's core knows nothing about React. It tracks registered components and pushes prop updates; the
+actual mounting is delegated to a **renderer**. The React renderer ships in the box, but the same
+contract supports Vue, Svelte, or anything else.
+
+## The `MeshRenderer` contract
+
+```ts
+type MeshRenderer = {
+    type: string;                 // e.g. "react" — matches registerComponent's first arg
+    renderComponent: RenderFunction;
+};
+
+type RenderFunction = (
+    componentName: string,
+    livewireComponent: LivewireComponent,
+    component: any,               // the value passed to registerComponent
+    props: any
+) => RenderedComponent;
+
+type RenderedComponent = {
+    componentName: string;
+    props: any;
+    updateProps: (livewireComponent: LivewireComponent, props: any) => void;
+    cleanup: () => void;
+};
+```
+
+A renderer's `renderComponent`:
+
+1. Mounts `component` into the `.mesh-root` element inside `livewireComponent.el` with the initial
+   `props`.
+2. Returns a `RenderedComponent` whose:
+   - **`updateProps`** re-renders with new props **without** tearing down — this is what preserves
+     local state across Livewire updates.
+   - **`cleanup`** unmounts and releases resources (called when Livewire cleans the component up).
+
+## How the React renderer does it
+
+The bundled renderer (the default export of `@mesh/react`) is a compact reference implementation:
+
+```tsx
+import { createRoot } from "react-dom/client";
+import LivewireContext from "./context";
+
+const reactRenderer: MeshRenderer = {
+    type: "react",
+    renderComponent: (componentName, livewireComponent, Component, props) => {
+        const el = livewireComponent.el.querySelector(".mesh-root");
+        if (!el) throw new Error("Mesh root element not found");
+
+        const root = createRoot(el);
+
+        const render = (lw, props) =>
+            root.render(
+                <React.StrictMode>
+                    <LivewireContext.Provider value={lw}>
+                        <Component {...props} />
+                    </LivewireContext.Provider>
+                </React.StrictMode>
+            );
+
+        render(livewireComponent, props);
+
+        return {
+            componentName,
+            props,
+            updateProps: render,          // same root → state preserved
+            cleanup: () => root.unmount(),
+        };
+    },
+};
+```
+
+Note how `updateProps` re-renders into the **same** React root, so component state survives prop
+updates. Wrapping the component in `LivewireContext.Provider` is what makes the hooks
+([`useWire`](/docs/api/hooks#usewire), `useEntangle`, …) able to find the Livewire instance.
+
+## Registering renderers
+
+Pass every renderer you want available to `initMesh`. The `type` of each is matched against the
+first argument of `registerComponent`:
+
+```ts
+import { initMesh } from "@mesh";
+import reactRenderer from "@mesh/react";
+import vueRenderer from "./my-vue-renderer";
+
+initMesh(Livewire, {
+    renderers: [reactRenderer, vueRenderer],
+    debug: true,
+});
+```
+
+A component registered with `registerComponent("vue", path, Component)` is then mounted by the
+renderer whose `type` is `"vue"`.
+
+<Callout>
+  Renderers are keyed by `type`, so a component can target any registered renderer simply by naming
+  it in `registerComponent`.
+</Callout>

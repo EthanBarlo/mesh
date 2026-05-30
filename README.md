@@ -46,6 +46,11 @@ export default Counter;
 <livewire:react-counter wire:model="count" />
 ```
 
+## Documentation
+
+Full documentation lives in [`docs/`](docs) as Markdown, served by the Fumadocs site in
+[`apps/docs/`](apps/docs) (`cd apps/docs && npm install && npm run dev`).
+
 ## Installation
 
 > Requires Livewire 4.
@@ -86,7 +91,7 @@ default export of `@mesh/react`. Additional renderers (Vue, Svelte, …) can imp
 
 ## Demo
 
-A runnable demo lives in [`demo/`](demo) — a small Laravel app rendering a React counter
+A runnable demo lives in [`apps/demo-react/`](apps/demo-react) — a small Laravel app rendering a React counter
 two-way bound to a Livewire property.
 
 ## License

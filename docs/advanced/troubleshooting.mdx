@@ -1,0 +1,60 @@
+---
+title: Troubleshooting
+description: Common pitfalls when wiring Mesh into an app, and how to debug them.
+---
+
+Most setup problems come down to one of a handful of mistakes. Work through this checklist first.
+
+## Common pitfalls checklist
+
+- **Used `@livewireScripts` instead of `@livewireScriptConfig`** → Livewire starts before Mesh's
+  hooks are registered, so nothing mounts. Use `@livewireScriptConfig` and call `Livewire.start()`
+  yourself in `app.ts` (after `initMesh`). See [Installation, Steps 4–5](/docs/installation).
+
+- **Component file not in Vite `input`** → its asset is never built, so the asset URL 404s and you
+  see `component "<path>" ... did not register` in the console. Add the file to the `input` array.
+
+- **Forgot `registerComponent(...)`** in the `.tsx` file → same `did not register` error. Every
+  Mesh component file must call `registerComponent` at module scope.
+
+- **Path mismatch** → the string in PHP `component()` must be **byte-for-byte identical** to the
+  second argument of `registerComponent()`. A trailing slash or different casing breaks the lookup.
+
+- **`@mesh` alias missing/wrong** → Vite can't resolve `@mesh` / `@mesh/react` imports. Check the
+  `resolve.alias` in `vite.config.js` (and the `paths` in `tsconfig.json` if you typecheck).
+
+- **Missing `@vitejs/plugin-react`** → `.tsx` files fail to compile. Install it and add `react()` to
+  the Vite `plugins` array.
+
+- **Props not JSON-serializable** → `props()` must return values that survive `json_encode`. No
+  closures, resources, or non-serializable objects.
+
+## Turn on debug logging
+
+Pass `debug: true` to `initMesh` to log Mesh's lifecycle to the console (each message is prefixed
+with `Mesh | `):
+
+```ts
+initMesh(Livewire, {
+    renderers: [reactRenderer],
+    debug: true, // remove in production
+});
+```
+
+You'll see messages as components register, assets are imported, and instances initialize — which
+quickly reveals whether a component failed to register, the asset URL is wrong, or the build path
+doesn't match.
+
+## Reading the errors
+
+| Console message | Likely cause |
+| --- | --- |
+| `component "<path>" is not registered and no data-mesh-asset URL was provided` | The mount point has no asset URL — usually the file isn't in Vite `input`, or the build is stale. |
+| `asset at "<url>" finished loading but did not register component "<path>"` | The asset built and loaded, but the build path in `registerComponent` doesn't match `component()`. |
+| `Mesh is not initialized` | `registerComponent` ran before `initMesh` — make sure `initMesh` runs before `Livewire.start()`. |
+| `Mesh root element not found` | The `.mesh-root` mount point is missing — usually a customized/overridden Mesh view. |
+
+<Callout>
+  Still stuck? Compare your setup against the runnable demo in `apps/demo-react/`, which is a
+  minimal, working Mesh + Livewire + React app.
+</Callout>

@@ -1,0 +1,99 @@
+---
+title: MeshComponent (PHP)
+description: The base Livewire class that renders a frontend component.
+---
+
+`MeshComponent` is the PHP base class for a Mesh feature. It extends `Livewire\Component`, so
+everything you know about Livewire components — public properties, actions, `wire:model`,
+validation, events — applies. It adds two abstract methods that say **which** frontend component to
+render and **what** props to give it.
+
+```php
+namespace EthanBarlo\Mesh;
+
+abstract class MeshComponent extends \Livewire\Component
+{
+    abstract public function component(): string;
+
+    /** @return array<string, mixed> */
+    abstract public function props(): array;
+
+    public function render(): \Illuminate\Contracts\View\View; // renders the mesh::component view
+}
+```
+
+You never write `render()` yourself — `MeshComponent` provides it, returning the built-in
+`mesh::component` view that emits the mount point Mesh looks for.
+
+## `component(): string`
+
+Returns the **build path** of the frontend component to render. This string must match, byte for
+byte, the second argument of `registerComponent` in the `.tsx` file.
+
+```php
+public function component(): string
+{
+    return 'resources/js/components/Counter.tsx';
+}
+```
+
+See [Building Components](/docs/guides/building-components) for the full build-path contract.
+
+## `props(): array`
+
+Returns the props passed to the frontend component. The array **must be JSON-serializable** — the
+values are `json_encode`d into the `data-mesh-props` attribute and parsed on the client.
+
+```php
+public function props(): array
+{
+    return [
+        'initialCount' => $this->count,
+        'label'        => 'Clicks',
+    ];
+}
+```
+
+<Callout type="warn">
+  Props must survive `json_encode`: no closures, resources, or non-serializable objects. Eloquent
+  models and collections serialize to arrays — pass exactly the shape your component expects.
+</Callout>
+
+When a request changes the value `props()` returns, Mesh pushes the new props into the mounted
+component without remounting, preserving local React state.
+
+## Two-way binding with `#[Modelable]`
+
+To let a parent bind a property with `wire:model`, mark it `#[Modelable]`:
+
+```php
+use Livewire\Attributes\Modelable;
+
+class ReactCounter extends MeshComponent
+{
+    #[Modelable]
+    public int $count = 0;
+
+    public function component(): string
+    {
+        return 'resources/js/components/Counter.tsx';
+    }
+
+    public function props(): array
+    {
+        return ['initialCount' => $this->count];
+    }
+}
+```
+
+```blade
+<livewire:react-counter wire:model="count" />
+```
+
+On the client, `useEntangle('count')` binds React state to that same property — giving you a value
+that flows seamlessly from the React UI, through the Livewire component, up to the parent.
+
+## Installation note
+
+The service provider (`EthanBarlo\Mesh\MeshServiceProvider`) is auto-discovered by Laravel; there
+is no config to publish. See [Installation](/docs/installation).

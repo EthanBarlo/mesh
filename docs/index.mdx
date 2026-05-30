@@ -1,0 +1,76 @@
+---
+title: Introduction
+description: Render React as the frontend of your Livewire components, with state kept in sync.
+---
+
+Mesh is a thin bridge between **Laravel Livewire** and **React**. A Livewire component declares
+which frontend component to render and what props to pass; Mesh mounts that component into the
+page and keeps React state and Livewire state in sync. Your application state stays on the server
+with Livewire — the view layer is React.
+
+<Callout title="Requires Livewire 4">
+  Mesh hooks into Livewire's `component.init` and `morph.updated` lifecycle events, which it
+  relies on for mounting and prop updates.
+</Callout>
+
+## The shape of a Mesh component
+
+A Mesh feature is three small pieces: a PHP component, a React component, and a Blade tag.
+
+```php title="app/Livewire/ReactCounter.php"
+use EthanBarlo\Mesh\MeshComponent;
+use Livewire\Attributes\Modelable;
+
+class ReactCounter extends MeshComponent
+{
+    #[Modelable]
+    public int $count = 0;
+
+    public function component(): string
+    {
+        return 'resources/js/components/Counter.tsx';
+    }
+
+    public function props(): array
+    {
+        return ['initialCount' => $this->count];
+    }
+}
+```
+
+```tsx title="resources/js/components/Counter.tsx"
+import { registerComponent } from "@mesh";
+import { useEntangle } from "@mesh/react";
+
+function Counter({ initialCount }: { initialCount: number }) {
+    const [count, setCount] = useEntangle<number>("count");
+    return <button onClick={() => setCount(count + 1)}>{count}</button>;
+}
+
+registerComponent("react", "resources/js/components/Counter.tsx", Counter);
+export default Counter;
+```
+
+```blade title="resources/views/..."
+<livewire:react-counter wire:model="count" />
+```
+
+## How it works
+
+1. A `MeshComponent` renders a small mount point carrying `data-mesh-component` (the build path),
+   `data-mesh-props` (JSON props), and `data-mesh-asset` (the Vite-resolved asset URL).
+2. `initMesh` hooks Livewire's `component.init` lifecycle. On init it lazily `import()`s the
+   component's asset (which calls `registerComponent`), then mounts it into the `.mesh-root`
+   element via the matching renderer.
+3. On every Livewire update (`morph.updated`), changed props are pushed into the mounted component
+   **without remounting**, so local React state is preserved.
+
+## Where to next
+
+- **[Installation](/docs/installation)** — wire Mesh into an existing Laravel + Livewire app.
+- **[Building Components](/docs/guides/building-components)** — the `registerComponent` pattern.
+- **[State with useEntangle](/docs/guides/state)** — two-way binding between React and Livewire.
+- **[API Reference](/docs/api/hooks)** — every hook and the `MeshComponent` base class.
+
+A runnable demo lives in [`apps/demo-react/`](https://github.com/ethanbarlo/mesh) — a small Laravel
+app rendering a React counter two-way bound to a Livewire property.

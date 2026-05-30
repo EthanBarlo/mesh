@@ -1,0 +1,71 @@
+---
+title: State with useEntangle
+description: Two-way binding between React state and a Livewire property.
+---
+
+`useEntangle` is the primary way to share state between React and Livewire. It works like
+`useState`, but the value is kept in sync with a Livewire property in **both** directions: when the
+server changes the property, React re-renders; when React updates the value, the change is written
+back to Livewire.
+
+```tsx
+import { useEntangle } from "@mesh/react";
+
+function Counter() {
+    const [count, setCount] = useEntangle<number>("count");
+
+    return (
+        <div>
+            <button onClick={() => setCount(count - 1)}>-</button>
+            <span>{count}</span>
+            <button onClick={() => setCount(count + 1)}>+</button>
+        </div>
+    );
+}
+```
+
+Here `"count"` is the name of a public property on the Livewire component. The returned tuple is
+exactly a `useState` pair — `[value, setValue]` — so it drops into existing React code.
+
+## Live vs. deferred sync
+
+The second argument controls **when** a change is sent to the server:
+
+```tsx
+const [name, setName] = useEntangle<string>("name");        // deferred (default)
+const [name, setName] = useEntangle<string>("name", true);  // live
+```
+
+- **Deferred (`live = false`, the default)** — React state updates immediately, but the value is
+  only committed to the server on the next Livewire network request. Best for inputs where you
+  don't want a round-trip on every keystroke.
+- **Live (`live = true`)** — every change is committed to the server immediately. Use when the
+  server needs to react to each change (e.g. live validation or dependent fields).
+
+<Callout>
+  `live` maps directly to Livewire's `$wire.$set(key, value, live)`. Deferred updates batch with
+  the next request; live updates trigger their own.
+</Callout>
+
+## Under the hood
+
+`useEntangle` is a small wrapper over [`useWire`](/docs/api/hooks#usewire):
+
+- It seeds React state from `wire.$get(key)`.
+- It calls `wire.$watch(key, ...)` so server-driven changes flow **into** React state.
+- It calls `wire.$set(key, value, live)` whenever the React value changes, flowing **out** to
+  Livewire.
+
+Because Mesh updates props without remounting, an entangled value and any other local React state
+both persist across Livewire requests.
+
+## Typing the value
+
+Pass a type parameter to type both the value and the setter:
+
+```tsx
+const [count, setCount] = useEntangle<number>("count");
+const [tags, setTags]   = useEntangle<string[]>("tags");
+```
+
+The default is `string` if no type argument is provided.
