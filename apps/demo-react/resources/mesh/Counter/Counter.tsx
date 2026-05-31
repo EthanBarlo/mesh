@@ -1,11 +1,11 @@
 import React from "react";
 import { useEntangle } from "@mesh/react";
 
-interface ReactCounterProps {
+interface CounterProps {
     initialCount: number;
 }
 
-const ReactCounter: React.FC<ReactCounterProps> = ({ initialCount }) => {
+const Counter: React.FC<CounterProps> = ({ initialCount }) => {
     const [count, setCount] = useEntangle<number>("count");
 
     const handleIncrement = () => {
@@ -77,4 +77,4 @@ const ReactCounter: React.FC<ReactCounterProps> = ({ initialCount }) => {
     );
 };
 
-export default ReactCounter;
+export default Counter;

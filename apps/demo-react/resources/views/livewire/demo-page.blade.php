@@ -48,7 +48,7 @@
             {{-- A plain Livewire component, rendered with the standard <livewire:…> tag. --}}
             <livewire:counter wire:model="count" />
             {{-- A Mesh component (React frontend), rendered with the <mesh:…> tag. --}}
-            <mesh:react-counter wire:model="count" />
+            <mesh:counter wire:model="count" />
         </div>
 
         <!-- Features Grid -->
