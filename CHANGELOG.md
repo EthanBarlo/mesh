@@ -2,7 +2,7 @@
 
 All notable changes to `mesh` will be documented in this file.
 
-## 0.1.0 - Unreleased
+## 0.1.0 - 2026-05-31
 
 Initial release of Mesh, a fresh rebuild of LivewireMesh.
 
