@@ -1,11 +1,17 @@
 export type CleanupCallback = () => void;
 
-export type ComponentsMap = {
-    [key: string]: {
-        renderer: string;
-        component: any;
-    };
+export type ComponentLoader = () => Promise<{ default: any }>;
+
+export type RegistryEntry = {
+    renderer: string;
+    load: ComponentLoader;
 };
+
+export type ComponentRegistry = {
+    [id: string]: RegistryEntry;
+};
+
+export type GlobResult = Record<string, ComponentLoader>;
 
 export interface LivewireSnapshot {
     // The serialized state of the component (public properties)
@@ -98,6 +104,7 @@ export type Wire = {
 
 export type Config = {
     renderers: MeshRenderer[];
+    components: GlobResult;
     debug?: boolean;
 };
 
@@ -124,7 +131,10 @@ declare global {
     interface Window {
         Mesh:
             | {
-                  components: ComponentsMap;
+                  registry: ComponentRegistry;
+                  resolved: {
+                      [id: string]: Promise<any>;
+                  };
                   renderedComponents: {
                       [key: string]: RenderedComponent;
                   };

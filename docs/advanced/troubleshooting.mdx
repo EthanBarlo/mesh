@@ -1,60 +1,62 @@
 ---
 title: Troubleshooting
-description: Common pitfalls when wiring Mesh into an app, and how to debug them.
+description: Common Mesh mount failures and fixes.
 ---
 
-Most setup problems come down to one of a handful of mistakes. Work through this checklist first.
+# Troubleshooting
 
-## Common pitfalls checklist
+## Component doesn't mount
 
-- **Used `@livewireScripts` instead of `@livewireScriptConfig`** → Livewire starts before Mesh's
-  hooks are registered, so nothing mounts. Use `@livewireScriptConfig` and call `Livewire.start()`
-  yourself in `app.ts` (after `initMesh`). See [Installation, Steps 4–5](/docs/installation).
+The most common cause is an **id mismatch** between PHP and JS.
 
-- **Component entry not in Vite `input`** → its asset is never built, so the asset URL 404s and you
-  see `component "<path>" ... did not register` in the console. Add the file to the `input` array.
+### Check the id
 
-- **Forgot `registerComponent(...)`** in the entry file → same `did not register` error. Every
-  Mesh component entry must call `registerComponent` at module scope.
+The id derived by PHP must equal the id derived from the JS folder path. Both are simple strings.
 
-- **Path mismatch** → the string in PHP `component()` must be **byte-for-byte identical** to the
-  second argument of `registerComponent()`. A trailing slash or different casing breaks the lookup.
+- PHP: `App\Mesh\Counter` → `Counter` (strip `App\Mesh\`, backslashes become slashes).
+- JS: `/resources/js/mesh/Counter/index.tsx` → `Counter` (keep what's after `resources/js/mesh/`,
+  drop the extension and trailing `/index`).
 
-- **`@mesh` alias missing/wrong** → Vite can't resolve `@mesh` / `@mesh/react` imports. Check the
-  `resolve.alias` in `vite.config.js` (and the `paths` in `tsconfig.json` if you typecheck).
+If the class name and the folder name disagree (including case), the ids won't match and nothing
+mounts. `make:mesh` keeps both in sync; mismatches usually come from renaming one side by hand.
 
-- **Missing `@vitejs/plugin-react`** → `.tsx` files fail to compile. Install it and add `react()` to
-  the Vite `plugins` array.
+## Glob doesn't match the component
 
-- **Props not JSON-serializable** → `props()` must return values that survive `json_encode`. No
-  closures, resources, or non-serializable objects.
+Components are discovered by `import.meta.glob('/resources/js/mesh/**/index.{tsx,jsx}')` in `app.ts`.
+A component is only registered if its entry is named `index.tsx` (or `index.jsx`) and lives under
+`resources/js/mesh`. A file named anything else — or placed outside that directory — is ignored.
+Check the folder layout and that the glob pattern includes your entry's extension.
 
-## Turn on debug logging
+## Renderer can't be inferred
 
-Pass `debug: true` to `initMesh` to log Mesh's lifecycle to the console (each message is prefixed
-with `Mesh | `):
+The renderer comes from the entry file extension (`tsx`/`jsx` → React, `vue` → Vue, `svelte` →
+Svelte). An unknown extension throws. Make sure the renderer key the extension maps to is present in
+`initMesh({ renderers })`.
+
+## Livewire not started
+
+Mesh needs Livewire 4 running. Ensure `app.ts` ends with:
 
 ```ts
-initMesh(Livewire, {
-    renderers: [reactRenderer],
-    debug: true, // remove in production
-});
+@livewireScriptConfig
+Livewire.start()
 ```
 
-You'll see messages as components register, assets are imported, and instances initialize — which
-quickly reveals whether a component failed to register, the asset URL is wrong, or the build path
-doesn't match.
+## Case-sensitivity bugs
 
-## Reading the errors
+On macOS the filesystem is case-insensitive, so `Counter` and `counter` resolve the same. On Linux (production) they don't. Always match the case of the class name and the folder exactly — both are StudlyCase.
 
-| Console message | Likely cause |
-| --- | --- |
-| `component "<path>" is not registered and no data-mesh-asset URL was provided` | The mount point has no asset URL — usually the file isn't in Vite `input`, or the build is stale. |
-| `asset at "<url>" finished loading but did not register component "<path>"` | The asset built and loaded, but the build path in `registerComponent` doesn't match `component()`. |
-| `Mesh is not initialized` | `registerComponent` ran before `initMesh` — make sure `initMesh` runs before `Livewire.start()`. |
-| `Mesh root element not found` | The `.mesh-root` mount point is missing — usually a customized/overridden Mesh view. |
+## Renderer not registered
 
-<Callout>
-  Still stuck? Compare your setup against the runnable demo in `apps/demo-react/`, which is a
-  minimal, working Mesh + Livewire + React app.
-</Callout>
+If a component's inferred renderer key (e.g. `react`) isn't in `initMesh({ renderers })`, it won't mount. Check that the key is present.
+
+## Props not updating
+
+Props are computed server-side in `props()`. They only change when the Livewire component re-renders. If props look stale, verify the Livewire round-trip is happening.
+
+## Still stuck?
+
+- Double-check the PHP class name and the `resources/js/mesh/...` folder name produce the same id.
+- Confirm the entry is `index.{tsx,jsx}` and matched by the `app.ts` glob.
+- Verify the `@mesh` alias resolves in `vite.config.ts`.
+- Check the browser console for dynamic-import errors when the chunk loads.

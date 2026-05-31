@@ -1,105 +1,82 @@
 ---
 title: Renderers
-description: How Mesh stays framework-agnostic, and how to write your own renderer.
+description: How Mesh mounts React, Vue, and Svelte components.
 ---
 
-Mesh's core knows nothing about React. It tracks registered components and pushes prop updates; the
-actual mounting is delegated to a **renderer**. The React renderer ships in the box, but the same
-contract supports Vue, Svelte, or anything else.
+# Renderers
 
-## The `MeshRenderer` contract
-
-```ts
-type MeshRenderer = {
-    type: string;                 // e.g. "react" — matches registerComponent's first arg
-    renderComponent: RenderFunction;
-};
-
-type RenderFunction = (
-    componentName: string,
-    livewireComponent: LivewireComponent,
-    component: any,               // the value passed to registerComponent
-    props: any
-) => RenderedComponent;
-
-type RenderedComponent = {
-    componentName: string;
-    props: any;
-    updateProps: (livewireComponent: LivewireComponent, props: any) => void;
-    cleanup: () => void;
-};
-```
-
-A renderer's `renderComponent`:
-
-1. Mounts `component` into the `.mesh-root` element inside `livewireComponent.el` with the initial
-   `props`.
-2. Returns a `RenderedComponent` whose:
-   - **`updateProps`** re-renders with new props **without** tearing down — this is what preserves
-     local state across Livewire updates.
-   - **`cleanup`** unmounts and releases resources (called when Livewire cleans the component up).
-
-## How the React renderer does it
-
-The bundled renderer (the default export of `@mesh/react`) is a compact reference implementation:
-
-```tsx
-import { createRoot } from "react-dom/client";
-import LivewireContext from "./context";
-
-const reactRenderer: MeshRenderer = {
-    type: "react",
-    renderComponent: (componentName, livewireComponent, Component, props) => {
-        const el = livewireComponent.el.querySelector(".mesh-root");
-        if (!el) throw new Error("Mesh root element not found");
-
-        const root = createRoot(el);
-
-        const render = (lw, props) =>
-            root.render(
-                <React.StrictMode>
-                    <LivewireContext.Provider value={lw}>
-                        <Component {...props} />
-                    </LivewireContext.Provider>
-                </React.StrictMode>
-            );
-
-        render(livewireComponent, props);
-
-        return {
-            componentName,
-            props,
-            updateProps: render,          // same root → state preserved
-            cleanup: () => root.unmount(),
-        };
-    },
-};
-```
-
-Note how `updateProps` re-renders into the **same** React root, so component state survives prop
-updates. Wrapping the component in `LivewireContext.Provider` is what makes the hooks
-([`useWire`](/docs/api/hooks#usewire), `useEntangle`, …) able to find the Livewire instance.
+A **renderer** teaches Mesh how to mount a given framework's components. React ships built in; Vue and Svelte follow the same interface.
 
 ## Registering renderers
 
-Pass every renderer you want available to `initMesh`. The `type` of each is matched against the
-first argument of `registerComponent`:
-
 ```ts
-import { initMesh } from "@mesh";
-import reactRenderer from "@mesh/react";
-import vueRenderer from "./my-vue-renderer";
+// resources/js/app.ts
+import { initMesh } from '@mesh/runtime'
+import { reactRenderer } from '@mesh/renderers/react'
 
-initMesh(Livewire, {
-    renderers: [reactRenderer, vueRenderer],
-    debug: true,
-});
+initMesh({
+  renderers: {
+    react: reactRenderer,
+  },
+  components: import.meta.glob('/resources/js/mesh/**/index.{tsx,jsx}'),
+})
 ```
 
-A component registered with `registerComponent("vue", path, Component)` is then mounted by the
-renderer whose `type` is `"vue"`.
+## The renderer interface
 
-<Callout>
-  Renderers are keyed by `type`, so a component can target any registered renderer simply by naming
-  it in `registerComponent`.
-</Callout>
+A renderer implements `mount` and `unmount`:
+
+```ts
+export interface MeshRenderer {
+  mount(el: HTMLElement, component: unknown, props: Record<string, unknown>): void
+  unmount(el: HTMLElement): void
+}
+```
+
+## Renderer is inferred from the file extension
+
+Components do not declare a renderer. Mesh infers it from the entry file's extension:
+
+- `index.tsx` / `index.jsx` → `react`
+- `index.vue` → `vue`
+- `index.svelte` → `svelte`
+
+The inferred key must match a key in the `renderers` object passed to `initMesh`. If a `.vue`
+component is discovered but no `vue` renderer is configured, the mount fails. An unknown extension
+throws rather than silently defaulting.
+
+## Built-in React renderer
+
+The React renderer uses `createRoot` from `react-dom/client`.
+
+## Vue and Svelte
+
+To support other frameworks, register their renderers under the matching keys and add their entry
+extensions to the glob so they are discovered:
+
+```ts
+initMesh({
+  renderers: {
+    react: reactRenderer,
+    vue: vueRenderer,
+    svelte: svelteRenderer,
+  },
+  components: import.meta.glob('/resources/js/mesh/**/index.{tsx,jsx,vue,svelte}'),
+})
+```
+
+A component written as `index.vue` is inferred to use the `vue` renderer automatically.
+
+## Choosing a renderer per component
+
+A component's renderer is determined by its entry file extension. The PHP side is renderer-agnostic; it only carries the id and props.
+
+## Adding a custom renderer
+
+Implement the `MeshRenderer` interface and register it under a renderer key. Mesh maps a component to
+that key via its file extension, so a custom renderer needs Mesh to recognise the corresponding
+extension.
+
+## Wiring renderers into `initMesh`
+
+All renderers are passed in a single `initMesh({ renderers, components })` call at app boot. There is no per-component renderer config file; the renderer comes from the entry extension and the renderer map in `app.ts`.

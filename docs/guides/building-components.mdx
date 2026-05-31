@@ -1,97 +1,113 @@
 ---
-title: Building Components
-description: Register React components, match build paths, and pass props from Livewire.
+title: Building components
+description: Create a Mesh component end to end.
 ---
 
-A Mesh component links PHP and frontend code with a single string: the **build path**. The PHP
-`component()` method returns it, and the matching frontend entry file registers itself under the
-exact same string. Get this contract right and everything else follows.
+# Building components
 
-## Register every component
+A Mesh component has two parts: a PHP class and a framework component whose folder entry default-exports it. `make:mesh` scaffolds both, and a single glob in `app.ts` wires every component up automatically.
 
-Each Mesh component entry must call `registerComponent` at module scope:
+## Scaffold with `make:mesh`
 
-```ts title="resources/js/mesh/Counter/index.ts"
-import { registerComponent } from "@mesh";
-import Counter from "./Counter";
-
-//                       renderer   build path (must match PHP component())   the component
-registerComponent("react", "resources/js/mesh/Counter/index.ts", Counter);
-export default Counter;
+```bash
+php artisan make:mesh Counter
 ```
 
-The three arguments are:
+Creates:
 
-- **`renderer`** — the renderer `type` that should mount this component (`"react"` for the bundled
-  React renderer). See [Renderers](/docs/advanced/renderers).
-- **`name`** — the build path. This must be **byte-for-byte identical** to the string returned from
-  the PHP `component()` method.
-- **`component`** — the component itself.
+- `app/Mesh/Counter.php`
+- `resources/js/mesh/Counter/index.tsx` — the component (its **default export** is the component)
 
-`registerComponent` adds an entry to the global `window.Mesh.components` map keyed by the build
-path. When Livewire initializes a Mesh component, Mesh looks the component up by that key.
+## The PHP class
 
-## The build-path contract
+```php
+<?php
 
-```php title="app/Mesh/Counter.php"
-public function component(): string
+namespace App\Mesh;
+
+use EthanBarlo\Mesh\Component;
+
+class Counter extends Component
 {
-    return 'resources/js/mesh/Counter/index.ts'; // ← must match registerComponent's 2nd arg
+    public function props(): array
+    {
+        return ['start' => 0];
+    }
 }
 ```
 
-```ts title="resources/js/mesh/Counter/index.ts"
-registerComponent("react", "resources/js/mesh/Counter/index.ts", Counter); // ← same string
+## The React component
+
+A component is a **folder** whose `index.{tsx,jsx}` default-exports it. Co-located helper files in the
+same folder are ignored by the registry glob (it matches only `index.{tsx,jsx}`).
+
+```tsx
+// resources/js/mesh/Counter/index.tsx
+export default function Counter({ start }: { start: number }) {
+  return <div>{start}</div>
+}
 ```
 
-<Callout type="warn">
-  If these two strings differ in any way, the asset loads but the component never registers under
-  the key Mesh is looking for, and you'll see a `did not register` error in the console.
-</Callout>
+That's it — no separate registration entry, and nothing to add to your Vite `input` array.
 
-## Add the file to Vite's input
+## Registering components
 
-Mesh lazy-loads each component's compiled asset on demand, so Vite must build it as an entry
-point. Add every Mesh component entry to the `input` array in `vite.config.js`:
+Components are not registered one by one. A single `import.meta.glob` in `app.ts` builds a lazy
+registry of every component folder. Each match becomes its own code-split chunk fetched on first
+render:
 
-```js title="vite.config.js"
-laravel({
-    input: [
-        'resources/css/app.css',
-        'resources/js/app.ts',
-        'resources/js/mesh/Counter/index.ts', // ← each Mesh component entry
-    ],
-}),
+```ts
+// resources/js/app.ts
+initMesh({
+  renderers: { react: reactRenderer },
+  components: import.meta.glob('/resources/js/mesh/**/index.{tsx,jsx}'),
+})
 ```
 
-A file that isn't in `input` is never built, so its asset URL 404s and the component can't register.
+Add a new component just by creating its folder under `resources/js/mesh` — the glob picks it up on
+the next build. There is no per-component Vite input and no `registerComponent` call.
 
-## Passing props
+## A simple id, derived identically on both sides
 
-The PHP `props()` method returns the props passed to your React component. They must be
-**JSON-serializable** — they travel through `data-mesh-props` as a JSON string.
+Each component is identified by a short **id** string — `Counter`, or `Forms/Input` for a nested
+component — not a build path. Both sides derive it the same way:
+
+- **PHP** strips the `App\Mesh\` prefix and replaces remaining backslashes with slashes
+  (`App\Mesh\Forms\Input` → `Forms/Input`).
+- **JS** takes the glob key, keeps everything after `resources/js/mesh/`, then drops the file
+  extension and the trailing `/index` (`/resources/js/mesh/Forms/Input/index.tsx` → `Forms/Input`).
+
+Because `make:mesh` StudlyCases both the class segments and the folder names, the ids match
+automatically. The folder name must match the StudlyCase class name exactly — case matters on Linux
+even if macOS hides a mismatch.
+
+The renderer is inferred from the entry file extension: `tsx`/`jsx` → React, `vue` → Vue,
+`svelte` → Svelte. An unknown extension throws rather than silently picking a default.
+
+## Nested components
+
+```bash
+php artisan make:mesh Forms/Input
+```
+
+Creates `app/Mesh/Forms/Input.php` and `resources/js/mesh/Forms/Input/index.tsx`. The id is
+`Forms/Input` on both sides, derived automatically.
+
+## Props
+
+`props()` returns a JSON-serializable array. Keys become the component's props:
 
 ```php
 public function props(): array
 {
-    return [
-        'initialCount' => $this->count,
-        'label'        => 'Clicks',
-    ];
+    return ['start' => 5, 'label' => 'Hits'];
 }
 ```
 
 ```tsx
-function Counter({ initialCount, label }: { initialCount: number; label: string }) {
-    // ...
+export default function Counter({ start, label }: { start: number; label: string }) {
+  return <button>{label}: {start}</button>
 }
 ```
 
-When a Livewire request changes the output of `props()`, Mesh diffs the new props against the
-last-rendered ones and, if they changed, pushes them into the mounted component **without
-remounting** — so any local React state survives the update.
-
-<Callout title="Props vs. entangled state">
-  Use `props()` for read-only values flowing **from** the server. To bind a value in **both**
-  directions, use [`useEntangle`](/docs/guides/state) instead.
-</Callout>
+Props are computed on the server each render and passed into the component on mount.

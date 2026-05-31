@@ -1,11 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 use EthanBarlo\Mesh\Tests\Fixtures\TestComponent;
 use Livewire\Livewire;
 
-it('renders the mesh mount point with the component path', function () {
+it('renders the mesh mount point with the component id', function () {
     Livewire::test(TestComponent::class)
-        ->assertSeeHtml('data-mesh-component="resources/js/components/Greeter.tsx"')
+        ->assertSeeHtml('data-mesh-component="Greeter"')
         ->assertSeeHtml('class="mesh-root"')
         ->assertSeeHtml('wire:ignore');
 });

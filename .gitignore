@@ -25,3 +25,5 @@ phpunit.xml
 phpstan.neon
 testbench.yaml
 /coverage
+# Testbench/Pest writes runtime logs here when the suite runs
+/storage

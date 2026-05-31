@@ -1,112 +1,103 @@
 # Mesh
 
-Render React (and, in future, other frameworks) as the frontend of your Livewire components.
+> A React + Livewire 4 islands bridge. Render interactive framework components inside Livewire, with props flowing across the boundary.
 
-Mesh is a thin bridge: a Livewire component declares which frontend component to render and
-what props to pass, and Mesh mounts that component into the page, keeping React state and
-Livewire state in sync. State stays on the server with Livewire; the view layer is React.
+## What it does
 
-```php
-// app/Mesh/Counter.php
-use EthanBarlo\Mesh\MeshComponent;
-use Livewire\Attributes\Modelable;
+Mesh lets you drop a React (or Vue/Svelte) component into a Livewire view and treat it as an island. Livewire owns the server state; Mesh hands props across the bridge and mounts the component.
 
-class Counter extends MeshComponent
-{
-    #[Modelable]
-    public int $count = 0;
-
-    public function component(): string
-    {
-        return 'resources/js/mesh/Counter/index.ts';
-    }
-
-    public function props(): array
-    {
-        return ['initialCount' => $this->count];
-    }
-}
-```
-
-```tsx
-// resources/js/mesh/Counter/Counter.tsx
-import { useEntangle } from "@mesh/react";
-
-export default function Counter({ initialCount }: { initialCount: number }) {
-    const [count, setCount] = useEntangle<number>("count");
-    return <button onClick={() => setCount(count + 1)}>{count}</button>;
-}
-```
-
-```ts
-// resources/js/mesh/Counter/index.ts
-import { registerComponent } from "@mesh";
-import Counter from "./Counter";
-
-registerComponent("react", "resources/js/mesh/Counter/index.ts", Counter);
-export default Counter;
-```
-
-```blade
-<mesh:counter wire:model="count" />
-```
-
-Mesh components live in `app/Mesh` (namespace `App\Mesh`) and are referenced with the
-`<mesh:…>` tag, keeping them clearly distinct from plain Livewire components. Generate one with
-`php artisan make:mesh Counter`. The generated frontend files live in
-`resources/js/mesh/Counter` — colocated with the rest of your JavaScript under
-`resources/js`. Change that base directory with `mesh.component_path`, configure the default
-scaffold renderer with `mesh.make.renderer`, or pass `--renderer=react`. (Existing `app/Livewire` components and `<livewire:…>`
-tags keep working unchanged — the `<mesh:…>` convention is additive and opt-in.)
-
-## Documentation
-
-Full documentation lives in [`docs/`](docs) as Markdown, served by the Fumadocs site in
-[`apps/docs/`](apps/docs) (`cd apps/docs && npm install && npm run dev`).
-
-## Installation
-
-> Requires Livewire 4.
-
-See **[INSTALL.md](INSTALL.md)** for full, copy-pasteable setup steps (it doubles as a guide an
-AI assistant can follow to wire Mesh into a host app). In short:
+## Install
 
 ```bash
 composer require ethanbarlo/mesh
 ```
 
-Then add the `@mesh` Vite alias, initialize Mesh in your `app.ts`, and register your components.
+See [INSTALL.md](INSTALL.md) for the full host-app setup (Vite alias, `app.ts`, Livewire start).
 
-## How it works
+## Quick example
 
-1. A `MeshComponent` renders a small mount point carrying `data-mesh-component` (the build
-   path), `data-mesh-props` (JSON props), and `data-mesh-asset` (the Vite-resolved asset URL).
-2. `initMesh` hooks Livewire's `component.init` and `morph.updated` lifecycle. On init it lazily
-   `import()`s the component's asset (which calls `registerComponent`), then mounts it into the
-   `.mesh-root` element via the matching renderer.
-3. On every Livewire update, changed props are pushed into the mounted component without
-   remounting, so local component state is preserved.
+### 1. The PHP component
 
-## React hooks
+```php
+<?php
 
-All exported from `@mesh/react`:
+namespace App\Mesh;
 
-- `useWire<T>()` — the Livewire `$wire` object (`$set`, `$get`, `$call`, `$watch`, `$dispatch`, …).
-- `useEntangle<T>(key, live = false)` — two-way binding between React state and a Livewire property.
-- `useErrorBag()` — the current validation error bag, updated after each Livewire request.
-- `useLivewireComponent()` — the raw Livewire component instance.
+use EthanBarlo\Mesh\Component;
 
-## Renderers
+class Counter extends Component
+{
+    public function props(): array
+    {
+        return [
+            'start' => 0,
+        ];
+    }
+}
+```
 
-Mesh is renderer-agnostic. `initMesh` takes a list of renderers; the React renderer is the
-default export of `@mesh/react`. Additional renderers (Vue, Svelte, …) can implement the same
-`MeshRenderer` contract and be added to the list.
+### 2. The React component
 
-## Demo
+A component is a folder whose `index.{tsx,jsx}` default-exports it.
 
-A runnable demo lives in [`apps/demo-react/`](apps/demo-react) — a small Laravel app rendering a React counter
-two-way bound to a Livewire property.
+```tsx
+// resources/js/mesh/Counter/index.tsx
+import { useState } from 'react'
+
+export default function Counter({ start }: { start: number }) {
+  const [count, setCount] = useState(start)
+  return <button onClick={() => setCount(count + 1)}>{count}</button>
+}
+```
+
+### 3. Register the whole directory once
+
+There is no per-component registration entry. A single `import.meta.glob` in `app.ts` discovers
+every component and code-splits each into its own async chunk:
+
+```ts
+// resources/js/app.ts
+import { initMesh } from '@mesh/runtime'
+import { reactRenderer } from '@mesh/renderers/react'
+
+initMesh({
+  renderers: { react: reactRenderer },
+  components: import.meta.glob('/resources/js/mesh/**/index.{tsx,jsx}'),
+})
+```
+
+### 4. Render in Blade
+
+```blade
+<livewire:mesh :component="\App\Mesh\Counter::class" />
+```
+
+## Documentation
+
+- [Installation](docs/installation.mdx)
+- [Building components](docs/guides/building-components.mdx)
+- [`Mesh\Component` API](docs/api/mesh-component.mdx)
+- [Renderers (React/Vue/Svelte)](docs/advanced/renderers.mdx)
+- [Troubleshooting](docs/advanced/troubleshooting.mdx)
+
+## Requirements
+
+- PHP 8.2+, Laravel 11+
+- Livewire 4
+- Node with Vite (host app)
 
 ## License
 
-The MIT License (MIT). See [LICENSE.md](LICENSE.md).
+MIT
+
+## Why an alias instead of npm?
+
+The frontend lives in the Composer package so the PHP and JS ship together and can never drift in version. The `@mesh` alias points Vite at `vendor/ethanbarlo/mesh/resources/js`. There is no separate npm install step for the runtime.
+
+## Component ids
+
+A component's **id** is a simple string, derived identically on both sides. The PHP `component()`
+method derives it from the class name relative to `App\Mesh` (`App\Mesh\Counter` → `Counter`,
+`App\Mesh\Forms\Input` → `Forms/Input`), and the JS registry derives the same id from the folder
+path under the fixed `resources/js/mesh` directory. Because `make:mesh` StudlyCases both the class
+segments and the folder names, the two always agree. See [building components](docs/guides/building-components.mdx) for details.

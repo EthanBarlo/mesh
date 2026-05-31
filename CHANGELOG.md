@@ -8,5 +8,7 @@ Initial release of Mesh, a fresh rebuild of LivewireMesh.
 
 - Render React components as the frontend of a Livewire component by extending `MeshComponent`.
 - Pluggable renderer architecture (React adapter included; Vue/Svelte/etc. can be added).
-- Lazy-loaded frontend assets via `data-mesh-asset` dynamic imports.
+- Auto-discovered components: a single `import.meta.glob` registry in `app.ts` lazy-loads each
+  component as its own code-split chunk on first render, identified by a simple id derived
+  identically in PHP (`MeshComponent::component()`) and JS.
 - React hooks: `useWire`, `useEntangle`, `useErrorBag`, and `useLivewireComponent`.

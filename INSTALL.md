@@ -1,213 +1,102 @@
 # Installing Mesh
 
-This guide is written as explicit, ordered steps. A human or an AI assistant can follow it
-top-to-bottom to add Mesh to an existing Laravel + Livewire application. Each step says exactly
-what to change and why.
+> React + Livewire 4 islands. This guide gets a host Laravel app rendering a Mesh component.
 
-> Assumptions: a working Laravel app with Livewire 4.0+ installed, Vite (the standard Laravel
-> setup), and Node available. If Livewire isn't installed yet, run `composer require "livewire/livewire:^4.0"`
-> first and confirm a Livewire component renders before continuing.
-
----
-
-## Step 1 — Install the PHP package
+## 1. Require the package
 
 ```bash
 composer require ethanbarlo/mesh
 ```
 
-The service provider (`EthanBarlo\Mesh\MeshServiceProvider`) is auto-discovered. If you want to
-change the default scaffold renderer used by `make:mesh`, or where component files are generated,
-publish the optional config:
+## 2. Install the frontend runtime
 
-```bash
-php artisan vendor:publish --tag=mesh-config
-```
+The frontend ships **inside the Composer package**. Host apps consume it through a Vite **alias**, not npm.
 
-`mesh.component_path` (default `resources/js/mesh`) sets the base directory for generated
-components. It also forms the build-path string returned by each component's `component()` method,
-so if you change it, use the same path in your Vite `input` entries (and any `tsconfig` includes).
+Add the alias to `vite.config.ts`:
 
-## Step 2 — Install React in the host app
-
-```bash
-npm install react react-dom
-npm install -D @types/react @types/react-dom @vitejs/plugin-react
-```
-
-## Step 3 — Add the React plugin and the `@mesh` alias to Vite
-
-Edit `vite.config.js` (or `.ts`). Add `@vitejs/plugin-react` and an alias pointing `@mesh` at
-the package's shipped TypeScript source in `vendor/`:
-
-```js
-import { defineConfig } from 'vite';
-import laravel from 'laravel-vite-plugin';
-import react from '@vitejs/plugin-react';
-import path from 'path';
+```ts
+import { defineConfig } from 'vite'
+import laravel from 'laravel-vite-plugin'
+import react from '@vitejs/plugin-react'
 
 export default defineConfig({
-    plugins: [
-        laravel({
-            input: [
-                'resources/css/app.css',
-                'resources/js/app.ts',
-                // Every Mesh component entry must also be listed here (see Step 6).
-                'resources/js/mesh/Counter/index.ts',
-            ],
-            refresh: true,
-        }),
-        react(),
-    ],
-    resolve: {
-        alias: {
-            '@mesh': path.resolve(__dirname, 'vendor/ethanbarlo/mesh/resources/js'),
-        },
+  plugins: [
+    laravel({
+      input: [
+        'resources/css/app.css',
+        'resources/js/app.ts',
+      ],
+    }),
+    react(),
+  ],
+  resolve: {
+    alias: {
+      '@mesh': '/vendor/ethanbarlo/mesh/resources/js',
     },
-});
+  },
+})
 ```
 
-If you use TypeScript path checking, mirror the alias in `tsconfig.json`:
+Mesh components are **not** individual Vite inputs. They are discovered automatically by a single
+`import.meta.glob` in `app.ts` (next step) and code-split into their own async chunks.
 
-```jsonc
-{
-  "compilerOptions": {
-    "jsx": "react-jsx",
-    "paths": {
-      "@mesh": ["vendor/ethanbarlo/mesh/resources/js/index.ts"],
-      "@mesh/*": ["vendor/ethanbarlo/mesh/resources/js/*"]
-    }
-  }
-}
-```
+## 3. Wire up `app.ts`
 
-## Step 4 — Initialize Mesh in your JS entrypoint
-
-Mesh hooks into Livewire's lifecycle, so it must run **before** `Livewire.start()`. That means
-you bundle Livewire yourself rather than letting `@livewireScripts` inject it.
-
-Edit `resources/js/app.ts`:
+Register your renderers and hand Mesh the glob of every component. One line wires up the whole
+`resources/js/mesh` directory — there is no per-component registration.
 
 ```ts
-import { Livewire, Alpine } from '../../vendor/livewire/livewire/dist/livewire.esm';
-import { initMesh } from '@mesh';
-import reactRenderer from '@mesh/react';
+import { initMesh } from '@mesh/runtime'
+import { reactRenderer } from '@mesh/renderers/react'
 
-initMesh(Livewire, {
-    renderers: [reactRenderer],
-    debug: true, // logs "Mesh | ..." during development; remove in production
-});
+initMesh({
+  renderers: {
+    react: reactRenderer,
+  },
+  // Lazy registry: every component folder's entry, code-split on first render.
+  components: import.meta.glob('/resources/js/mesh/**/index.{tsx,jsx}'),
+})
 
-Livewire.start();
+// Livewire 4 requires explicit start
+import { Livewire } from '../../vendor/livewire/livewire/dist/livewire.esm'
+@livewireScriptConfig
+Livewire.start()
 ```
 
-## Step 5 — Update your layout
+`import.meta.glob(..., { eager: false })` is the default, so each match becomes a lazy
+`() => import(...)` chunk. Mesh fetches the chunk for a component the first time it renders.
 
-In your Blade layout (`<head>`/`<body>`), use `@vite` to load your bundle and
-`@livewireScriptConfig` — **not** `@livewireScripts` (that would load and start Livewire before
-your `app.ts` runs, so Mesh would never register its hooks).
-
-```blade
-<head>
-    @livewireStyles
-    @vite(['resources/css/app.css', 'resources/js/app.ts'])
-</head>
-<body>
-    {{ $slot }}
-    @livewireScriptConfig
-</body>
-```
-
-## Step 6 — Write a React component and register it
-
-Each Mesh component entry **must** call `registerComponent(renderer, path, Component)` where
-`path` is exactly the string the PHP side returns from `component()`, and the entry file **must**
-be listed in the Vite `input` array (Step 3). The `make:mesh` command creates this structure for
-React by default.
-
-```tsx
-import { useEntangle } from '@mesh/react';
-
-export default function Counter({ initialCount }: { initialCount: number }) {
-    const [count, setCount] = useEntangle<number>('count');
-    return (
-        <div>
-            <button onClick={() => setCount(count - 1)}>-</button>
-            <span>{count}</span>
-            <button onClick={() => setCount(count + 1)}>+</button>
-        </div>
-    );
-}
-```
-
-```ts
-import { registerComponent } from '@mesh';
-import Counter from './Counter';
-
-registerComponent('react', 'resources/js/mesh/Counter/index.ts', Counter);
-export default Counter;
-```
-
-## Step 7 — Create the Mesh component
-
-Mesh components live in `app/Mesh` (namespace `App\Mesh`), keeping them distinct from plain
-Livewire components in `app/Livewire`. Scaffold one with `php artisan make:mesh Counter`,
-or create it by hand:
-
-```php
-<?php
-
-namespace App\Mesh;
-
-use EthanBarlo\Mesh\MeshComponent;
-use Livewire\Attributes\Modelable;
-
-class Counter extends MeshComponent
-{
-    #[Modelable] // enables wire:model two-way binding from a parent
-    public int $count = 0;
-
-    public function component(): string
-    {
-        // Must match the path passed to registerComponent() in the entry file.
-        return 'resources/js/mesh/Counter/index.ts';
-    }
-
-    public function props(): array
-    {
-        return ['initialCount' => $this->count];
-    }
-}
-```
-
-## Step 8 — Render it and run
-
-```blade
-<mesh:counter wire:model="count" />
-```
-
-The `<mesh:…>` tag resolves to the matching class in `App\Mesh` (here `App\Mesh\Counter`).
-Existing `<livewire:…>` tags keep working — `<mesh:…>` is additive.
+## 4. Create a component
 
 ```bash
-npm run dev      # or: npm run build
-php artisan serve
+php artisan make:mesh Counter
 ```
 
-Open the page: the React component should mount inside the Livewire component, and
-`useEntangle('count')` keeps React state and the `count` Livewire property in sync both ways.
+This scaffolds:
 
----
+- `app/Mesh/Counter.php` — the PHP component class
+- `resources/js/mesh/Counter/index.tsx` — your React component (its **default export** is the component)
 
-## Common pitfalls checklist
+The component directory is fixed at `resources/js/mesh`. A component is a folder whose
+`index.{tsx,jsx}` default-exports it. Nested components live in nested folders, e.g.
+`resources/js/mesh/Forms/Input/index.tsx`.
 
-- **Used `@livewireScripts`** instead of `@livewireScriptConfig` → Livewire starts before Mesh
-  hooks are registered; nothing mounts. Use `@livewireScriptConfig` and `Livewire.start()` in JS.
-- **Component entry not in Vite `input`** → its asset is never built/registered; the console shows
-  `component "<path>" ... did not register`.
-- **Forgot `registerComponent(...)`** in the entry file → same "did not register" error.
-- **Path mismatch** → the string in `component()` (PHP) must be byte-for-byte identical to the
-  first-after-renderer argument of `registerComponent()`.
-- **`@mesh` alias missing/wrong** → Vite can't resolve `@mesh` / `@mesh/react` imports.
-- **Missing `@vitejs/plugin-react`** → `.tsx` files fail to compile.
-- **Props not JSON-serializable** → `props()` must return values that survive `json_encode`.
+## 5. Render it in Blade
+
+```blade
+<livewire:mesh :component="\App\Mesh\Counter::class" />
+```
+
+## 6. Where to go next
+
+- The component **id** is what links the two sides — a simple string like `Counter` (or `Forms/Input`),
+  derived identically from the PHP class name and the folder path. `make:mesh` keeps them in sync.
+- Read the [building components guide](docs/guides/building-components.mdx).
+- See [renderers](docs/advanced/renderers.mdx) to add Vue or Svelte.
+- See [troubleshooting](docs/advanced/troubleshooting.mdx) if a component doesn't mount.
+
+## Notes
+
+- Livewire 4 is required (the `<livewire:mesh>` tag and `@livewireScriptConfig`).
+- The folder name must match the StudlyCase PHP class name exactly. Case matters on Linux even
+  though macOS may hide a mismatch.

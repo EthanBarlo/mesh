@@ -5,6 +5,7 @@ import reactRenderer from '@mesh/react';
 // Initialize Mesh with the React renderer
 initMesh(Livewire, {
     renderers: [reactRenderer],
+    components: import.meta.glob('/resources/js/mesh/**/index.{tsx,jsx}'),
     debug: true,
 });
 

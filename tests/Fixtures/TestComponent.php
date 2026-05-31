@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace EthanBarlo\Mesh\Tests\Fixtures;
 
 use EthanBarlo\Mesh\MeshComponent;
@@ -10,7 +12,7 @@ class TestComponent extends MeshComponent
 
     public function component(): string
     {
-        return 'resources/js/components/Greeter.tsx';
+        return 'Greeter';
     }
 
     public function props(): array

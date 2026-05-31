@@ -1,99 +1,92 @@
 ---
-title: MeshComponent (PHP)
-description: The base Livewire class that renders a frontend component.
+title: Mesh\Component
+description: The base class every Mesh PHP component extends.
 ---
 
-`MeshComponent` is the PHP base class for a Mesh feature. It extends `Livewire\Component`, so
-everything you know about Livewire components — public properties, actions, `wire:model`,
-validation, events — applies. It adds two abstract methods that say **which** frontend component to
-render and **what** props to give it.
+# `Mesh\Component`
+
+Every Mesh component is a PHP class extending `EthanBarlo\Mesh\Component`. It declares the props passed to the frontend and the **id** that links to the JS component.
+
+## Minimal component
 
 ```php
-namespace EthanBarlo\Mesh;
+<?php
 
-abstract class MeshComponent extends \Livewire\Component
+namespace App\Mesh;
+
+use EthanBarlo\Mesh\Component;
+
+class Counter extends Component
 {
-    abstract public function component(): string;
-
-    /** @return array<string, mixed> */
-    abstract public function props(): array;
-
-    public function render(): \Illuminate\Contracts\View\View; // renders the mesh::component view
+    public function props(): array
+    {
+        return [
+            'start' => 0,
+        ];
+    }
 }
 ```
-
-You never write `render()` yourself — `MeshComponent` provides it, returning the built-in
-`mesh::component` view that emits the mount point Mesh looks for.
-
-## `component(): string`
-
-Returns the **build path** of the frontend component to render. This string must match, byte for
-byte, the second argument of `registerComponent` in the frontend entry file.
-
-```php
-public function component(): string
-{
-    return 'resources/js/mesh/Counter/index.ts';
-}
-```
-
-See [Building Components](/docs/guides/building-components) for the full build-path contract.
 
 ## `props(): array`
 
-Returns the props passed to the frontend component. The array **must be JSON-serializable** — the
-values are `json_encode`d into the `data-mesh-props` attribute and parsed on the client.
+Returns the associative array of props handed to the frontend component. Values must be JSON-serializable. Called once per render.
 
 ```php
 public function props(): array
 {
     return [
-        'initialCount' => $this->count,
-        'label'        => 'Clicks',
+        'start' => $this->start,
+        'label' => 'Clicks',
     ];
 }
 ```
 
-<Callout type="warn">
-  Props must survive `json_encode`: no closures, resources, or non-serializable objects. Eloquent
-  models and collections serialize to arrays — pass exactly the shape your component expects.
-</Callout>
+## `component(): string`
 
-When a request changes the value `props()` returns, Mesh pushes the new props into the mounted
-component without remounting, preserving local React state.
-
-## Two-way binding with `#[Modelable]`
-
-To let a parent bind a property with `wire:model`, mark it `#[Modelable]`:
+Returns the component **id** — a simple string like `Counter` or `Forms/Input`. By default it is
+auto-derived from the class name, so you rarely write it yourself.
 
 ```php
-use Livewire\Attributes\Modelable;
-
-class Counter extends MeshComponent
+// Default for App\Mesh\Counter — you don't need to write this.
+public function component(): string
 {
-    #[Modelable]
-    public int $count = 0;
-
-    public function component(): string
-    {
-        return 'resources/js/mesh/Counter/index.ts';
-    }
-
-    public function props(): array
-    {
-        return ['initialCount' => $this->count];
-    }
+    return 'Counter';
 }
 ```
 
-```blade
-<mesh:counter wire:model="count" />
-```
+## How the id is derived
 
-On the client, `useEntangle('count')` binds React state to that same property — giving you a value
-that flows seamlessly from the React UI, through the Livewire component, up to the parent.
+The default `component()` derives the id from the class name relative to the `App\Mesh` namespace:
+it strips the `App\Mesh\` prefix and replaces the remaining backslashes with forward slashes.
 
-## Installation note
+- `App\Mesh\Counter` → `Counter`
+- `App\Mesh\Forms\Input` → `Forms/Input`
 
-The service provider (`EthanBarlo\Mesh\MeshServiceProvider`) is auto-discovered by Laravel; there
-is no config to publish. See [Installation](/docs/installation).
+The JS side derives the identical id from the component's folder under the fixed `resources/js/mesh`
+directory (`/resources/js/mesh/Forms/Input/index.tsx` → `Forms/Input`). Because `make:mesh`
+StudlyCases both the class segments and the folder names, the two sides always agree.
+
+You can override `component()` to return any id, but it must match an entry discovered by the
+`import.meta.glob` in `app.ts`.
+
+## Nested components
+
+For `App\Mesh\Forms\Input`, the derived id is `Forms/Input`. The JS entry lives at
+`resources/js/mesh/Forms/Input/index.tsx` and resolves to the same id automatically.
+
+## How rendering works
+
+1. Livewire renders `<livewire:mesh :component="...">`.
+2. Mesh calls `component()` to get the id and `props()` to get the data.
+3. The id is emitted to the runtime, which looks it up in the lazy component registry built from
+   `import.meta.glob('/resources/js/mesh/**/index.{tsx,jsx}')`.
+4. The runtime imports that component's code-split chunk on first render, then mounts it with the
+   props using the renderer inferred from the entry's file extension.
+
+## Case sensitivity
+
+Component ids are case-sensitive. `App\Mesh\Counter` maps to the `Counter/` folder, not `counter/`. On case-insensitive filesystems (macOS) a mismatch can hide until it surfaces on Linux. Always keep the folder name byte-identical to the StudlyCase class name.
+
+## Props lifecycle
+
+Props are computed server-side in `props()` and serialized into the mount payload. They are not reactive after mount unless you re-render the Livewire component (which re-runs `props()` and re-mounts/updates the island).

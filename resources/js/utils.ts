@@ -4,10 +4,6 @@ export function getComponentName(el: HTMLElement) {
     return el.dataset.meshComponent;
 }
 
-export function getComponentAsset(el: HTMLElement) {
-    return el.dataset.meshAsset;
-}
-
 export function debugLog(...args: any[]) {
     if (window.Mesh?.config.debug) {
         console.log("Mesh | ", ...args);
@@ -24,14 +20,6 @@ export function getProps(el: HTMLElement) {
         }
     }
     return props;
-}
-
-export function getComponent(name: string) {
-    const component = window.Mesh?.components[name];
-    if (!component) {
-        throw new Error(`Mesh component "${name}" not found`);
-    }
-    return component;
 }
 
 export function setRenderedComponent(

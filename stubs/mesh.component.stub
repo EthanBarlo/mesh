@@ -1,16 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace {{ namespace }};
 
 use EthanBarlo\Mesh\MeshComponent;
 
 class {{ class }} extends MeshComponent
 {
-    public function component(): string
-    {
-        return '{{ component }}';
-    }
-
     public function props(): array
     {
         return [];
