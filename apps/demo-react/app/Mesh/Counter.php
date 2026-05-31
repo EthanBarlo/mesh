@@ -12,7 +12,7 @@ class Counter extends MeshComponent
 
     public function component(): string
     {
-        return 'resources/mesh/Counter/index.ts';
+        return 'resources/js/mesh/Counter/index.ts';
     }
 
     public function props(): array

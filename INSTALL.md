@@ -17,11 +17,16 @@ composer require ethanbarlo/mesh
 ```
 
 The service provider (`EthanBarlo\Mesh\MeshServiceProvider`) is auto-discovered. If you want to
-change the default scaffold renderer used by `make:mesh`, publish the optional config:
+change the default scaffold renderer used by `make:mesh`, or where component files are generated,
+publish the optional config:
 
 ```bash
 php artisan vendor:publish --tag=mesh-config
 ```
+
+`mesh.component_path` (default `resources/js/mesh`) sets the base directory for generated
+components. It also forms the build-path string returned by each component's `component()` method,
+so if you change it, use the same path in your Vite `input` entries (and any `tsconfig` includes).
 
 ## Step 2 — Install React in the host app
 
@@ -48,7 +53,7 @@ export default defineConfig({
                 'resources/css/app.css',
                 'resources/js/app.ts',
                 // Every Mesh component entry must also be listed here (see Step 6).
-                'resources/mesh/ReactCounter/index.ts',
+                'resources/js/mesh/ReactCounter/index.ts',
             ],
             refresh: true,
         }),
@@ -139,7 +144,7 @@ export default function ReactCounter({ initialCount }: { initialCount: number })
 import { registerComponent } from '@mesh';
 import ReactCounter from './ReactCounter';
 
-registerComponent('react', 'resources/mesh/ReactCounter/index.ts', ReactCounter);
+registerComponent('react', 'resources/js/mesh/ReactCounter/index.ts', ReactCounter);
 export default ReactCounter;
 ```
 
@@ -165,7 +170,7 @@ class ReactCounter extends MeshComponent
     public function component(): string
     {
         // Must match the path passed to registerComponent() in the entry file.
-        return 'resources/mesh/ReactCounter/index.ts';
+        return 'resources/js/mesh/ReactCounter/index.ts';
     }
 
     public function props(): array

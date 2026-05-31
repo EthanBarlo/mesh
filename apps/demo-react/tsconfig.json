@@ -21,8 +21,6 @@
     "include": [
         "resources/js/**/*.ts",
         "resources/js/**/*.tsx",
-        "resources/mesh/**/*.ts",
-        "resources/mesh/**/*.tsx",
         "vendor/ethanbarlo/mesh/resources/js/**/*.ts",
         "vendor/ethanbarlo/mesh/resources/js/**/*.tsx"
     ],

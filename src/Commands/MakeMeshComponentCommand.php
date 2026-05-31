@@ -23,7 +23,8 @@ class MakeMeshComponentCommand extends Command
 
         $class = class_basename(str_replace('/', '\\', $relative));
         $renderer = $this->renderer();
-        $component = 'resources/mesh/'.$relative.'/index.ts';
+        $base = trim((string) config('mesh.component_path', 'resources/js/mesh'), '/');
+        $component = $base.'/'.$relative.'/index.ts';
 
         $namespace = 'App\\Mesh';
         if (str_contains($relative, '/')) {
@@ -31,7 +32,7 @@ class MakeMeshComponentCommand extends Command
         }
 
         $path = app_path('Mesh/'.$relative.'.php');
-        $frontendDirectory = resource_path('mesh/'.$relative);
+        $frontendDirectory = base_path($base.'/'.$relative);
         $frontendFiles = $this->frontendFiles($files, $renderer, $frontendDirectory, $class);
 
         if ($frontendFiles === []) {

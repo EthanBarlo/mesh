@@ -28,7 +28,7 @@ class ReactCounter extends MeshComponent
 
     public function component(): string
     {
-        return 'resources/mesh/ReactCounter/index.ts';
+        return 'resources/js/mesh/ReactCounter/index.ts';
     }
 
     public function props(): array
@@ -38,7 +38,7 @@ class ReactCounter extends MeshComponent
 }
 ```
 
-```tsx title="resources/mesh/ReactCounter/ReactCounter.tsx"
+```tsx title="resources/js/mesh/ReactCounter/ReactCounter.tsx"
 import { useEntangle } from "@mesh/react";
 
 export default function ReactCounter({ initialCount }: { initialCount: number }) {
@@ -47,11 +47,11 @@ export default function ReactCounter({ initialCount }: { initialCount: number })
 }
 ```
 
-```ts title="resources/mesh/ReactCounter/index.ts"
+```ts title="resources/js/mesh/ReactCounter/index.ts"
 import { registerComponent } from "@mesh";
 import ReactCounter from "./ReactCounter";
 
-registerComponent("react", "resources/mesh/ReactCounter/index.ts", ReactCounter);
+registerComponent("react", "resources/js/mesh/ReactCounter/index.ts", ReactCounter);
 export default ReactCounter;
 ```
 
