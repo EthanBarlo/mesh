@@ -73,7 +73,7 @@ Livewire.start()
 ### 4. Render in Blade
 
 ```blade
-<livewire:mesh :component="\App\Mesh\Counter::class" />
+<mesh:counter />
 ```
 
 ## Documentation

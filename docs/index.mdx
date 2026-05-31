@@ -12,7 +12,7 @@ Mesh renders React (and Vue/Svelte) components as islands inside Livewire 4 view
 - **PHP component** (`App\Mesh\*`) declares props and a component **id**.
 - **JS component** is a folder under `resources/js/mesh` whose `index.{tsx,jsx}` default-exports it.
 - **app.ts** registers the renderers; Mesh auto-discovers every component from `resources/js/mesh`.
-- **Blade** renders `<livewire:mesh :component="...">`.
+- **Blade** renders `<mesh:counter />`.
 - **Runtime** (`@mesh`) maps the id to a lazy chunk and mounts it.
 
 ## Quick links
@@ -52,7 +52,7 @@ initMesh(Livewire, {
 ```
 
 ```blade
-<livewire:mesh :component="\App\Mesh\Counter::class" />
+<mesh:counter />
 ```
 
 ## Key ideas

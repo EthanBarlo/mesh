@@ -12,6 +12,13 @@ composer require ethanbarlo/mesh
 
 The frontend ships **inside the Composer package**. Host apps consume it through a Vite **alias**, not npm.
 
+Using the React renderer? React is an optional peer dependency — install it (and Vite's React plugin) in your host app:
+
+```bash
+npm install react react-dom
+npm install -D @vitejs/plugin-react
+```
+
 Add the alias to `vite.config.ts`:
 
 ```ts
@@ -50,7 +57,6 @@ import { Livewire, Alpine } from '../../vendor/livewire/livewire/dist/livewire.e
 import { initMesh } from '@mesh'
 import reactRenderer from '@mesh/react'
 
-@livewireScriptConfig
 initMesh(Livewire, {
   renderers: [reactRenderer],
   debug: true,
@@ -62,6 +68,10 @@ Livewire.start()
 
 Each discovered component folder's entry becomes a lazy `() => import(...)` chunk. Mesh fetches the
 chunk for a component the first time it renders.
+
+Because you bundle Livewire yourself, your **Blade layout** must emit `@livewireScriptConfig` — the
+directive that injects the config the bundled Livewire reads on `Livewire.start()`. It's a Blade
+directive, so it lives in the layout, not in `app.ts` (see the next step).
 
 ## 4. Create a component
 
@@ -78,10 +88,29 @@ The component directory is fixed at `resources/js/mesh`. A component is a folder
 `index.{tsx,jsx}` default-exports it. Nested components live in nested folders, e.g.
 `resources/js/mesh/Forms/Input/index.tsx`.
 
-## 5. Render it in Blade
+## 5. Set up your layout and render
+
+Your layout loads the bundle with `@vite` and emits Livewire's runtime config with
+`@livewireScriptConfig`:
 
 ```blade
-<livewire:mesh :component="\App\Mesh\Counter::class" />
+{{-- resources/views/components/layouts/app.blade.php --}}
+<head>
+    @livewireStyles
+    @vite(['resources/css/app.css', 'resources/js/app.ts'])
+</head>
+<body>
+    {{ $slot }}
+
+    @livewireScriptConfig
+</body>
+```
+
+Then render a Mesh component anywhere in a Livewire view with the `<mesh:…>` tag. The tag name
+is the component **id** in kebab-case (`Counter` → `counter`), and props pass through as attributes:
+
+```blade
+<mesh:counter />
 ```
 
 ## 6. Where to go next
@@ -94,6 +123,6 @@ The component directory is fixed at `resources/js/mesh`. A component is a folder
 
 ## Notes
 
-- Livewire 4 is required (the `<livewire:mesh>` tag and `@livewireScriptConfig`).
+- Livewire 4 is required (the `<mesh:…>` tag and `@livewireScriptConfig`).
 - The folder name must match the StudlyCase PHP class name exactly. Case matters on Linux even
   though macOS may hide a mismatch.

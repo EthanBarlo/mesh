@@ -49,7 +49,12 @@ it('creates a nested component', function () {
     expect(File::exists($jsEntry))->toBeTrue();
 });
 
-it('respects the renderer option', function () {
+it('lets --renderer override the configured default', function () {
+    // Point the config default at a renderer with no stub, so this only passes
+    // if --renderer actually overrides it (otherwise the command would fail with
+    // "Unsupported renderer [bogus]").
+    config()->set('mesh.make.renderer', 'bogus');
+
     $this->artisan('make:mesh', ['name' => 'Fancy', '--renderer' => 'react'])
         ->assertExitCode(0);
 

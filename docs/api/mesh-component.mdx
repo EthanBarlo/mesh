@@ -76,7 +76,7 @@ For `App\Mesh\Forms\Input`, the derived id is `Forms/Input`. The JS entry lives 
 
 ## How rendering works
 
-1. Livewire renders `<livewire:mesh :component="...">`.
+1. Blade renders `<mesh:counter />`, which compiles to a namespaced Livewire mount.
 2. Mesh calls `component()` to get the id and `props()` to get the data.
 3. The id is emitted to the runtime, which looks it up in the lazy component registry Mesh builds by
    auto-discovering every entry under `resources/js/mesh`.
