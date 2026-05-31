@@ -91,8 +91,6 @@ it('fails for unsupported renderer scaffolds without writing files', function ()
 it('does not overwrite existing generated files', function () {
     $this->artisan('make:mesh', ['name' => 'Counter'])->assertSuccessful();
     $this->artisan('make:mesh', ['name' => 'Counter'])->assertFailed();
-
-    $this->artisan('make:mesh', ['name' => 'Counter', '--force' => true])->assertFailed();
 });
 
 it('fails when a frontend target already exists', function () {

@@ -9,7 +9,6 @@ use Illuminate\Support\Str;
 class MakeMeshComponentCommand extends Command
 {
     protected $signature = 'make:mesh {name : The component name, e.g. Counter or Forms/Input}
-                                      {--force : Reserved for compatibility; generated files are not overwritten}
                                       {--renderer= : The frontend renderer scaffold to generate}';
 
     protected $description = 'Create a new Mesh component class';
