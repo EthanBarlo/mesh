@@ -11,7 +11,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // Behind a TLS-terminating reverse proxy (e.g. Coolify/Traefik), trust the
+        // forwarded headers so Laravel sees the original https scheme/host and
+        // generates https asset URLs instead of insecure http ones.
+        $middleware->trustProxies(at: '*');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
