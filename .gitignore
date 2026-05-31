@@ -1,15 +1,12 @@
 # Composer
-composer.lock
-# but the demo app's lockfile must be committed for reproducible container builds
-!/apps/demo-react/composer.lock
+# Root library lockfiles are not committed (package convention); the leading
+# slash anchors these to the root so the apps/* applications still commit theirs.
+/composer.lock
 /vendor
 
 # Node
 /node_modules
-package-lock.json
-# but the app lockfiles must be committed for reproducible container builds
-!/apps/docs/package-lock.json
-!/apps/demo-react/package-lock.json
+/package-lock.json
 npm-debug.log
 yarn-error.log
 
