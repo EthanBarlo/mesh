@@ -37,34 +37,31 @@ export default defineConfig({
 })
 ```
 
-Mesh components are **not** individual Vite inputs. They are discovered automatically by a single
-`import.meta.glob` in `app.ts` (next step) and code-split into their own async chunks.
+Mesh components are **not** individual Vite inputs. Mesh auto-discovers them from
+`resources/js/mesh` and code-splits each into its own async chunk.
 
 ## 3. Wire up `app.ts`
 
-Register your renderers and hand Mesh the glob of every component. One line wires up the whole
-`resources/js/mesh` directory — there is no per-component registration.
+Register your renderers — that's it. Mesh auto-discovers every component under `resources/js/mesh`,
+so there is no per-component registration and nothing to declare for components.
 
 ```ts
-import { initMesh } from '@mesh/runtime'
-import { reactRenderer } from '@mesh/renderers/react'
+import { Livewire, Alpine } from '../../vendor/livewire/livewire/dist/livewire.esm'
+import { initMesh } from '@mesh'
+import reactRenderer from '@mesh/react'
 
-initMesh({
-  renderers: {
-    react: reactRenderer,
-  },
-  // Lazy registry: every component folder's entry, code-split on first render.
-  components: import.meta.glob('/resources/js/mesh/**/index.{tsx,jsx}'),
+@livewireScriptConfig
+initMesh(Livewire, {
+  renderers: [reactRenderer],
+  debug: true,
 })
 
 // Livewire 4 requires explicit start
-import { Livewire } from '../../vendor/livewire/livewire/dist/livewire.esm'
-@livewireScriptConfig
 Livewire.start()
 ```
 
-`import.meta.glob(..., { eager: false })` is the default, so each match becomes a lazy
-`() => import(...)` chunk. Mesh fetches the chunk for a component the first time it renders.
+Each discovered component folder's entry becomes a lazy `() => import(...)` chunk. Mesh fetches the
+chunk for a component the first time it renders.
 
 ## 4. Create a component
 

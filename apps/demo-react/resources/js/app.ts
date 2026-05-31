@@ -2,10 +2,9 @@ import { Livewire, Alpine } from '../../vendor/livewire/livewire/dist/livewire.e
 import { initMesh } from '@mesh';
 import reactRenderer from '@mesh/react';
 
-// Initialize Mesh with the React renderer
+// Mesh auto-discovers components from resources/js/mesh — no registration needed.
 initMesh(Livewire, {
     renderers: [reactRenderer],
-    components: import.meta.glob('/resources/js/mesh/**/index.{tsx,jsx}'),
     debug: true,
 });
 

@@ -9,6 +9,14 @@ import {
     setRenderedComponent,
 } from "./utils";
 
+// Auto-discover every Mesh component. Each `resources/js/mesh/<Name>/index.{ext}`
+// becomes its own lazy, code-split chunk, keyed by its derived id. The pattern is a
+// root-absolute literal so Vite resolves it against the host app root even though
+// this module is loaded through the `@mesh` alias into the package's vendored source.
+const componentModules = import.meta.glob<{ default: unknown }>(
+    "/resources/js/mesh/**/index.{tsx,jsx,vue,svelte}"
+);
+
 // Resolve (and cache) the default export of a registered component. Each
 // component is its own lazy, code-split chunk that is imported on first render.
 function loadComponent(id: string): Promise<any> {
@@ -52,12 +60,12 @@ function loadComponent(id: string): Promise<any> {
 }
 
 export default async function initMesh(Livewire: any, config: Config) {
-    const { renderers, components, debug } = config;
+    const { renderers, debug } = config;
 
     // Initialize the Mesh global object synchronously (before any await) so the
     // registry is available the moment Livewire begins initializing components.
     window.Mesh = {
-        registry: buildRegistry(components ?? {}),
+        registry: buildRegistry(componentModules),
         resolved: {},
         renderedComponents: {},
         config: {
@@ -70,8 +78,8 @@ export default async function initMesh(Livewire: any, config: Config) {
 
     if (Object.keys(window.Mesh.registry).length === 0) {
         console.warn(
-            "Mesh: no components were provided. Did you pass the result of " +
-                "import.meta.glob to initMesh?"
+            "Mesh: no components found under resources/js/mesh. " +
+                "Create one with `php artisan make:mesh <Name>`."
         );
     }
 

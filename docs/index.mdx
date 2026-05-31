@@ -11,7 +11,7 @@ Mesh renders React (and Vue/Svelte) components as islands inside Livewire 4 view
 
 - **PHP component** (`App\Mesh\*`) declares props and a component **id**.
 - **JS component** is a folder under `resources/js/mesh` whose `index.{tsx,jsx}` default-exports it.
-- **app.ts** registers every component with one `import.meta.glob`, plus the renderers.
+- **app.ts** registers the renderers; Mesh auto-discovers every component from `resources/js/mesh`.
 - **Blade** renders `<livewire:mesh :component="...">`.
 - **Runtime** (`@mesh`) maps the id to a lazy chunk and mounts it.
 
@@ -44,10 +44,10 @@ export default function Counter({ start }: { start: number }) {
 ```
 
 ```ts
-// resources/js/app.ts — one line registers every component
-initMesh({
-  renderers: { react: reactRenderer },
-  components: import.meta.glob('/resources/js/mesh/**/index.{tsx,jsx}'),
+// resources/js/app.ts — register renderers; components are auto-discovered
+initMesh(Livewire, {
+  renderers: [reactRenderer],
+  debug: true,
 })
 ```
 
@@ -62,7 +62,7 @@ initMesh({
   (`App\Mesh\Forms\Input` → `Forms/Input`); JS derives the same id from the folder path under
   `resources/js/mesh`.
 - **Renderer from the file extension.** `tsx`/`jsx` → React, `vue` → Vue, `svelte` → Svelte.
-- **Lazy registry.** One `import.meta.glob` code-splits each component into its own chunk.
+- **Zero-config discovery.** Mesh finds every component under `resources/js/mesh` and code-splits each into its own chunk.
 - **Livewire 4.** Requires `@livewireScriptConfig` and `Livewire.start()`.
 
 ## Component model at a glance

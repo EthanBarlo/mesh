@@ -50,20 +50,24 @@ export default function Counter({ start }: { start: number }) {
 }
 ```
 
-### 3. Register the whole directory once
+### 3. Wire up `app.ts`
 
-There is no per-component registration entry. A single `import.meta.glob` in `app.ts` discovers
-every component and code-splits each into its own async chunk:
+There is no per-component registration and nothing to declare for components. Mesh auto-discovers
+every component under `resources/js/mesh` and code-splits each into its own async chunk, loaded on
+first render. You only register your renderers:
 
 ```ts
 // resources/js/app.ts
-import { initMesh } from '@mesh/runtime'
-import { reactRenderer } from '@mesh/renderers/react'
+import { Livewire, Alpine } from '../../vendor/livewire/livewire/dist/livewire.esm'
+import { initMesh } from '@mesh'
+import reactRenderer from '@mesh/react'
 
-initMesh({
-  renderers: { react: reactRenderer },
-  components: import.meta.glob('/resources/js/mesh/**/index.{tsx,jsx}'),
+initMesh(Livewire, {
+  renderers: [reactRenderer],
+  debug: true,
 })
+
+Livewire.start()
 ```
 
 ### 4. Render in Blade

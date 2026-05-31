@@ -21,7 +21,7 @@ composer require ethanbarlo/mesh
 
 ## Step 2 — Vite alias + plugins
 
-Mesh components are discovered by a glob in `app.ts`, so they do **not** need individual Vite input
+Mesh auto-discovers components from `resources/js/mesh`, so they do **not** need individual Vite input
 entries. Your `input` array only lists your real app entrypoints.
 
 ```ts
@@ -50,24 +50,22 @@ export default defineConfig({
 
 ## Step 3 — Configure `app.ts`
 
-Register your renderers and pass Mesh the glob of every component. The glob matches only
-`index.{tsx,jsx}` files under the fixed `resources/js/mesh` directory, so co-located helper files
-are ignored. Each match becomes its own lazy, code-split chunk fetched on first render.
+Register your renderers — that's all. Mesh auto-discovers every component under the fixed
+`resources/js/mesh` directory: only `index.{tsx,jsx}` entries are picked up (co-located helper files
+are ignored), and each becomes its own lazy, code-split chunk fetched on first render.
 
 ```ts
 // resources/js/app.ts
-import { initMesh } from '@mesh/runtime'
-import { reactRenderer } from '@mesh/renderers/react'
+import { Livewire, Alpine } from '../../vendor/livewire/livewire/dist/livewire.esm'
+import { initMesh } from '@mesh'
+import reactRenderer from '@mesh/react'
 
-initMesh({
-  renderers: {
-    react: reactRenderer,
-  },
-  components: import.meta.glob('/resources/js/mesh/**/index.{tsx,jsx}'),
+@livewireScriptConfig
+initMesh(Livewire, {
+  renderers: [reactRenderer],
+  debug: true,
 })
 
-import { Livewire } from '../../vendor/livewire/livewire/dist/livewire.esm'
-@livewireScriptConfig
 Livewire.start()
 ```
 
@@ -107,7 +105,7 @@ is the component).
 
 ## How the alias works
 
-The `@mesh` alias points Vite at the package's `resources/js` directory inside `vendor/`. When you `import { initMesh } from '@mesh/runtime'`, Vite resolves it to `vendor/ethanbarlo/mesh/resources/js/runtime.ts`. This keeps the runtime versioned with the PHP package.
+The `@mesh` alias points Vite at the package's `resources/js` directory inside `vendor/`. When you `import { initMesh } from '@mesh'`, Vite resolves it to the runtime inside `vendor/ethanbarlo/mesh/resources/js`. This keeps the runtime versioned with the PHP package.
 
 ## A simple id, derived identically on both sides
 
@@ -116,8 +114,8 @@ component. It is derived the same way on each side:
 
 - **PHP** strips the `App\Mesh\` prefix from the class name and replaces the remaining backslashes
   with forward slashes (`App\Mesh\Forms\Input` → `Forms/Input`).
-- **JS** takes the glob key, keeps everything after `resources/js/mesh/`, drops the file extension
-  and the trailing `/index` (`/resources/js/mesh/Forms/Input/index.tsx` → `Forms/Input`).
+- **JS** takes the discovered entry's path, keeps everything after `resources/js/mesh/`, drops the
+  file extension and the trailing `/index` (`/resources/js/mesh/Forms/Input/index.tsx` → `Forms/Input`).
 
 Because `make:mesh` StudlyCases both the class segments and the folder names, the ids match. The
 renderer is inferred from the entry's file extension (`tsx`/`jsx` → React). See
@@ -134,4 +132,4 @@ first render, so only the components actually used on a page are loaded.
 
 ## Troubleshooting
 
-See [troubleshooting](advanced/troubleshooting.mdx) for common mount failures (id mismatch, glob not matching, Livewire not started).
+See [troubleshooting](advanced/troubleshooting.mdx) for common mount failures (id mismatch, entry not discovered, Livewire not started).

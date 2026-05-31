@@ -104,7 +104,6 @@ export type Wire = {
 
 export type Config = {
     renderers: MeshRenderer[];
-    components: GlobResult;
     debug?: boolean;
 };
 

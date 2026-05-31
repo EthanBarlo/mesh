@@ -9,17 +9,21 @@ A **renderer** teaches Mesh how to mount a given framework's components. React s
 
 ## Registering renderers
 
+Pass the renderers you need to `initMesh`. Mesh selects one per component from the entry file's
+extension; components themselves are auto-discovered from `resources/js/mesh`.
+
 ```ts
 // resources/js/app.ts
-import { initMesh } from '@mesh/runtime'
-import { reactRenderer } from '@mesh/renderers/react'
+import { Livewire, Alpine } from '../../vendor/livewire/livewire/dist/livewire.esm'
+import { initMesh } from '@mesh'
+import reactRenderer from '@mesh/react'
 
-initMesh({
-  renderers: {
-    react: reactRenderer,
-  },
-  components: import.meta.glob('/resources/js/mesh/**/index.{tsx,jsx}'),
+initMesh(Livewire, {
+  renderers: [reactRenderer],
+  debug: true,
 })
+
+Livewire.start()
 ```
 
 ## The renderer interface
@@ -41,8 +45,8 @@ Components do not declare a renderer. Mesh infers it from the entry file's exten
 - `index.vue` → `vue`
 - `index.svelte` → `svelte`
 
-The inferred key must match a key in the `renderers` object passed to `initMesh`. If a `.vue`
-component is discovered but no `vue` renderer is configured, the mount fails. An unknown extension
+The inferred renderer must be one of the renderers passed to `initMesh`. If a `.vue`
+component is discovered but no Vue renderer is passed, the mount fails. An unknown extension
 throws rather than silently defaulting.
 
 ## Built-in React renderer
@@ -51,18 +55,22 @@ The React renderer uses `createRoot` from `react-dom/client`.
 
 ## Vue and Svelte
 
-To support other frameworks, register their renderers under the matching keys and add their entry
-extensions to the glob so they are discovered:
+To support other frameworks, just pass their renderers. Mesh auto-discovers `.vue` and `.svelte`
+entries the same way it discovers `.tsx`/`.jsx`, so no extra component config is needed:
 
 ```ts
-initMesh({
-  renderers: {
-    react: reactRenderer,
-    vue: vueRenderer,
-    svelte: svelteRenderer,
-  },
-  components: import.meta.glob('/resources/js/mesh/**/index.{tsx,jsx,vue,svelte}'),
+import { Livewire, Alpine } from '../../vendor/livewire/livewire/dist/livewire.esm'
+import { initMesh } from '@mesh'
+import reactRenderer from '@mesh/react'
+import vueRenderer from '@mesh/vue'
+import svelteRenderer from '@mesh/svelte'
+
+initMesh(Livewire, {
+  renderers: [reactRenderer, vueRenderer, svelteRenderer],
+  debug: true,
 })
+
+Livewire.start()
 ```
 
 A component written as `index.vue` is inferred to use the `vue` renderer automatically.
@@ -73,10 +81,10 @@ A component's renderer is determined by its entry file extension. The PHP side i
 
 ## Adding a custom renderer
 
-Implement the `MeshRenderer` interface and register it under a renderer key. Mesh maps a component to
-that key via its file extension, so a custom renderer needs Mesh to recognise the corresponding
+Implement the `MeshRenderer` interface and pass it in the `renderers` array. Mesh maps a component to
+a renderer via its file extension, so a custom renderer needs Mesh to recognise the corresponding
 extension.
 
 ## Wiring renderers into `initMesh`
 
-All renderers are passed in a single `initMesh({ renderers, components })` call at app boot. There is no per-component renderer config file; the renderer comes from the entry extension and the renderer map in `app.ts`.
+All renderers are passed in a single `initMesh(Livewire, { renderers })` call at app boot. There is no per-component renderer config file; the renderer comes from the entry extension and the renderers passed in `app.ts`.

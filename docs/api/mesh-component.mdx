@@ -66,8 +66,8 @@ The JS side derives the identical id from the component's folder under the fixed
 directory (`/resources/js/mesh/Forms/Input/index.tsx` → `Forms/Input`). Because `make:mesh`
 StudlyCases both the class segments and the folder names, the two sides always agree.
 
-You can override `component()` to return any id, but it must match an entry discovered by the
-`import.meta.glob` in `app.ts`.
+You can override `component()` to return any id, but it must match a component Mesh discovers under
+`resources/js/mesh`.
 
 ## Nested components
 
@@ -78,8 +78,8 @@ For `App\Mesh\Forms\Input`, the derived id is `Forms/Input`. The JS entry lives 
 
 1. Livewire renders `<livewire:mesh :component="...">`.
 2. Mesh calls `component()` to get the id and `props()` to get the data.
-3. The id is emitted to the runtime, which looks it up in the lazy component registry built from
-   `import.meta.glob('/resources/js/mesh/**/index.{tsx,jsx}')`.
+3. The id is emitted to the runtime, which looks it up in the lazy component registry Mesh builds by
+   auto-discovering every entry under `resources/js/mesh`.
 4. The runtime imports that component's code-split chunk on first render, then mounts it with the
    props using the renderer inferred from the entry's file extension.
 

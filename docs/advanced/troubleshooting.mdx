@@ -20,18 +20,18 @@ The id derived by PHP must equal the id derived from the JS folder path. Both ar
 If the class name and the folder name disagree (including case), the ids won't match and nothing
 mounts. `make:mesh` keeps both in sync; mismatches usually come from renaming one side by hand.
 
-## Glob doesn't match the component
+## Component isn't discovered
 
-Components are discovered by `import.meta.glob('/resources/js/mesh/**/index.{tsx,jsx}')` in `app.ts`.
-A component is only registered if its entry is named `index.tsx` (or `index.jsx`) and lives under
-`resources/js/mesh`. A file named anything else — or placed outside that directory — is ignored.
-Check the folder layout and that the glob pattern includes your entry's extension.
+Mesh auto-discovers components from `resources/js/mesh`. A component is only discovered if its entry
+is named `index.{tsx,jsx}` (or `index.vue`/`index.svelte`) and lives under `resources/js/mesh`. A
+file named anything else — or placed outside that directory — is ignored. Check the folder layout,
+and that a renderer matching your entry's extension is passed to `initMesh`.
 
 ## Renderer can't be inferred
 
 The renderer comes from the entry file extension (`tsx`/`jsx` → React, `vue` → Vue, `svelte` →
-Svelte). An unknown extension throws. Make sure the renderer key the extension maps to is present in
-`initMesh({ renderers })`.
+Svelte). An unknown extension throws. Make sure the renderer the extension maps to is passed in
+`initMesh(Livewire, { renderers })`.
 
 ## Livewire not started
 
@@ -48,7 +48,7 @@ On macOS the filesystem is case-insensitive, so `Counter` and `counter` resolve 
 
 ## Renderer not registered
 
-If a component's inferred renderer key (e.g. `react`) isn't in `initMesh({ renderers })`, it won't mount. Check that the key is present.
+If a component's inferred renderer (e.g. React) isn't passed in `initMesh(Livewire, { renderers })`, it won't mount. Check that the matching renderer is passed.
 
 ## Props not updating
 
@@ -57,6 +57,6 @@ Props are computed server-side in `props()`. They only change when the Livewire 
 ## Still stuck?
 
 - Double-check the PHP class name and the `resources/js/mesh/...` folder name produce the same id.
-- Confirm the entry is `index.{tsx,jsx}` and matched by the `app.ts` glob.
+- Confirm the entry is `index.{tsx,jsx}` under `resources/js/mesh` so Mesh discovers it.
 - Verify the `@mesh` alias resolves in `vite.config.ts`.
 - Check the browser console for dynamic-import errors when the chunk loads.
