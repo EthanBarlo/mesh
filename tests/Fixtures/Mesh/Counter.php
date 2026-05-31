@@ -6,6 +6,4 @@ namespace App\Mesh;
 
 use EthanBarlo\Mesh\MeshComponent;
 
-class Counter extends MeshComponent
-{
-}
+class Counter extends MeshComponent {}

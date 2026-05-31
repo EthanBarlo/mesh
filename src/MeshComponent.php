@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace EthanBarlo\Mesh;
 
-use LogicException;
 use Livewire\Component;
+use LogicException;
 
 abstract class MeshComponent extends Component
 {
@@ -26,7 +26,7 @@ abstract class MeshComponent extends Component
      */
     public function component(): string
     {
-        $prefix = self::MESH_NAMESPACE . '\\';
+        $prefix = self::MESH_NAMESPACE.'\\';
         $class = static::class;
 
         if (! str_starts_with($class, $prefix)) {

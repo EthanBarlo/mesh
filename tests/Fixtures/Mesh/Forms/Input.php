@@ -6,6 +6,4 @@ namespace App\Mesh\Forms;
 
 use EthanBarlo\Mesh\MeshComponent;
 
-class Input extends MeshComponent
-{
-}
+class Input extends MeshComponent {}

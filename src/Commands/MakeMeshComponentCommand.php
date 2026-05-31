@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace EthanBarlo\Mesh\Commands;
 
 use Illuminate\Console\Command;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 
 class MakeMeshComponentCommand extends Command
 {
@@ -30,19 +30,19 @@ class MakeMeshComponentCommand extends Command
         $relative = implode('/', $segments);
         $className = end($segments);
         $namespaceSuffix = count($segments) > 1
-            ? '\\' . implode('\\', array_slice($segments, 0, -1))
+            ? '\\'.implode('\\', array_slice($segments, 0, -1))
             : '';
 
-        $classNamespace = 'App\\Mesh' . $namespaceSuffix;
+        $classNamespace = 'App\\Mesh'.$namespaceSuffix;
 
         // Resolve renderer
         $renderer = $this->option('renderer') ?: config('mesh.make.renderer', 'react');
 
-        $phpTargetDir = app_path('Mesh' . ($namespaceSuffix ? str_replace('\\', '/', $namespaceSuffix) : ''));
-        $phpTarget = $phpTargetDir . '/' . $className . '.php';
+        $phpTargetDir = app_path('Mesh'.($namespaceSuffix ? str_replace('\\', '/', $namespaceSuffix) : ''));
+        $phpTarget = $phpTargetDir.'/'.$className.'.php';
 
-        $jsTargetDir = base_path(self::COMPONENT_BASE . '/' . $relative);
-        $jsEntry = $jsTargetDir . '/index.tsx';
+        $jsTargetDir = base_path(self::COMPONENT_BASE.'/'.$relative);
+        $jsEntry = $jsTargetDir.'/index.tsx';
 
         if (File::exists($phpTarget) || File::exists($jsTargetDir)) {
             $this->error('Component already exists.');
@@ -51,7 +51,7 @@ class MakeMeshComponentCommand extends Command
         }
 
         // Validate renderer before writing anything.
-        $rendererStubDir = __DIR__ . '/../../stubs/renderers/' . $renderer;
+        $rendererStubDir = __DIR__.'/../../stubs/renderers/'.$renderer;
 
         if (! File::isDirectory($rendererStubDir)) {
             $this->error("Unsupported renderer [{$renderer}].");
@@ -60,7 +60,7 @@ class MakeMeshComponentCommand extends Command
         }
 
         // PHP class
-        $phpStub = File::get(__DIR__ . '/../../stubs/mesh.component.stub');
+        $phpStub = File::get(__DIR__.'/../../stubs/mesh.component.stub');
 
         $phpStub = str_replace(
             ['{{ namespace }}', '{{ class }}'],
@@ -74,13 +74,13 @@ class MakeMeshComponentCommand extends Command
         // Frontend entry
         File::ensureDirectoryExists($jsTargetDir);
 
-        $indexStub = File::get($rendererStubDir . '/index.tsx.stub');
+        $indexStub = File::get($rendererStubDir.'/index.tsx.stub');
         $indexStub = str_replace('{{ class }}', $className, $indexStub);
         File::put($jsEntry, $indexStub);
 
         $this->info('Mesh component created:');
-        $this->line('  PHP:      ' . $phpTarget);
-        $this->line('  Frontend: ' . $jsEntry);
+        $this->line('  PHP:      '.$phpTarget);
+        $this->line('  Frontend: '.$jsEntry);
 
         return self::SUCCESS;
     }
