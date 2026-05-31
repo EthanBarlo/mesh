@@ -5,6 +5,8 @@ composer.lock
 # Node
 /node_modules
 package-lock.json
+# but the docs app's lockfile must be committed for reproducible container builds
+!/apps/docs/package-lock.json
 npm-debug.log
 yarn-error.log
 
