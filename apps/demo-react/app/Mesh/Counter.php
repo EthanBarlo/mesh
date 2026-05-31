@@ -2,10 +2,10 @@
 
 namespace App\Mesh;
 
-use EthanBarlo\Mesh\MeshComponent;
+use EthanBarlo\Mesh\Component;
 use Livewire\Attributes\Modelable;
 
-class Counter extends MeshComponent
+class Counter extends Component
 {
     #[Modelable]
     public int $count = 0;

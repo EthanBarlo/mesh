@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace EthanBarlo\Mesh\Tests\Fixtures;
 
-use EthanBarlo\Mesh\MeshComponent;
+use EthanBarlo\Mesh\Component;
 
-class TestComponent extends MeshComponent
+class TestComponent extends Component
 {
     public string $name = 'world';
 

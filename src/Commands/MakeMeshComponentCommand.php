@@ -59,23 +59,27 @@ class MakeMeshComponentCommand extends Command
             return self::FAILURE;
         }
 
-        // PHP class
-        $phpStub = File::get(__DIR__.'/../../stubs/mesh.component.stub');
-
+        // Read and prepare both stubs before writing anything, so a failure
+        // reading the frontend stub can't leave a half-generated PHP component
+        // behind (which would then block reruns as "already exists").
         $phpStub = str_replace(
             ['{{ namespace }}', '{{ class }}'],
             [$classNamespace, $className],
-            $phpStub
+            File::get(__DIR__.'/../../stubs/mesh.component.stub')
         );
 
+        $indexStub = str_replace(
+            '{{ class }}',
+            $className,
+            File::get($rendererStubDir.'/index.tsx.stub')
+        );
+
+        // PHP class
         File::ensureDirectoryExists($phpTargetDir);
         File::put($phpTarget, $phpStub);
 
         // Frontend entry
         File::ensureDirectoryExists($jsTargetDir);
-
-        $indexStub = File::get($rendererStubDir.'/index.tsx.stub');
-        $indexStub = str_replace('{{ class }}', $className, $indexStub);
         File::put($jsEntry, $indexStub);
 
         $this->info('Mesh component created:');

@@ -94,6 +94,17 @@ export default async function initMesh(Livewire: any, config: Config) {
         }
         debugLog("component.init | " + id, { component });
 
+        // Register teardown before any await: Livewire may remove the component
+        // while the lazy chunk is loading or rendering. If that happens, mark the
+        // work as disposed so we never mount an orphaned root, and tear down any
+        // root that was already created before the dispose was observed.
+        let disposed = false;
+        let renderedComponent: any;
+        cleanup(() => {
+            disposed = true;
+            renderedComponent?.cleanup();
+        });
+
         let resolvedComponent: any;
         try {
             resolvedComponent = await loadComponent(id);
@@ -101,15 +112,21 @@ export default async function initMesh(Livewire: any, config: Config) {
             console.error(e);
             return;
         }
+        if (disposed) {
+            return;
+        }
 
         try {
-            const renderedComponent = await renderComponent(
+            renderedComponent = await renderComponent(
                 component,
                 id,
                 resolvedComponent
             );
+            if (disposed) {
+                renderedComponent.cleanup();
+                return;
+            }
             setRenderedComponent(component.id, renderedComponent);
-            cleanup(() => renderedComponent.cleanup());
         } catch (e) {
             console.error("Mesh: failed to render \"" + id + "\"", e);
         }

@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace EthanBarlo\Mesh;
 
-use Livewire\Component;
+use Livewire\Component as LivewireComponent;
 use LogicException;
 
-abstract class MeshComponent extends Component
+abstract class Component extends LivewireComponent
 {
     /**
      * The namespace under which conventional Mesh components live.

@@ -24,7 +24,7 @@ it('creates a react component by default', function () {
     expect(File::exists($phpFile))->toBeTrue();
 
     $contents = File::get($phpFile);
-    expect($contents)->toContain('class Counter extends MeshComponent');
+    expect($contents)->toContain('class Counter extends Component');
     expect($contents)->not->toContain('function component()');
 
     $jsEntry = $this->appBase.'/resources/js/mesh/Counter/index.tsx';
@@ -43,7 +43,7 @@ it('creates a nested component', function () {
 
     $contents = File::get($phpFile);
     expect($contents)->toContain('namespace App\\Mesh\\Forms;');
-    expect($contents)->toContain('class Input extends MeshComponent');
+    expect($contents)->toContain('class Input extends Component');
 
     $jsEntry = $this->appBase.'/resources/js/mesh/Forms/Input/index.tsx';
     expect(File::exists($jsEntry))->toBeTrue();

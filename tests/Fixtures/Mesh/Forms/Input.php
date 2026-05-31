@@ -4,6 +4,6 @@ declare(strict_types=1);
 
 namespace App\Mesh\Forms;
 
-use EthanBarlo\Mesh\MeshComponent;
+use EthanBarlo\Mesh\Component;
 
-class Input extends MeshComponent {}
+class Input extends Component {}
