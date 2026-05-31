@@ -1,16 +1,25 @@
-# Build context for the docs image is the repo root; keep it lean and avoid
-# clobbering container-installed dependencies / generated output.
+# Build context for the docs and demo images is the repo root; keep it lean and
+# avoid clobbering container-installed dependencies / generated output.
 **/node_modules
+**/vendor
 **/.next
 **/.source
 **/.git
 **/*.log
 
-# PHP package internals — not needed to build the docs site.
-vendor
+# Rebuilt inside the container — never copy host artifacts in.
+**/public/build
+**/*.sqlite
+# Host-generated Laravel package manifest (built with dev deps); regenerated in-image.
+**/bootstrap/cache/*.php
 build
 .phpunit.cache
 coverage
+
+# Secrets / local env — runtime config comes from the host (Coolify) env.
+**/.env
+**/.env.*
+!**/.env.example
 
 .DS_Store
 *.pem
