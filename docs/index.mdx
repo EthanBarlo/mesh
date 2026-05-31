@@ -17,18 +17,18 @@ with Livewire — the view layer is React.
 
 A Mesh feature is three small pieces: a PHP component, a React component, and a Blade tag.
 
-```php title="app/Mesh/ReactCounter.php"
+```php title="app/Mesh/Counter.php"
 use EthanBarlo\Mesh\MeshComponent;
 use Livewire\Attributes\Modelable;
 
-class ReactCounter extends MeshComponent
+class Counter extends MeshComponent
 {
     #[Modelable]
     public int $count = 0;
 
     public function component(): string
     {
-        return 'resources/js/mesh/ReactCounter/index.ts';
+        return 'resources/js/mesh/Counter/index.ts';
     }
 
     public function props(): array
@@ -38,31 +38,31 @@ class ReactCounter extends MeshComponent
 }
 ```
 
-```tsx title="resources/js/mesh/ReactCounter/ReactCounter.tsx"
+```tsx title="resources/js/mesh/Counter/Counter.tsx"
 import { useEntangle } from "@mesh/react";
 
-export default function ReactCounter({ initialCount }: { initialCount: number }) {
+export default function Counter({ initialCount }: { initialCount: number }) {
     const [count, setCount] = useEntangle<number>("count");
     return <button onClick={() => setCount(count + 1)}>{count}</button>;
 }
 ```
 
-```ts title="resources/js/mesh/ReactCounter/index.ts"
+```ts title="resources/js/mesh/Counter/index.ts"
 import { registerComponent } from "@mesh";
-import ReactCounter from "./ReactCounter";
+import Counter from "./Counter";
 
-registerComponent("react", "resources/js/mesh/ReactCounter/index.ts", ReactCounter);
-export default ReactCounter;
+registerComponent("react", "resources/js/mesh/Counter/index.ts", Counter);
+export default Counter;
 ```
 
 ```blade title="resources/views/..."
-<mesh:react-counter wire:model="count" />
+<mesh:counter wire:model="count" />
 ```
 
 <Callout title="app/Mesh and the <mesh:…> tag">
   Mesh components live in `app/Mesh` (namespace `App\Mesh`) and are referenced with the
   `<mesh:…>` tag, so they read distinctly from plain Livewire components. Scaffold one with
-  `php artisan make:mesh ReactCounter`. The scaffold renderer defaults to React and can be changed
+  `php artisan make:mesh Counter`. The scaffold renderer defaults to React and can be changed
   with `mesh.make.renderer` or `--renderer=react`. Existing `app/Livewire` components and `<livewire:…>`
   tags continue to work — `<mesh:…>` is additive and opt-in.
 </Callout>

@@ -33,7 +33,7 @@ byte, the second argument of `registerComponent` in the frontend entry file.
 ```php
 public function component(): string
 {
-    return 'resources/js/mesh/ReactCounter/index.ts';
+    return 'resources/js/mesh/Counter/index.ts';
 }
 ```
 
@@ -69,14 +69,14 @@ To let a parent bind a property with `wire:model`, mark it `#[Modelable]`:
 ```php
 use Livewire\Attributes\Modelable;
 
-class ReactCounter extends MeshComponent
+class Counter extends MeshComponent
 {
     #[Modelable]
     public int $count = 0;
 
     public function component(): string
     {
-        return 'resources/js/mesh/ReactCounter/index.ts';
+        return 'resources/js/mesh/Counter/index.ts';
     }
 
     public function props(): array
@@ -87,7 +87,7 @@ class ReactCounter extends MeshComponent
 ```
 
 ```blade
-<mesh:react-counter wire:model="count" />
+<mesh:counter wire:model="count" />
 ```
 
 On the client, `useEntangle('count')` binds React state to that same property — giving you a value

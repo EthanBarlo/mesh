@@ -7,18 +7,18 @@ what props to pass, and Mesh mounts that component into the page, keeping React 
 Livewire state in sync. State stays on the server with Livewire; the view layer is React.
 
 ```php
-// app/Mesh/ReactCounter.php
+// app/Mesh/Counter.php
 use EthanBarlo\Mesh\MeshComponent;
 use Livewire\Attributes\Modelable;
 
-class ReactCounter extends MeshComponent
+class Counter extends MeshComponent
 {
     #[Modelable]
     public int $count = 0;
 
     public function component(): string
     {
-        return 'resources/js/mesh/ReactCounter/index.ts';
+        return 'resources/js/mesh/Counter/index.ts';
     }
 
     public function props(): array
@@ -29,32 +29,32 @@ class ReactCounter extends MeshComponent
 ```
 
 ```tsx
-// resources/js/mesh/ReactCounter/ReactCounter.tsx
+// resources/js/mesh/Counter/Counter.tsx
 import { useEntangle } from "@mesh/react";
 
-export default function ReactCounter({ initialCount }: { initialCount: number }) {
+export default function Counter({ initialCount }: { initialCount: number }) {
     const [count, setCount] = useEntangle<number>("count");
     return <button onClick={() => setCount(count + 1)}>{count}</button>;
 }
 ```
 
 ```ts
-// resources/js/mesh/ReactCounter/index.ts
+// resources/js/mesh/Counter/index.ts
 import { registerComponent } from "@mesh";
-import ReactCounter from "./ReactCounter";
+import Counter from "./Counter";
 
-registerComponent("react", "resources/js/mesh/ReactCounter/index.ts", ReactCounter);
-export default ReactCounter;
+registerComponent("react", "resources/js/mesh/Counter/index.ts", Counter);
+export default Counter;
 ```
 
 ```blade
-<mesh:react-counter wire:model="count" />
+<mesh:counter wire:model="count" />
 ```
 
 Mesh components live in `app/Mesh` (namespace `App\Mesh`) and are referenced with the
 `<mesh:…>` tag, keeping them clearly distinct from plain Livewire components. Generate one with
-`php artisan make:mesh ReactCounter`. The generated frontend files live in
-`resources/js/mesh/ReactCounter` — colocated with the rest of your JavaScript under
+`php artisan make:mesh Counter`. The generated frontend files live in
+`resources/js/mesh/Counter` — colocated with the rest of your JavaScript under
 `resources/js`. Change that base directory with `mesh.component_path`, configure the default
 scaffold renderer with `mesh.make.renderer`, or pass `--renderer=react`. (Existing `app/Livewire` components and `<livewire:…>`
 tags keep working unchanged — the `<mesh:…>` convention is additive and opt-in.)

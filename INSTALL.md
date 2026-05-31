@@ -53,7 +53,7 @@ export default defineConfig({
                 'resources/css/app.css',
                 'resources/js/app.ts',
                 // Every Mesh component entry must also be listed here (see Step 6).
-                'resources/js/mesh/ReactCounter/index.ts',
+                'resources/js/mesh/Counter/index.ts',
             ],
             refresh: true,
         }),
@@ -128,7 +128,7 @@ React by default.
 ```tsx
 import { useEntangle } from '@mesh/react';
 
-export default function ReactCounter({ initialCount }: { initialCount: number }) {
+export default function Counter({ initialCount }: { initialCount: number }) {
     const [count, setCount] = useEntangle<number>('count');
     return (
         <div>
@@ -142,16 +142,16 @@ export default function ReactCounter({ initialCount }: { initialCount: number })
 
 ```ts
 import { registerComponent } from '@mesh';
-import ReactCounter from './ReactCounter';
+import Counter from './Counter';
 
-registerComponent('react', 'resources/js/mesh/ReactCounter/index.ts', ReactCounter);
-export default ReactCounter;
+registerComponent('react', 'resources/js/mesh/Counter/index.ts', Counter);
+export default Counter;
 ```
 
 ## Step 7 — Create the Mesh component
 
 Mesh components live in `app/Mesh` (namespace `App\Mesh`), keeping them distinct from plain
-Livewire components in `app/Livewire`. Scaffold one with `php artisan make:mesh ReactCounter`,
+Livewire components in `app/Livewire`. Scaffold one with `php artisan make:mesh Counter`,
 or create it by hand:
 
 ```php
@@ -162,7 +162,7 @@ namespace App\Mesh;
 use EthanBarlo\Mesh\MeshComponent;
 use Livewire\Attributes\Modelable;
 
-class ReactCounter extends MeshComponent
+class Counter extends MeshComponent
 {
     #[Modelable] // enables wire:model two-way binding from a parent
     public int $count = 0;
@@ -170,7 +170,7 @@ class ReactCounter extends MeshComponent
     public function component(): string
     {
         // Must match the path passed to registerComponent() in the entry file.
-        return 'resources/js/mesh/ReactCounter/index.ts';
+        return 'resources/js/mesh/Counter/index.ts';
     }
 
     public function props(): array
@@ -183,10 +183,10 @@ class ReactCounter extends MeshComponent
 ## Step 8 — Render it and run
 
 ```blade
-<mesh:react-counter wire:model="count" />
+<mesh:counter wire:model="count" />
 ```
 
-The `<mesh:…>` tag resolves to the matching class in `App\Mesh` (here `App\Mesh\ReactCounter`).
+The `<mesh:…>` tag resolves to the matching class in `App\Mesh` (here `App\Mesh\Counter`).
 Existing `<livewire:…>` tags keep working — `<mesh:…>` is additive.
 
 ```bash

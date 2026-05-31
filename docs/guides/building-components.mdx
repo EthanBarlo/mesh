@@ -11,13 +11,13 @@ exact same string. Get this contract right and everything else follows.
 
 Each Mesh component entry must call `registerComponent` at module scope:
 
-```ts title="resources/js/mesh/ReactCounter/index.ts"
+```ts title="resources/js/mesh/Counter/index.ts"
 import { registerComponent } from "@mesh";
-import ReactCounter from "./ReactCounter";
+import Counter from "./Counter";
 
 //                       renderer   build path (must match PHP component())   the component
-registerComponent("react", "resources/js/mesh/ReactCounter/index.ts", ReactCounter);
-export default ReactCounter;
+registerComponent("react", "resources/js/mesh/Counter/index.ts", Counter);
+export default Counter;
 ```
 
 The three arguments are:
@@ -33,15 +33,15 @@ path. When Livewire initializes a Mesh component, Mesh looks the component up by
 
 ## The build-path contract
 
-```php title="app/Mesh/ReactCounter.php"
+```php title="app/Mesh/Counter.php"
 public function component(): string
 {
-    return 'resources/js/mesh/ReactCounter/index.ts'; // ← must match registerComponent's 2nd arg
+    return 'resources/js/mesh/Counter/index.ts'; // ← must match registerComponent's 2nd arg
 }
 ```
 
-```ts title="resources/js/mesh/ReactCounter/index.ts"
-registerComponent("react", "resources/js/mesh/ReactCounter/index.ts", ReactCounter); // ← same string
+```ts title="resources/js/mesh/Counter/index.ts"
+registerComponent("react", "resources/js/mesh/Counter/index.ts", Counter); // ← same string
 ```
 
 <Callout type="warn">
@@ -59,7 +59,7 @@ laravel({
     input: [
         'resources/css/app.css',
         'resources/js/app.ts',
-        'resources/js/mesh/ReactCounter/index.ts', // ← each Mesh component entry
+        'resources/js/mesh/Counter/index.ts', // ← each Mesh component entry
     ],
 }),
 ```
