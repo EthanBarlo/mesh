@@ -1,5 +1,10 @@
 export { default as initMesh } from "./initMesh";
-export { default as registerComponent } from "./registerComponent";
+export {
+    buildRegistry,
+    deriveId,
+    inferRenderer,
+    MESH_BASE,
+} from "./buildRegistry";
 
 export type {
     Config,
@@ -9,4 +14,8 @@ export type {
     LivewireComponent,
     LivewireSnapshot,
     Wire,
+    ComponentRegistry,
+    RegistryEntry,
+    ComponentLoader,
+    GlobResult,
 } from "./types";

@@ -5,3 +5,13 @@ parameters:
     tmpDir: build/phpstan
     checkOctaneCompatibility: true
     checkModelProperties: true
+    ignoreErrors:
+        # `mesh::component` is a real package view registered via ->hasViews(),
+        # but Larastan can't resolve the package's view namespace when it boots
+        # the testbench app in CI, so it can't confirm the literal is a
+        # view-string. reportUnmatched:false keeps this a no-op locally, where
+        # the namespace does resolve and the error never fires.
+        -
+            message: '#^Parameter \#1 \$view of function view expects view-string\|null, string given\.$#'
+            path: src/Component.php
+            reportUnmatched: false

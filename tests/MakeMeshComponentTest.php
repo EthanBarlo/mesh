@@ -1,124 +1,76 @@
 <?php
 
+declare(strict_types=1);
+
 use Illuminate\Support\Facades\File;
 
+beforeEach(function () {
+    $this->appBase = sys_get_temp_dir().'/mesh-make-'.uniqid();
+    File::ensureDirectoryExists($this->appBase);
+
+    // Point Laravel's base/app paths at our temp scratch dir.
+    app()->setBasePath($this->appBase);
+});
+
 afterEach(function () {
-    File::deleteDirectory(app_path('Mesh'));
-    File::deleteDirectory(base_path('resources/js/mesh'));
-    File::deleteDirectory(base_path('resources/custom'));
+    File::deleteDirectory($this->appBase);
 });
 
-it('loads the default make renderer from config', function () {
-    expect(config('mesh.make.renderer'))->toBe('react');
-});
-
-it('scaffolds a react mesh component', function () {
+it('creates a react component by default', function () {
     $this->artisan('make:mesh', ['name' => 'Counter'])
-        ->assertSuccessful();
+        ->assertExitCode(0);
 
-    $path = app_path('Mesh/Counter.php');
-    $componentPath = base_path('resources/js/mesh/Counter/Counter.tsx');
-    $entryPath = base_path('resources/js/mesh/Counter/index.ts');
+    $phpFile = $this->appBase.'/app/Mesh/Counter.php';
+    expect(File::exists($phpFile))->toBeTrue();
 
-    expect(File::exists($path))->toBeTrue();
-    expect(File::exists($componentPath))->toBeTrue();
-    expect(File::exists($entryPath))->toBeTrue();
+    $contents = File::get($phpFile);
+    expect($contents)->toContain('class Counter extends Component');
+    expect($contents)->not->toContain('function component()');
 
-    $contents = File::get($path);
+    $jsEntry = $this->appBase.'/resources/js/mesh/Counter/index.tsx';
+    expect(File::exists($jsEntry))->toBeTrue();
 
-    expect($contents)
-        ->toContain('namespace App\\Mesh;')
-        ->toContain('class Counter extends MeshComponent')
-        ->toContain('use EthanBarlo\\Mesh\\MeshComponent;')
-        ->toContain("return 'resources/js/mesh/Counter/index.ts';");
-
-    expect(File::get($componentPath))
-        ->toContain('export default function Counter');
-
-    expect(File::get($entryPath))
-        ->toContain('import { registerComponent } from "@mesh";')
-        ->toContain('import Counter from "./Counter";')
-        ->toContain('registerComponent("react", "resources/js/mesh/Counter/index.ts", Counter);');
+    $jsContents = File::get($jsEntry);
+    expect($jsContents)->not->toContain('registerComponent');
 });
 
-it('supports nested component names', function () {
+it('creates a nested component', function () {
     $this->artisan('make:mesh', ['name' => 'Forms/Input'])
-        ->assertSuccessful();
+        ->assertExitCode(0);
 
-    $path = app_path('Mesh/Forms/Input.php');
-    $componentPath = base_path('resources/js/mesh/Forms/Input/Input.tsx');
-    $entryPath = base_path('resources/js/mesh/Forms/Input/index.ts');
+    $phpFile = $this->appBase.'/app/Mesh/Forms/Input.php';
+    expect(File::exists($phpFile))->toBeTrue();
 
-    expect(File::exists($path))->toBeTrue();
-    expect(File::exists($componentPath))->toBeTrue();
-    expect(File::exists($entryPath))->toBeTrue();
+    $contents = File::get($phpFile);
+    expect($contents)->toContain('namespace App\\Mesh\\Forms;');
+    expect($contents)->toContain('class Input extends Component');
 
-    expect(File::get($path))
-        ->toContain('namespace App\\Mesh\\Forms;')
-        ->toContain('class Input extends MeshComponent')
-        ->toContain("return 'resources/js/mesh/Forms/Input/index.ts';");
-
-    expect(File::get($entryPath))
-        ->toContain('registerComponent("react", "resources/js/mesh/Forms/Input/index.ts", Input);');
+    $jsEntry = $this->appBase.'/resources/js/mesh/Forms/Input/index.tsx';
+    expect(File::exists($jsEntry))->toBeTrue();
 });
 
-it('uses the configured renderer when no renderer option is provided', function () {
-    config()->set('mesh.make.renderer', 'vue');
+it('lets --renderer override the configured default', function () {
+    // Point the config default at a renderer with no stub, so this only passes
+    // if --renderer actually overrides it (otherwise the command would fail with
+    // "Unsupported renderer [bogus]").
+    config()->set('mesh.make.renderer', 'bogus');
+
+    $this->artisan('make:mesh', ['name' => 'Fancy', '--renderer' => 'react'])
+        ->assertExitCode(0);
+
+    $jsEntry = $this->appBase.'/resources/js/mesh/Fancy/index.tsx';
+    expect(File::exists($jsEntry))->toBeTrue();
+});
+
+it('fails for unsupported renderer', function () {
+    $this->artisan('make:mesh', ['name' => 'Broken', '--renderer' => 'vue'])
+        ->assertExitCode(1);
+});
+
+it('does not overwrite an existing component', function () {
+    File::ensureDirectoryExists($this->appBase.'/app/Mesh');
+    File::put($this->appBase.'/app/Mesh/Counter.php', '<?php // existing');
 
     $this->artisan('make:mesh', ['name' => 'Counter'])
-        ->assertFailed();
-
-    expect(File::exists(app_path('Mesh/Counter.php')))->toBeFalse();
-});
-
-it('allows the renderer option to override config', function () {
-    config()->set('mesh.make.renderer', 'vue');
-
-    $this->artisan('make:mesh', ['name' => 'Counter', '--renderer' => 'react'])
-        ->assertSuccessful();
-
-    expect(File::get(base_path('resources/js/mesh/Counter/index.ts')))
-        ->toContain('registerComponent("react", "resources/js/mesh/Counter/index.ts", Counter);');
-});
-
-it('honours a custom component_path for both the directory and the contract string', function () {
-    config()->set('mesh.component_path', 'resources/custom');
-
-    $this->artisan('make:mesh', ['name' => 'Counter'])
-        ->assertSuccessful();
-
-    $classPath = app_path('Mesh/Counter.php');
-    $entryPath = base_path('resources/custom/Counter/index.ts');
-
-    expect(File::exists($entryPath))->toBeTrue();
-    expect(File::exists(base_path('resources/js/mesh/Counter/index.ts')))->toBeFalse();
-
-    expect(File::get($classPath))
-        ->toContain("return 'resources/custom/Counter/index.ts';");
-
-    expect(File::get($entryPath))
-        ->toContain('registerComponent("react", "resources/custom/Counter/index.ts", Counter);');
-});
-
-it('fails for unsupported renderer scaffolds without writing files', function () {
-    $this->artisan('make:mesh', ['name' => 'Counter', '--renderer' => 'svelte'])
-        ->assertFailed();
-
-    expect(File::exists(app_path('Mesh/Counter.php')))->toBeFalse();
-    expect(File::exists(base_path('resources/js/mesh/Counter/index.ts')))->toBeFalse();
-});
-
-it('does not overwrite existing generated files', function () {
-    $this->artisan('make:mesh', ['name' => 'Counter'])->assertSuccessful();
-    $this->artisan('make:mesh', ['name' => 'Counter'])->assertFailed();
-});
-
-it('fails when a frontend target already exists', function () {
-    File::ensureDirectoryExists(base_path('resources/js/mesh/Counter'));
-    File::put(base_path('resources/js/mesh/Counter/index.ts'), '// Existing entry');
-
-    $this->artisan('make:mesh', ['name' => 'Counter'])
-        ->assertFailed();
-
-    expect(File::exists(app_path('Mesh/Counter.php')))->toBeFalse();
+        ->assertExitCode(1);
 });

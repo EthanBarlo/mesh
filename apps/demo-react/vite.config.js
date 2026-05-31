@@ -10,7 +10,6 @@ export default defineConfig({
             input: [
                 'resources/css/app.css',
                 'resources/js/app.ts',
-                'resources/js/mesh/Counter/index.ts',
             ],
             refresh: true,
         }),

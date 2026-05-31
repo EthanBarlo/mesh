@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Mesh\TestComponent;
 use Illuminate\Support\Facades\Blade;
 
@@ -26,7 +28,7 @@ it('mounts the resolved App\\Mesh class via the mesh tag', function () {
     $html = Blade::render('<mesh:test-component name="Ethan" />');
 
     expect($html)
-        ->toContain('data-mesh-component="resources/js/components/Greeter.tsx"')
+        ->toContain('data-mesh-component="TestComponent"')
         ->toContain('class="mesh-root"')
         ->toContain('Hello Ethan');
 });

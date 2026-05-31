@@ -1,56 +1,72 @@
+import { buildRegistry } from "./buildRegistry";
 import renderComponent from "./renderComponent";
 import { Config } from "./types";
 import {
     debugLog,
-    getComponentAsset,
     getComponentName,
     getProps,
     getRenderedComponent,
     setRenderedComponent,
 } from "./utils";
 
-// Tracks in-flight dynamic imports per asset URL so multiple instances of the
-// same mesh component don't trigger redundant network work.
-const assetLoaders: Record<string, Promise<unknown>> = {};
+// Auto-discover every Mesh component. Each `resources/js/mesh/<Name>/index.{ext}`
+// becomes its own lazy, code-split chunk, keyed by its derived id. The pattern is a
+// root-absolute literal so Vite resolves it against the host app root even though
+// this module is loaded through the `@mesh` alias into the package's vendored source.
+const componentModules = import.meta.glob<{ default: unknown }>(
+    "/resources/js/mesh/**/index.{tsx,jsx,vue,svelte}"
+);
 
-async function ensureComponentRegistered(
-    componentName: string,
-    assetUrl: string | undefined
-): Promise<void> {
-    if (window.Mesh?.components[componentName]) {
-        return;
+// Resolve (and cache) the default export of a registered component. Each
+// component is its own lazy, code-split chunk that is imported on first render.
+function loadComponent(id: string): Promise<any> {
+    if (!window.Mesh) {
+        throw new Error("Mesh is not initialized");
     }
 
-    if (!assetUrl) {
+    const entry = window.Mesh.registry[id];
+    if (!entry) {
+        const known = Object.keys(window.Mesh.registry);
         throw new Error(
-            `Mesh: component "${componentName}" is not registered and no data-mesh-asset URL was provided to load it dynamically.`
+            "Mesh: component \"" +
+                id +
+                "\" is not registered. Known components: " +
+                (known.length ? known.join(", ") : "(none)") +
+                "."
         );
     }
 
-    if (!assetLoaders[assetUrl]) {
-        debugLog("component.init | " + componentName, "Importing asset", assetUrl);
-        assetLoaders[assetUrl] = import(/* @vite-ignore */ assetUrl).catch((e) => {
-            delete assetLoaders[assetUrl];
-            throw e;
-        });
+    const cache = window.Mesh.resolved;
+    if (!cache[id]) {
+        cache[id] = entry
+            .load()
+            .then((m) => {
+                if (!m || !m.default) {
+                    throw new Error(
+                        "Mesh: component \"" +
+                            id +
+                            "\" module has no default export."
+                    );
+                }
+                return m.default;
+            })
+            .catch((e) => {
+                delete cache[id];
+                throw e;
+            });
     }
 
-    await assetLoaders[assetUrl];
-
-    if (!window.Mesh?.components[componentName]) {
-        throw new Error(
-            `Mesh: asset at "${assetUrl}" finished loading but did not register component "${componentName}".`
-        );
-    }
+    return cache[id];
 }
 
 export default async function initMesh(Livewire: any, config: Config) {
     const { renderers, debug } = config;
 
-    // Initialize the Mesh global object, which tracks the registered components,
-    // the actively rendered components, and their props.
+    // Initialize the Mesh global object synchronously (before any await) so the
+    // registry is available the moment Livewire begins initializing components.
     window.Mesh = {
-        components: {},
+        registry: buildRegistry(componentModules),
+        resolved: {},
         renderedComponents: {},
         config: {
             renderers: Object.fromEntries(
@@ -60,41 +76,64 @@ export default async function initMesh(Livewire: any, config: Config) {
         },
     };
 
+    if (Object.keys(window.Mesh.registry).length === 0) {
+        console.warn(
+            "Mesh: no components found under resources/js/mesh. " +
+                "Create one with `php artisan make:mesh <Name>`."
+        );
+    }
+
     debugLog("Initialized Mesh", window.Mesh.config);
 
     // Hook into Livewire component initialization
     Livewire.hook("component.init", async ({ component, cleanup }: any) => {
-        const componentName = getComponentName(component.el);
+        const id = getComponentName(component.el);
 
-        if (!componentName) {
+        if (!id) {
             return; // Not a Mesh component
         }
-        debugLog("component.init | " + componentName, { component });
+        debugLog("component.init | " + id, { component });
 
+        // Register teardown before any await: Livewire may remove the component
+        // while the lazy chunk is loading or rendering. If that happens, mark the
+        // work as disposed so we never mount an orphaned root, and tear down any
+        // root that was already created before the dispose was observed.
+        let disposed = false;
+        let renderedComponent: any;
+        cleanup(() => {
+            disposed = true;
+            renderedComponent?.cleanup();
+        });
+
+        let resolvedComponent: any;
         try {
-            await ensureComponentRegistered(
-                componentName,
-                getComponentAsset(component.el)
-            );
+            resolvedComponent = await loadComponent(id);
         } catch (e) {
             console.error(e);
             return;
         }
+        if (disposed) {
+            return;
+        }
 
         try {
-            const renderedComponent = await renderComponent(
+            renderedComponent = await renderComponent(
                 component,
-                componentName
+                id,
+                resolvedComponent
             );
+            if (disposed) {
+                renderedComponent.cleanup();
+                return;
+            }
             setRenderedComponent(component.id, renderedComponent);
-            cleanup(() => renderedComponent.cleanup());
         } catch (e) {
-            console.error(`Mesh: failed to render "${componentName}"`, e);
+            console.error("Mesh: failed to render \"" + id + "\"", e);
         }
     });
 
     // Hook into Livewire component updates
-    Livewire.hook("morph.updated", ({ el, component }: any) => {
+    Livewire.hook("morph.updated", ({ component }: any) => {
         try {
             const rendered = getRenderedComponent(component.id);
             let props = getProps(component.el);

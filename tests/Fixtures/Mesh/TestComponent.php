@@ -1,17 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Mesh;
 
-use EthanBarlo\Mesh\MeshComponent;
+use EthanBarlo\Mesh\Component;
 
-class TestComponent extends MeshComponent
+class TestComponent extends Component
 {
     public string $name = 'world';
-
-    public function component(): string
-    {
-        return 'resources/js/components/Greeter.tsx';
-    }
 
     public function props(): array
     {

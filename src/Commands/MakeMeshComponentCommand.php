@@ -1,127 +1,91 @@
 <?php
 
+declare(strict_types=1);
+
 namespace EthanBarlo\Mesh\Commands;
 
 use Illuminate\Console\Command;
-use Illuminate\Filesystem\Filesystem;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 
 class MakeMeshComponentCommand extends Command
 {
-    protected $signature = 'make:mesh {name : The component name, e.g. Counter or Forms/Input}
-                                      {--renderer= : The frontend renderer scaffold to generate}';
+    /**
+     * The hardcoded base directory (relative to the host app root) for Mesh
+     * frontend component entries. Mirrors the JS-side glob base and is NOT
+     * configurable.
+     */
+    private const COMPONENT_BASE = 'resources/js/mesh';
 
-    protected $description = 'Create a new Mesh component class';
+    protected $signature = 'make:mesh {name} {--renderer=}';
 
-    public function handle(Filesystem $files): int
+    protected $description = 'Create a new Mesh component (PHP class + frontend entry).';
+
+    public function handle(): int
     {
-        // Normalize separators and studly-case each segment: "forms/input" -> "Forms/Input".
-        $relative = collect(preg_split('/[\\/\\\\]+/', $this->argument('name')))
-            ->filter()
-            ->map(fn ($segment) => Str::studly($segment))
-            ->implode('/');
+        $name = str_replace('\\', '/', (string) $this->argument('name'));
+        $segments = array_filter(explode('/', $name));
+        $segments = array_map(fn (string $s) => Str::studly($s), $segments);
 
-        $class = class_basename(str_replace('/', '\\', $relative));
-        $renderer = $this->renderer();
-        $base = trim((string) config('mesh.component_path', 'resources/js/mesh'), '/');
-        $component = $base.'/'.$relative.'/index.ts';
+        $relative = implode('/', $segments);
+        $className = end($segments);
+        $namespaceSuffix = count($segments) > 1
+            ? '\\'.implode('\\', array_slice($segments, 0, -1))
+            : '';
 
-        $namespace = 'App\\Mesh';
-        if (str_contains($relative, '/')) {
-            $namespace .= '\\'.str_replace('/', '\\', dirname($relative));
-        }
+        $classNamespace = 'App\\Mesh'.$namespaceSuffix;
 
-        $path = app_path('Mesh/'.$relative.'.php');
-        $frontendDirectory = base_path($base.'/'.$relative);
-        $frontendFiles = $this->frontendFiles($files, $renderer, $frontendDirectory, $class);
+        // Resolve renderer
+        $renderer = $this->option('renderer') ?: config('mesh.make.renderer', 'react');
 
-        if ($frontendFiles === []) {
+        $phpTargetDir = app_path('Mesh'.($namespaceSuffix ? str_replace('\\', '/', $namespaceSuffix) : ''));
+        $phpTarget = $phpTargetDir.'/'.$className.'.php';
+
+        $jsTargetDir = base_path(self::COMPONENT_BASE.'/'.$relative);
+        $jsEntry = $jsTargetDir.'/index.tsx';
+
+        if (File::exists($phpTarget) || File::exists($jsTargetDir)) {
+            $this->error('Component already exists.');
+
             return self::FAILURE;
         }
 
-        foreach ([$path, ...array_values($frontendFiles)] as $target) {
-            if ($files->exists($target)) {
-                $this->components->error("Mesh component target already exists: {$target}");
+        // Validate renderer before writing anything.
+        $rendererStubDir = __DIR__.'/../../stubs/renderers/'.$renderer;
 
-                return self::FAILURE;
-            }
+        if (! File::isDirectory($rendererStubDir)) {
+            $this->error("Unsupported renderer [{$renderer}].");
+
+            return self::FAILURE;
         }
 
-        $files->ensureDirectoryExists(dirname($path));
-        $files->put($path, $this->buildClass($namespace, $class, $component));
+        // Read and prepare both stubs before writing anything, so a failure
+        // reading the frontend stub can't leave a half-generated PHP component
+        // behind (which would then block reruns as "already exists").
+        $phpStub = str_replace(
+            ['{{ namespace }}', '{{ class }}'],
+            [$classNamespace, $className],
+            File::get(__DIR__.'/../../stubs/mesh.component.stub')
+        );
 
-        $files->ensureDirectoryExists($frontendDirectory);
-        foreach ($frontendFiles as $stub => $target) {
-            $files->put($target, $this->buildFrontend($stub, $renderer, $component, $class));
-        }
+        $indexStub = str_replace(
+            '{{ class }}',
+            $className,
+            File::get($rendererStubDir.'/index.tsx.stub')
+        );
 
-        $this->components->info("Mesh component [{$path}] created successfully.");
-        $this->components->info("Mesh {$renderer} files [{$frontendDirectory}] created successfully.");
+        // PHP class
+        File::ensureDirectoryExists($phpTargetDir);
+        File::put($phpTarget, $phpStub);
+
+        // Frontend entry
+        File::ensureDirectoryExists($jsTargetDir);
+        File::put($jsEntry, $indexStub);
+
+        $this->info('Mesh component created:');
+        $this->line('  PHP:      '.$phpTarget);
+        $this->line('  Frontend: '.$jsEntry);
 
         return self::SUCCESS;
-    }
-
-    protected function renderer(): string
-    {
-        return Str::lower($this->option('renderer') ?: config('mesh.make.renderer', 'react') ?: 'react');
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    protected function frontendFiles(Filesystem $files, string $renderer, string $directory, string $class): array
-    {
-        $stubDirectory = __DIR__.'/../../stubs/renderers/'.$renderer;
-
-        if (! $files->isDirectory($stubDirectory)) {
-            $this->components->error("Mesh renderer scaffold [{$renderer}] is not supported.");
-
-            return [];
-        }
-
-        $stubs = collect($files->files($stubDirectory))
-            ->filter(fn ($file) => str_ends_with($file->getFilename(), '.stub'))
-            ->sortBy(fn ($file) => $file->getFilename());
-
-        if ($stubs->isEmpty()) {
-            $this->components->error("Mesh renderer scaffold [{$renderer}] does not contain any stubs.");
-
-            return [];
-        }
-
-        return $stubs
-            ->mapWithKeys(fn ($file) => [
-                $file->getRealPath() => $directory.'/'.$this->buildStubFilename($file->getFilename(), $class),
-            ])
-            ->all();
-    }
-
-    protected function buildStubFilename(string $filename, string $class): string
-    {
-        return str_replace(
-            ['{{ class }}'],
-            [$class],
-            Str::beforeLast($filename, '.stub')
-        );
-    }
-
-    protected function buildClass(string $namespace, string $class, string $component): string
-    {
-        $stub = file_get_contents(__DIR__.'/../../stubs/mesh.component.stub');
-
-        return str_replace(
-            ['{{ namespace }}', '{{ class }}', '{{ component }}'],
-            [$namespace, $class, $component],
-            $stub
-        );
-    }
-
-    protected function buildFrontend(string $stub, string $renderer, string $component, string $class): string
-    {
-        return str_replace(
-            ['{{ renderer }}', '{{ component }}', '{{ class }}'],
-            [$renderer, $component, $class],
-            file_get_contents($stub)
-        );
     }
 }
