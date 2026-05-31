@@ -7,7 +7,7 @@ what props to pass, and Mesh mounts that component into the page, keeping React 
 Livewire state in sync. State stays on the server with Livewire; the view layer is React.
 
 ```php
-// app/Livewire/ReactCounter.php
+// app/Mesh/ReactCounter.php
 use EthanBarlo\Mesh\MeshComponent;
 use Livewire\Attributes\Modelable;
 
@@ -18,7 +18,7 @@ class ReactCounter extends MeshComponent
 
     public function component(): string
     {
-        return 'resources/js/components/Counter.tsx';
+        return 'resources/js/mesh/ReactCounter/index.ts';
     }
 
     public function props(): array
@@ -29,22 +29,35 @@ class ReactCounter extends MeshComponent
 ```
 
 ```tsx
-// resources/js/components/Counter.tsx
-import { registerComponent } from "@mesh";
+// resources/js/mesh/ReactCounter/ReactCounter.tsx
 import { useEntangle } from "@mesh/react";
 
-function Counter({ initialCount }: { initialCount: number }) {
+export default function ReactCounter({ initialCount }: { initialCount: number }) {
     const [count, setCount] = useEntangle<number>("count");
     return <button onClick={() => setCount(count + 1)}>{count}</button>;
 }
+```
 
-registerComponent("react", "resources/js/components/Counter.tsx", Counter);
-export default Counter;
+```ts
+// resources/js/mesh/ReactCounter/index.ts
+import { registerComponent } from "@mesh";
+import ReactCounter from "./ReactCounter";
+
+registerComponent("react", "resources/js/mesh/ReactCounter/index.ts", ReactCounter);
+export default ReactCounter;
 ```
 
 ```blade
-<livewire:react-counter wire:model="count" />
+<mesh:react-counter wire:model="count" />
 ```
+
+Mesh components live in `app/Mesh` (namespace `App\Mesh`) and are referenced with the
+`<mesh:…>` tag, keeping them clearly distinct from plain Livewire components. Generate one with
+`php artisan make:mesh ReactCounter`. The generated frontend files live in
+`resources/js/mesh/ReactCounter` — colocated with the rest of your JavaScript under
+`resources/js`. Change that base directory with `mesh.component_path`, configure the default
+scaffold renderer with `mesh.make.renderer`, or pass `--renderer=react`. (Existing `app/Livewire` components and `<livewire:…>`
+tags keep working unchanged — the `<mesh:…>` convention is additive and opt-in.)
 
 ## Documentation
 

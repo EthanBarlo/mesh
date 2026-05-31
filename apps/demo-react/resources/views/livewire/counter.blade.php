@@ -6,7 +6,7 @@
     <div class="relative p-8 rounded-2xl bg-slate-800/80 border border-white/10 backdrop-blur-xl">
         <div class="text-center">
             <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-4 block">
-                Livewire Counter
+                Pure Livewire Counter
             </span>
             
             <!-- Counter Display -->

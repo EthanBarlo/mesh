@@ -42,7 +42,8 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "EthanBarlo\\Mesh\\Tests\\": "tests/"
+            "EthanBarlo\\Mesh\\Tests\\": "tests/",
+            "App\\Mesh\\": "tests/Fixtures/Mesh/"
         }
     },
     "scripts": {

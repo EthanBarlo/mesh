@@ -1,10 +1,10 @@
 import React from "react";
-import { registerComponent } from "@mesh";
 import { useEntangle } from "@mesh/react";
 
 interface CounterProps {
     initialCount: number;
 }
+
 const Counter: React.FC<CounterProps> = ({ initialCount }) => {
     const [count, setCount] = useEntangle<number>("count");
 
@@ -48,7 +48,7 @@ const Counter: React.FC<CounterProps> = ({ initialCount }) => {
                             aria-label="Decrement counter"
                             tabIndex={0}
                         >
-                            −
+                            -
                         </button>
 
                         <button
@@ -76,8 +76,5 @@ const Counter: React.FC<CounterProps> = ({ initialCount }) => {
         </div>
     );
 };
-
-// Register the component with Mesh
-registerComponent("react", "resources/js/components/Counter.tsx", Counter);
 
 export default Counter;

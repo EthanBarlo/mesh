@@ -44,13 +44,17 @@
         </div>
 
         <!-- Counter Cards -->
-        <div class="w-full max-w-3xl grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="w-full max-w-5xl grid grid-cols-1 md:grid-cols-3 gap-6">
+            {{-- A plain Livewire component, rendered with the standard <livewire:…> tag. --}}
             <livewire:counter wire:model="count" />
-            <livewire:react-counter wire:model="count" />
+            {{-- A Livewire component with Alpine-managed client-side state via entangle. --}}
+            <livewire:counter-alpine wire:model="count" />
+            {{-- A Mesh component (React frontend), rendered with the <mesh:…> tag. --}}
+            <mesh:counter wire:model="count" />
         </div>
 
         <!-- Features Grid -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-16 max-w-3xl w-full">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-16 max-w-5xl w-full">
             <div class="p-5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
                 <div class="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center mb-3">
                     <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

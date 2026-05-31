@@ -1,0 +1,6 @@
+import { registerComponent } from "@mesh";
+import {{ class }} from "./{{ class }}";
+
+registerComponent("{{ renderer }}", "{{ component }}", {{ class }});
+
+export default {{ class }};

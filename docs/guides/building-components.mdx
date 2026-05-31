@@ -3,24 +3,21 @@ title: Building Components
 description: Register React components, match build paths, and pass props from Livewire.
 ---
 
-A Mesh component lives in two files that are linked by a single string: the **build path**. The PHP
-`component()` method returns it, and the matching `.tsx` file registers itself under the exact same
-string. Get this contract right and everything else follows.
+A Mesh component links PHP and frontend code with a single string: the **build path**. The PHP
+`component()` method returns it, and the matching frontend entry file registers itself under the
+exact same string. Get this contract right and everything else follows.
 
 ## Register every component
 
-Each Mesh component file must call `registerComponent` at module scope:
+Each Mesh component entry must call `registerComponent` at module scope:
 
-```tsx title="resources/js/components/Counter.tsx"
+```ts title="resources/js/mesh/ReactCounter/index.ts"
 import { registerComponent } from "@mesh";
+import ReactCounter from "./ReactCounter";
 
-function Counter(props) {
-    return <div>{/* ... */}</div>;
-}
-
-//                 renderer   build path (must match PHP component())   the component
-registerComponent("react", "resources/js/components/Counter.tsx", Counter);
-export default Counter;
+//                       renderer   build path (must match PHP component())   the component
+registerComponent("react", "resources/js/mesh/ReactCounter/index.ts", ReactCounter);
+export default ReactCounter;
 ```
 
 The three arguments are:
@@ -36,15 +33,15 @@ path. When Livewire initializes a Mesh component, Mesh looks the component up by
 
 ## The build-path contract
 
-```php title="app/Livewire/ReactCounter.php"
+```php title="app/Mesh/ReactCounter.php"
 public function component(): string
 {
-    return 'resources/js/components/Counter.tsx'; // ← must match registerComponent's 2nd arg
+    return 'resources/js/mesh/ReactCounter/index.ts'; // ← must match registerComponent's 2nd arg
 }
 ```
 
-```tsx title="resources/js/components/Counter.tsx"
-registerComponent("react", "resources/js/components/Counter.tsx", Counter); // ← same string
+```ts title="resources/js/mesh/ReactCounter/index.ts"
+registerComponent("react", "resources/js/mesh/ReactCounter/index.ts", ReactCounter); // ← same string
 ```
 
 <Callout type="warn">
@@ -55,14 +52,14 @@ registerComponent("react", "resources/js/components/Counter.tsx", Counter); // �
 ## Add the file to Vite's input
 
 Mesh lazy-loads each component's compiled asset on demand, so Vite must build it as an entry
-point. Add every Mesh component file to the `input` array in `vite.config.js`:
+point. Add every Mesh component entry to the `input` array in `vite.config.js`:
 
 ```js title="vite.config.js"
 laravel({
     input: [
         'resources/css/app.css',
         'resources/js/app.ts',
-        'resources/js/components/Counter.tsx', // ← each Mesh component
+        'resources/js/mesh/ReactCounter/index.ts', // ← each Mesh component entry
     ],
 }),
 ```
