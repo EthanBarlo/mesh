@@ -18,6 +18,7 @@ class MeshServiceProvider extends PackageServiceProvider
          */
         $package
             ->name('mesh')
+            ->hasConfigFile()
             ->hasViews()
             ->hasCommand(MakeMeshComponentCommand::class);
     }

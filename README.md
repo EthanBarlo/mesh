@@ -18,7 +18,7 @@ class ReactCounter extends MeshComponent
 
     public function component(): string
     {
-        return 'resources/js/components/Counter.tsx';
+        return 'resources/mesh/ReactCounter/index.ts';
     }
 
     public function props(): array
@@ -29,17 +29,22 @@ class ReactCounter extends MeshComponent
 ```
 
 ```tsx
-// resources/js/components/Counter.tsx
-import { registerComponent } from "@mesh";
+// resources/mesh/ReactCounter/ReactCounter.tsx
 import { useEntangle } from "@mesh/react";
 
-function Counter({ initialCount }: { initialCount: number }) {
+export default function ReactCounter({ initialCount }: { initialCount: number }) {
     const [count, setCount] = useEntangle<number>("count");
     return <button onClick={() => setCount(count + 1)}>{count}</button>;
 }
+```
 
-registerComponent("react", "resources/js/components/Counter.tsx", Counter);
-export default Counter;
+```ts
+// resources/mesh/ReactCounter/index.ts
+import { registerComponent } from "@mesh";
+import ReactCounter from "./ReactCounter";
+
+registerComponent("react", "resources/mesh/ReactCounter/index.ts", ReactCounter);
+export default ReactCounter;
 ```
 
 ```blade
@@ -48,7 +53,9 @@ export default Counter;
 
 Mesh components live in `app/Mesh` (namespace `App\Mesh`) and are referenced with the
 `<mesh:…>` tag, keeping them clearly distinct from plain Livewire components. Generate one with
-`php artisan make:mesh ReactCounter`. (Existing `app/Livewire` components and `<livewire:…>`
+`php artisan make:mesh ReactCounter`. The generated frontend files live in
+`resources/mesh/ReactCounter`; configure the default scaffold renderer with
+`mesh.make.renderer` or pass `--renderer=react`. (Existing `app/Livewire` components and `<livewire:…>`
 tags keep working unchanged — the `<mesh:…>` convention is additive and opt-in.)
 
 ## Documentation

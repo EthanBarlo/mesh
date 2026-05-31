@@ -8,7 +8,7 @@ class {{ class }} extends MeshComponent
 {
     public function component(): string
     {
-        return 'resources/js/components/{{ class }}.tsx';
+        return '{{ component }}';
     }
 
     public function props(): array

@@ -10,7 +10,7 @@ abstract class MeshComponent extends LivewireComponent
 {
     /**
      * The frontend component to render, identified by its build path
-     * (e.g. 'resources/js/components/Counter.tsx').
+     * (e.g. 'resources/mesh/Counter/index.ts').
      */
     abstract public function component(): string;
 

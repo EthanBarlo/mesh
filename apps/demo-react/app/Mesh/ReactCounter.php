@@ -12,7 +12,7 @@ class ReactCounter extends MeshComponent
 
     public function component(): string
     {
-        return 'resources/js/components/Counter.tsx';
+        return 'resources/mesh/ReactCounter/index.ts';
     }
 
     public function props(): array

@@ -16,8 +16,12 @@ what to change and why.
 composer require ethanbarlo/mesh
 ```
 
-The service provider (`EthanBarlo\Mesh\MeshServiceProvider`) is auto-discovered; there is no
-config to publish.
+The service provider (`EthanBarlo\Mesh\MeshServiceProvider`) is auto-discovered. If you want to
+change the default scaffold renderer used by `make:mesh`, publish the optional config:
+
+```bash
+php artisan vendor:publish --tag=mesh-config
+```
 
 ## Step 2 — Install React in the host app
 
@@ -43,8 +47,8 @@ export default defineConfig({
             input: [
                 'resources/css/app.css',
                 'resources/js/app.ts',
-                // Every Mesh component file must also be listed here (see Step 6).
-                'resources/js/components/Counter.tsx',
+                // Every Mesh component entry must also be listed here (see Step 6).
+                'resources/mesh/ReactCounter/index.ts',
             ],
             refresh: true,
         }),
@@ -111,15 +115,15 @@ your `app.ts` runs, so Mesh would never register its hooks).
 
 ## Step 6 — Write a React component and register it
 
-Create `resources/js/components/Counter.tsx`. Each Mesh component file **must** call
-`registerComponent(renderer, path, Component)` where `path` is exactly the string the PHP side
-returns from `component()`, and the file **must** be listed in the Vite `input` array (Step 3).
+Each Mesh component entry **must** call `registerComponent(renderer, path, Component)` where
+`path` is exactly the string the PHP side returns from `component()`, and the entry file **must**
+be listed in the Vite `input` array (Step 3). The `make:mesh` command creates this structure for
+React by default.
 
 ```tsx
-import { registerComponent } from '@mesh';
 import { useEntangle } from '@mesh/react';
 
-function Counter({ initialCount }: { initialCount: number }) {
+export default function ReactCounter({ initialCount }: { initialCount: number }) {
     const [count, setCount] = useEntangle<number>('count');
     return (
         <div>
@@ -129,9 +133,14 @@ function Counter({ initialCount }: { initialCount: number }) {
         </div>
     );
 }
+```
 
-registerComponent('react', 'resources/js/components/Counter.tsx', Counter);
-export default Counter;
+```ts
+import { registerComponent } from '@mesh';
+import ReactCounter from './ReactCounter';
+
+registerComponent('react', 'resources/mesh/ReactCounter/index.ts', ReactCounter);
+export default ReactCounter;
 ```
 
 ## Step 7 — Create the Mesh component
@@ -155,8 +164,8 @@ class ReactCounter extends MeshComponent
 
     public function component(): string
     {
-        // Must match the path passed to registerComponent() in the .tsx file.
-        return 'resources/js/components/Counter.tsx';
+        // Must match the path passed to registerComponent() in the entry file.
+        return 'resources/mesh/ReactCounter/index.ts';
     }
 
     public function props(): array
@@ -189,9 +198,9 @@ Open the page: the React component should mount inside the Livewire component, a
 
 - **Used `@livewireScripts`** instead of `@livewireScriptConfig` → Livewire starts before Mesh
   hooks are registered; nothing mounts. Use `@livewireScriptConfig` and `Livewire.start()` in JS.
-- **Component file not in Vite `input`** → its asset is never built/registered; the console shows
+- **Component entry not in Vite `input`** → its asset is never built/registered; the console shows
   `component "<path>" ... did not register`.
-- **Forgot `registerComponent(...)`** in the `.tsx` file → same "did not register" error.
+- **Forgot `registerComponent(...)`** in the entry file → same "did not register" error.
 - **Path mismatch** → the string in `component()` (PHP) must be byte-for-byte identical to the
   first-after-renderer argument of `registerComponent()`.
 - **`@mesh` alias missing/wrong** → Vite can't resolve `@mesh` / `@mesh/react` imports.

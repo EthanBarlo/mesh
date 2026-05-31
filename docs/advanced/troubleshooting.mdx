@@ -11,11 +11,11 @@ Most setup problems come down to one of a handful of mistakes. Work through this
   hooks are registered, so nothing mounts. Use `@livewireScriptConfig` and call `Livewire.start()`
   yourself in `app.ts` (after `initMesh`). See [Installation, Steps 4–5](/docs/installation).
 
-- **Component file not in Vite `input`** → its asset is never built, so the asset URL 404s and you
+- **Component entry not in Vite `input`** → its asset is never built, so the asset URL 404s and you
   see `component "<path>" ... did not register` in the console. Add the file to the `input` array.
 
-- **Forgot `registerComponent(...)`** in the `.tsx` file → same `did not register` error. Every
-  Mesh component file must call `registerComponent` at module scope.
+- **Forgot `registerComponent(...)`** in the entry file → same `did not register` error. Every
+  Mesh component entry must call `registerComponent` at module scope.
 
 - **Path mismatch** → the string in PHP `component()` must be **byte-for-byte identical** to the
   second argument of `registerComponent()`. A trailing slash or different casing breaks the lookup.

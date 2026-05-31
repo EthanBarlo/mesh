@@ -28,12 +28,12 @@ You never write `render()` yourself — `MeshComponent` provides it, returning t
 ## `component(): string`
 
 Returns the **build path** of the frontend component to render. This string must match, byte for
-byte, the second argument of `registerComponent` in the `.tsx` file.
+byte, the second argument of `registerComponent` in the frontend entry file.
 
 ```php
 public function component(): string
 {
-    return 'resources/js/components/Counter.tsx';
+    return 'resources/mesh/ReactCounter/index.ts';
 }
 ```
 
@@ -76,7 +76,7 @@ class ReactCounter extends MeshComponent
 
     public function component(): string
     {
-        return 'resources/js/components/Counter.tsx';
+        return 'resources/mesh/ReactCounter/index.ts';
     }
 
     public function props(): array
