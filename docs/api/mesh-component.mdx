@@ -104,8 +104,8 @@ export default function Card({
 ```
 
 The **default slot** (everything not inside a named `<livewire:slot>`) becomes `children`. **Named
-slots** become entries on the `slots` prop, keyed by name. Use the `name="title"` form — the inline
-`:title` shorthand is broken in Livewire core.
+slots** become entries on the `slots` prop, keyed by name. Use the `name="title"` form — Livewire 4
+has no `:title` slot shorthand.
 
 Slot content is **reactive to the server**: when a parent re-render changes the slot (for example a
 slot that interpolates parent state), Mesh replaces the rendered content. It is rendered **statically**

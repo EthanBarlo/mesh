@@ -43,7 +43,10 @@ export function getSlots(el: HTMLElement): MeshSlots {
         return slots;
     }
 
-    for (const holder of Array.from(wrapper.children) as HTMLElement[]) {
+    for (const holder of Array.from(wrapper.children)) {
+        if (!(holder instanceof HTMLElement)) {
+            continue;
+        }
         const name = holder.dataset.meshSlot;
         if (name) {
             slots[name] = stripFragmentMarkers(holder.innerHTML);
