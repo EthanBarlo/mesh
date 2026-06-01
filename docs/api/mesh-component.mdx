@@ -112,9 +112,11 @@ slot that interpolates parent state), Mesh replaces the rendered content. It is 
 from server HTML, so **nested interactive Livewire/Alpine inside a slot is not supported in v1** — pass
 interactive children as their own Mesh components or props instead.
 
-Slot content is mirrored into React with `dangerouslySetInnerHTML`. Blade escapes `{{ }}` interpolation,
-so a default slot built from `{{ … }}` is safe; using `{!! … !!}` inside a slot injects unescaped HTML
-and carries the usual XSS responsibility — only do so with trusted content.
+<Callout type="warn">
+  **Security:** slot content is mirrored into the page with `dangerouslySetInnerHTML`. Blade escapes
+  `{{ }}` interpolation, so slots built from `{{ … }}` are safe. Content written with `{!! … !!}` (or
+  any other unescaped output) is injected as raw HTML — never put unsanitised user input in a slot.
+</Callout>
 
 `children` and `slots` are **reserved** prop names. If `props()` returns a `children` or `slots` key
 while slots are present, Mesh throws so the collision can't silently shadow the slot content.
