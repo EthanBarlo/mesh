@@ -13,6 +13,8 @@ export type ComponentRegistry = {
 
 export type GlobResult = Record<string, ComponentLoader>;
 
+export type MeshSlots = Record<string, string>;
+
 export interface LivewireSnapshot {
     // The serialized state of the component (public properties)
     data: Record<string, any>;
@@ -111,6 +113,7 @@ export type RenderedComponent = {
     componentName: string;
     props: any;
     updateProps: (livewireComponent: LivewireComponent, props: any) => void;
+    updateSlots?: (slots: MeshSlots) => void;
     cleanup: CleanupCallback;
 };
 
@@ -118,7 +121,8 @@ export type RenderFunction = (
     componentName: string,
     livewireComponent: LivewireComponent,
     component: any,
-    props: any
+    props: any,
+    slots?: MeshSlots
 ) => RenderedComponent;
 
 export type MeshRenderer = {

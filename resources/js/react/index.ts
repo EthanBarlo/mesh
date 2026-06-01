@@ -1,5 +1,5 @@
 export { default } from "./renderer";
-export { default as reactRenderer } from "./renderer";
+export { default as reactRenderer, MeshSlot } from "./renderer";
 
 export {
     default as LivewireContext,

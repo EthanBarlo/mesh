@@ -1,5 +1,5 @@
 import { LivewireComponent, RenderedComponent } from "./types";
-import { getProps, getRenderer } from "./utils";
+import { getProps, getRenderer, getSlots } from "./utils";
 
 export default function renderComponent(
     livewireComponent: LivewireComponent,
@@ -14,5 +14,6 @@ export default function renderComponent(
     const render = getRenderer(entry.renderer);
 
     const props = getProps(livewireComponent.el);
-    return render(id, livewireComponent, component, props);
+    const slots = getSlots(livewireComponent.el);
+    return render(id, livewireComponent, component, props, slots);
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace EthanBarlo\Mesh;
 
 use Livewire\Component as LivewireComponent;
+use Livewire\Features\SupportSlots\Slot;
 use LogicException;
 
 abstract class Component extends LivewireComponent
@@ -48,6 +49,30 @@ abstract class Component extends LivewireComponent
     public function props(): array
     {
         return [];
+    }
+
+    /**
+     * Real slot content keyed by name (the default slot is named 'default').
+     *
+     * Only populated on the mount render; on the component's own re-render the
+     * slots become content-less placeholders, so this returns []. Skips
+     * placeholder and whitespace-only slots.
+     *
+     * @internal
+     *
+     * @return array<string, string>
+     */
+    public function meshSlots(): array
+    {
+        $slots = [];
+
+        foreach ($this->getSlots() as $slot) {
+            if ($slot instanceof Slot && trim($slot->content) !== '') {
+                $slots[$slot->getName()] = $slot->content;
+            }
+        }
+
+        return $slots;
     }
 
     public function render()

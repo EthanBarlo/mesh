@@ -74,6 +74,58 @@ You can override `component()` to return any id, but it must match a component M
 For `App\Mesh\Forms\Input`, the derived id is `Forms/Input`. The JS entry lives at
 `resources/js/mesh/Forms/Input/index.tsx` and resolves to the same id automatically.
 
+## Slots
+
+Inner content of a `<mesh:…>` tag is forwarded to the frontend as React `children`, and named slots
+arrive in a `slots` prop. You write nothing extra on the PHP class — capturing slots is automatic.
+
+```blade
+<mesh:card>
+    <livewire:slot name="title">Welcome</livewire:slot>
+    Hello <strong>{{ $name }}</strong>
+</mesh:card>
+```
+
+```tsx
+export default function Card({
+    children,
+    slots,
+}: {
+    children?: React.ReactNode;
+    slots?: { title?: React.ReactNode };
+}) {
+    return (
+        <section>
+            <h2>{slots?.title}</h2>
+            <div>{children}</div>
+        </section>
+    );
+}
+```
+
+The **default slot** (everything not inside a named `<livewire:slot>`) becomes `children`. **Named
+slots** become entries on the `slots` prop, keyed by name. Use the `name="title"` form — the inline
+`:title` shorthand is broken in Livewire core.
+
+Slot content is **reactive to the server**: when a parent re-render changes the slot (for example a
+slot that interpolates parent state), Mesh replaces the rendered content. It is rendered **statically**
+from server HTML, so **nested interactive Livewire/Alpine inside a slot is not supported in v1** — pass
+interactive children as their own Mesh components or props instead.
+
+Slot content is mirrored into React with `dangerouslySetInnerHTML`. Blade escapes `{{ }}` interpolation,
+so a default slot built from `{{ … }}` is safe; using `{!! … !!}` inside a slot injects unescaped HTML
+and carries the usual XSS responsibility — only do so with trusted content.
+
+`children` and `slots` are **reserved** prop names. If `props()` returns a `children` or `slots` key
+while slots are present, Mesh throws so the collision can't silently shadow the slot content.
+
+### `meshSlots(): array`
+
+An `@internal` helper that returns the real slot content keyed by name (the default slot is named
+`default`). It is populated on the mount render only; on the component's own re-render the slots become
+content-less placeholders and it returns `[]`. You won't normally call this — it backs the Blade view
+and the slot tests.
+
 ## How rendering works
 
 1. Blade renders `<mesh:counter />`, which compiles to a namespaced Livewire mount.

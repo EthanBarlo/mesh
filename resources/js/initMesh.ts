@@ -6,6 +6,7 @@ import {
     getComponentName,
     getProps,
     getRenderedComponent,
+    getSlots,
     setRenderedComponent,
 } from "./utils";
 
@@ -127,6 +128,38 @@ export default async function initMesh(Livewire: any, config: Config) {
                 return;
             }
             setRenderedComponent(component.id, renderedComponent);
+
+            // Mirror server-driven slot changes into the rendered component.
+            // Livewire keeps the hidden [data-mesh-slots] holders current via
+            // fragment morphing; observe them (never .mesh-root, which React
+            // owns) and replace the slot content when the server sends new HTML.
+            const slotsRoot = component.el.querySelector("[data-mesh-slots]");
+            const updateSlots = renderedComponent.updateSlots;
+            if (slotsRoot && updateSlots) {
+                let last = JSON.stringify(getSlots(component.el));
+                const observer = new MutationObserver(() => {
+                    const next = getSlots(component.el);
+                    const serialized = JSON.stringify(next);
+                    if (serialized === last) {
+                        return; // skip-morph / no-op
+                    }
+                    last = serialized;
+                    // Server sent new slot content → replace children. Mirror the
+                    // mount path's error handling so a reactive-only failure (e.g. a
+                    // late prop/slot collision) is logged, not thrown uncaught.
+                    try {
+                        updateSlots(next);
+                    } catch (e) {
+                        console.error("Mesh: failed to update slots", e);
+                    }
+                });
+                observer.observe(slotsRoot, {
+                    childList: true,
+                    subtree: true,
+                    characterData: true,
+                });
+                cleanup(() => observer.disconnect());
+            }
         } catch (e) {
             console.error("Mesh: failed to render \"" + id + "\"", e);
         }

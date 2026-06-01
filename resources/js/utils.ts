@@ -1,4 +1,4 @@
-import { RenderedComponent } from "./types";
+import { MeshSlots, RenderedComponent } from "./types";
 
 export function getComponentName(el: HTMLElement) {
     return el.dataset.meshComponent;
@@ -20,6 +20,37 @@ export function getProps(el: HTMLElement) {
         }
     }
     return props;
+}
+
+// Livewire wraps slot content in `<!--[if FRAGMENT:...]><![endif]-->` /
+// `<!--[if ENDFRAGMENT:...]><![endif]-->` marker comments so it can morph the
+// slot in place. We strip them before mirroring the HTML into the React copy so
+// the markers don't leak duplicate fragment tokens into the rendered output.
+export const FRAGMENT_MARKER =
+    /<!--\[if (?:END)?FRAGMENT\b[\s\S]*?\]><!\[endif\]-->/gi;
+
+export function stripFragmentMarkers(html: string): string {
+    return html.replace(FRAGMENT_MARKER, "");
+}
+
+// Read the current slot content from a Mesh component's hidden slot holders.
+// Scoped to the wrapper's DIRECT children so nested mesh holders inside a slot
+// aren't mis-read. Returns {} when the component has no slots.
+export function getSlots(el: HTMLElement): MeshSlots {
+    const slots: MeshSlots = {};
+    const wrapper = el.querySelector<HTMLElement>("[data-mesh-slots]");
+    if (!wrapper) {
+        return slots;
+    }
+
+    for (const holder of Array.from(wrapper.children) as HTMLElement[]) {
+        const name = holder.dataset.meshSlot;
+        if (name) {
+            slots[name] = stripFragmentMarkers(holder.innerHTML);
+        }
+    }
+
+    return slots;
 }
 
 export function setRenderedComponent(
