@@ -10,16 +10,20 @@ export function debugLog(...args: any[]) {
     }
 }
 
-export function getProps(el: HTMLElement) {
-    let props = el.dataset.meshProps;
-    if (props) {
-        try {
-            props = JSON.parse(props);
-        } catch (e) {
-            console.error("Failed to parse data-mesh-props:", e);
-        }
+// Always returns an object: a missing attribute or malformed JSON normalizes
+// to {} so downstream consumers (spreads, `"children" in props`) never see
+// undefined or a raw string.
+export function getProps(el: HTMLElement): Record<string, any> {
+    const raw = el.dataset.meshProps;
+    if (!raw) {
+        return {};
     }
-    return props;
+    try {
+        return JSON.parse(raw);
+    } catch (e) {
+        console.error("Failed to parse data-mesh-props:", e);
+        return {};
+    }
 }
 
 // Livewire wraps slot content in `<!--[if FRAGMENT:...]><![endif]-->` /

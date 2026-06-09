@@ -28,14 +28,47 @@ Livewire.start()
 
 ## The renderer interface
 
-A renderer implements `mount` and `unmount`:
+The only things that are genuinely framework-specific are turning a slot's HTML **string** into a node
+(React `dangerouslySetInnerHTML`, Vue `v-html`, Svelte `{@html}`) and mounting/updating/unmounting a
+component — so that is the entire renderer contract. A renderer is an object with a `type` (the string
+Mesh infers from the file extension) plus those two operations:
 
 ```ts
-export interface MeshRenderer {
-  mount(el: HTMLElement, component: unknown, props: Record<string, unknown>): void
-  unmount(el: HTMLElement): void
+type MeshRenderer<TNode> = {
+  type: string
+  // HTML string -> framework node. Must be pure — called per slot on mount
+  // and again on every slot update.
+  renderSlot: (html: string, name: string) => TNode
+  mount: (args: {
+    el: HTMLElement                    // the resolved .mesh-root to mount into
+    livewireComponent: LivewireComponent
+    Component: any
+    ctx: RenderContext<TNode>          // initial props + prepared slots
+  }) => {
+    update: (ctx: RenderContext<TNode>) => void  // called on prop AND slot changes
+    cleanup: () => void
+  }
+}
+
+type RenderContext<TNode> = {
+  props: Record<string, any>
+  slots: PreparedSlots<TNode>
+}
+
+type PreparedSlots<TNode> = {
+  children: TNode | undefined      // the default slot, if non-empty
+  named: Record<string, TNode>     // every named slot
+  hasNamed: boolean
 }
 ```
+
+`MeshSlots` is a flat `Record<string, string>` of slot name → HTML (the unnamed slot is keyed
+`"default"`). Everything that is identical across frameworks is owned by the Mesh core, not the
+renderer: resolving `.mesh-root`, splitting slots into default vs named and running each through your
+`renderSlot`, guarding the reserved `children`/`slots` prop names (before mount and before every
+update), dirty-checking props, and keeping slot node references **stable across props-only updates** so
+your framework's reconciler can skip unchanged slot subtrees. Mesh calls `update` whenever props or slot
+content change, and `cleanup` when the component is removed.
 
 ## Renderer is inferred from the file extension
 
@@ -51,7 +84,54 @@ throws rather than silently defaulting.
 
 ## Built-in React renderer
 
-The React renderer uses `createRoot` from `react-dom/client`.
+The React renderer uses `createRoot` from `react-dom/client` and is the reference implementation of the
+interface. This is the whole renderer, written against the public exports (the shipped
+`resources/js/react/renderer.tsx` is identical apart from using package-internal imports):
+
+```tsx
+import React from 'react'
+import { createRoot } from 'react-dom/client'
+import { LivewireContext } from '@mesh/react'
+import type { MeshRenderer, RenderContext } from '@mesh'
+
+export function MeshSlot({ html }: { html: string }) {
+  return <div style={{ display: 'contents' }} dangerouslySetInnerHTML={{ __html: html }} />
+}
+
+const reactRenderer: MeshRenderer<React.ReactNode> = {
+  type: 'react',
+
+  // `name` becomes the React key for named slots so they keep a stable
+  // identity across re-renders; the default slot takes no key.
+  renderSlot: (html, name) => (
+    <MeshSlot key={name === 'default' ? undefined : name} html={html} />
+  ),
+
+  mount: ({ el, livewireComponent, Component, ctx }) => {
+    const root = createRoot(el)
+
+    const render = ({ props, slots }: RenderContext<React.ReactNode>) => {
+      root.render(
+        <React.StrictMode>
+          <LivewireContext.Provider value={livewireComponent}>
+            <Component {...props} {...(slots.hasNamed ? { slots: slots.named } : {})}>
+              {slots.children}
+            </Component>
+          </LivewireContext.Provider>
+        </React.StrictMode>
+      )
+    }
+
+    render(ctx)
+
+    return { update: render, cleanup: () => root.unmount() }
+  },
+}
+```
+
+For React, mounting and updating are the same operation, so `update` is just the `render` function.
+Because the core reuses the same prepared slot nodes across props-only updates, React skips
+re-rendering unchanged slot content.
 
 ## Vue and Svelte
 
@@ -83,7 +163,44 @@ A component's renderer is determined by its entry file extension. The PHP side i
 
 Implement the `MeshRenderer` interface and pass it in the `renderers` array. Mesh maps a component to
 a renderer via its file extension, so a custom renderer needs Mesh to recognise the corresponding
-extension.
+extension. You write only `renderSlot` (string → node) and `mount` (returning `update`/`cleanup`) —
+the core handles all the slot and props bookkeeping.
+
+The `mount`/`update` split maps directly onto frameworks that mount once and then mutate state rather
+than re-rendering. A Vue 3 renderer, for example, creates the app once and assigns into a `reactive()`
+object on update — and its `renderSlot` returns a slot **function** (`() => h(...)`), not a vnode,
+because Vue vnodes are single-use while a stable function reference is exactly what a Vue slot is:
+
+```ts
+import { createApp, reactive, h, type VNodeChild } from 'vue'
+import type { MeshRenderer } from '@mesh'
+
+type VueSlot = () => VNodeChild
+
+const vueRenderer: MeshRenderer<VueSlot> = {
+  type: 'vue',
+  renderSlot: (html) => () => h('div', { style: 'display: contents', innerHTML: html }),
+  mount: ({ el, Component, ctx }) => {
+    const state = reactive({ props: ctx.props, slots: ctx.slots })
+    const app = createApp({
+      render: () =>
+        h(Component, { ...state.props }, {
+          ...(state.slots.children ? { default: state.slots.children } : {}),
+          ...state.slots.named, // each value already IS a Vue slot function
+        }),
+    })
+    app.mount(el)
+    return {
+      update: (ctx) => { state.props = ctx.props; state.slots = ctx.slots },
+      cleanup: () => app.unmount(),
+    }
+  },
+}
+```
+
+Svelte 5 is symmetric: `renderSlot` can build a snippet with `createRawSnippet`, `mount` calls
+Svelte's `mount(Component, { target: el, props })` once with `$state`-backed props, `update` mutates
+that state, and `cleanup` calls `unmount`.
 
 ## Wiring renderers into `initMesh`
 

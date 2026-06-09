@@ -1,5 +1,6 @@
 import { LivewireComponent, RenderedComponent } from "./types";
 import { getProps, getRenderer, getSlots } from "./utils";
+import { mountComponent } from "./slots";
 
 export default function renderComponent(
     livewireComponent: LivewireComponent,
@@ -11,9 +12,9 @@ export default function renderComponent(
         throw new Error("Mesh: component \"" + id + "\" is not in the registry");
     }
 
-    const render = getRenderer(entry.renderer);
+    const renderer = getRenderer(entry.renderer);
 
     const props = getProps(livewireComponent.el);
     const slots = getSlots(livewireComponent.el);
-    return render(id, livewireComponent, component, props, slots);
+    return mountComponent(renderer, livewireComponent, component, props, slots);
 }

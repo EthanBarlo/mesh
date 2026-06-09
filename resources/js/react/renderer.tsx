@@ -1,7 +1,7 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import LivewireContext from "./context";
-import { MeshSlots, MeshRenderer } from "../types";
+import { MeshRenderer, RenderContext } from "../types";
 
 // Slot content is mirrored as static HTML. A wrapper element is unavoidable
 // (React Fragments can't take dangerouslySetInnerHTML); `display: contents`
@@ -20,92 +20,39 @@ export function MeshSlot({ html }: { html: string }) {
     );
 }
 
-const reactRenderer: MeshRenderer = {
+// The core owns all slot/props bookkeeping; this renderer supplies only the
+// two React-specific pieces: HTML string -> React node, and mount/update.
+const reactRenderer: MeshRenderer<React.ReactNode> = {
     type: "react",
-    renderComponent: (
-        componentName,
-        livewireComponent,
-        Component,
-        props,
-        slots = {}
-    ) => {
-        const root_element = livewireComponent.el.querySelector(".mesh-root");
 
-        if (!root_element) {
-            throw new Error("Mesh root element not found");
-        }
+    // `name` becomes the React key for named slots so they keep a stable
+    // identity across re-renders; the default slot is passed as a single
+    // `children` node and takes no key.
+    renderSlot: (html, name) => (
+        <MeshSlot key={name === "default" ? undefined : name} html={html} />
+    ),
 
-        const root = createRoot(root_element);
+    mount: ({ el, livewireComponent, Component, ctx }) => {
+        const root = createRoot(el);
 
-        // Props and slots are tracked in closure variables and re-applied on
-        // every render() so a prop update never drops the slot content and a
-        // slot update never drops the props.
-        let currentProps = props;
-        let children: React.ReactNode;
-        let namedSlots: Record<string, React.ReactNode> = {};
-
-        const applySlots = (s: MeshSlots) => {
-            const { default: def, ...named } = s;
-            children = def ? <MeshSlot html={def} /> : undefined;
-            namedSlots = Object.fromEntries(
-                Object.entries(named).map(([name, html]) => [
-                    name,
-                    <MeshSlot key={name} html={html} />,
-                ])
-            );
-        };
-
-        applySlots(slots);
-
-        // Creating a function here to allow us to update the props
-        // while maintaining the same root element, thus maintaining any state.
-        const render = () => {
-            const hasNamed = Object.keys(namedSlots).length > 0;
-
-            // Fail fast: `children` and `slots` are reserved for slot content.
-            if ((children || hasNamed) && "children" in currentProps) {
-                throw new Error(
-                    "Mesh: `children` is reserved for slot content — rename the prop from props()."
-                );
-            }
-            if (hasNamed && "slots" in currentProps) {
-                throw new Error(
-                    "Mesh: `slots` is reserved for named slot content — rename the prop from props()."
-                );
-            }
-
+        const render = ({ props, slots }: RenderContext<React.ReactNode>) => {
             root.render(
                 <React.StrictMode>
                     <LivewireContext.Provider value={livewireComponent}>
                         <Component
-                            {...currentProps}
-                            {...(hasNamed ? { slots: namedSlots } : {})}
+                            {...props}
+                            {...(slots.hasNamed ? { slots: slots.named } : {})}
                         >
-                            {children}
+                            {slots.children}
                         </Component>
                     </LivewireContext.Provider>
                 </React.StrictMode>
             );
         };
 
-        // Initial render
-        render();
+        render(ctx);
 
-        return {
-            componentName,
-            props,
-            updateProps: (_livewireComponent, props) => {
-                currentProps = props;
-                render();
-            },
-            updateSlots: (slots) => {
-                applySlots(slots);
-                render();
-            },
-            cleanup: () => {
-                root.unmount();
-            },
-        };
+        return { update: render, cleanup: () => root.unmount() };
     },
 };
 
