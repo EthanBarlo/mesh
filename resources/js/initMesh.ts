@@ -1,11 +1,12 @@
 import { buildRegistry } from "./buildRegistry";
 import renderComponent from "./renderComponent";
-import { Config } from "./types";
+import { Config, RenderedComponent } from "./types";
 import {
     debugLog,
     getComponentName,
     getProps,
     getRenderedComponent,
+    getSlots,
     setRenderedComponent,
 } from "./utils";
 
@@ -69,9 +70,7 @@ export default async function initMesh(Livewire: any, config: Config) {
         resolved: {},
         renderedComponents: {},
         config: {
-            renderers: Object.fromEntries(
-                renderers.map((r) => [r.type, r.renderComponent])
-            ),
+            renderers: Object.fromEntries(renderers.map((r) => [r.type, r])),
             debug,
         },
     };
@@ -99,7 +98,7 @@ export default async function initMesh(Livewire: any, config: Config) {
         // work as disposed so we never mount an orphaned root, and tear down any
         // root that was already created before the dispose was observed.
         let disposed = false;
-        let renderedComponent: any;
+        let renderedComponent: RenderedComponent | undefined;
         cleanup(() => {
             disposed = true;
             renderedComponent?.cleanup();
@@ -117,16 +116,44 @@ export default async function initMesh(Livewire: any, config: Config) {
         }
 
         try {
-            renderedComponent = await renderComponent(
-                component,
-                id,
-                resolvedComponent
-            );
+            const rendered = renderComponent(component, id, resolvedComponent);
+            renderedComponent = rendered;
             if (disposed) {
-                renderedComponent.cleanup();
+                rendered.cleanup();
                 return;
             }
-            setRenderedComponent(component.id, renderedComponent);
+            setRenderedComponent(component.id, rendered);
+
+            // Mirror server-driven slot changes into the rendered component.
+            // Livewire keeps the hidden [data-mesh-slots] holders current via
+            // fragment morphing; observe them (never .mesh-root, which React
+            // owns) and replace the slot content when the server sends new HTML.
+            const slotsRoot = component.el.querySelector("[data-mesh-slots]");
+            if (slotsRoot) {
+                let last = JSON.stringify(getSlots(component.el));
+                const observer = new MutationObserver(() => {
+                    const next = getSlots(component.el);
+                    const serialized = JSON.stringify(next);
+                    if (serialized === last) {
+                        return; // skip-morph / no-op
+                    }
+                    last = serialized;
+                    // Server sent new slot content → replace children. Mirror the
+                    // mount path's error handling so a reactive-only failure (e.g. a
+                    // late prop/slot collision) is logged, not thrown uncaught.
+                    try {
+                        rendered.updateSlots(next);
+                    } catch (e) {
+                        console.error("Mesh: failed to update slots", e);
+                    }
+                });
+                observer.observe(slotsRoot, {
+                    childList: true,
+                    subtree: true,
+                    characterData: true,
+                });
+                cleanup(() => observer.disconnect());
+            }
         } catch (e) {
             console.error("Mesh: failed to render \"" + id + "\"", e);
         }
@@ -134,19 +161,20 @@ export default async function initMesh(Livewire: any, config: Config) {
 
     // Hook into Livewire component updates
     Livewire.hook("morph.updated", ({ component }: any) => {
+        let rendered: RenderedComponent;
         try {
-            const rendered = getRenderedComponent(component.id);
-            let props = getProps(component.el);
-
-            // Return if props have not changed
-            if (JSON.stringify(props) === JSON.stringify(rendered.props)) {
-                return;
-            }
-
-            rendered.updateProps(component, props);
-            rendered.props = props;
-        } catch (e) {
+            rendered = getRenderedComponent(component.id);
+        } catch {
             return; // Not a Mesh component - silently ignore
+        }
+
+        // The handle dirty-checks the props itself, so a morph that didn't
+        // touch them is a no-op. Real update failures (e.g. a late
+        // reserved-prop collision) are logged, mirroring the slot path.
+        try {
+            rendered.updateProps(getProps(component.el));
+        } catch (e) {
+            console.error("Mesh: failed to update props", e);
         }
     });
 }

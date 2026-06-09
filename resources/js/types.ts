@@ -13,6 +13,31 @@ export type ComponentRegistry = {
 
 export type GlobResult = Record<string, ComponentLoader>;
 
+export type MeshSlots = Record<string, string>;
+
+// One slot's HTML string rendered into a framework node of type `T` — React
+// `dangerouslySetInnerHTML`, Vue `v-html`, Svelte `{@html}`. `name` is
+// "default" for the unnamed slot, or the named-slot key.
+export type SlotRenderer<T> = (html: string, name: string) => T;
+
+// The default-vs-named split of a component's slots, each already rendered
+// through the renderer's `renderSlot`.
+export type PreparedSlots<T> = {
+    // The default slot, or `undefined` when its HTML is empty/absent.
+    children: T | undefined;
+    // Every named slot, kept verbatim (NOT filtered when empty).
+    named: Record<string, T>;
+    // True when there is at least one named slot key.
+    hasNamed: boolean;
+};
+
+// What Mesh hands a renderer on mount and on every update: the latest props
+// and prepared slots. The reserved-prop guard has already run.
+export type RenderContext<T> = {
+    props: Record<string, any>;
+    slots: PreparedSlots<T>;
+};
+
 export interface LivewireSnapshot {
     // The serialized state of the component (public properties)
     data: Record<string, any>;
@@ -60,7 +85,7 @@ export type LivewireComponent = {
     $wire: Wire;
     children: any[];
     snapshot: LivewireSnapshot;
-    shapshotEncoded: string;
+    snapshotEncoded: string;
 };
 
 export type Wire = {
@@ -103,27 +128,41 @@ export type Wire = {
 };
 
 export type Config = {
-    renderers: MeshRenderer[];
+    renderers: MeshRenderer<any>[];
     debug?: boolean;
 };
 
+// Internal handle the core driver builds around a mounted renderer. Renderers
+// never construct this — they implement `MeshRenderer` and the core owns the
+// props/slots bookkeeping behind these methods.
 export type RenderedComponent = {
-    componentName: string;
-    props: any;
-    updateProps: (livewireComponent: LivewireComponent, props: any) => void;
+    updateProps: (props: Record<string, any>) => void;
+    updateSlots: (slots: MeshSlots) => void;
     cleanup: CleanupCallback;
 };
 
-export type RenderFunction = (
-    componentName: string,
-    livewireComponent: LivewireComponent,
-    component: any,
-    props: any
-) => RenderedComponent;
-
-export type MeshRenderer = {
+// A renderer supplies only the two genuinely framework-specific operations:
+// turning a slot's HTML string into a node, and mounting/updating/unmounting
+// a component. Everything else (the default-vs-named slot split, the reserved
+// `children`/`slots` prop guard, props dirty-checking, and keeping slot node
+// references stable across props-only updates) is owned by the Mesh core.
+export type MeshRenderer<TNode = unknown> = {
     type: string;
-    renderComponent: RenderFunction;
+    // HTML string -> framework node. Must be pure: it is called per slot,
+    // outside any mount, so it cannot rely on per-mount state.
+    renderSlot: SlotRenderer<TNode>;
+    mount: (args: {
+        // The resolved `.mesh-root` element to mount into.
+        el: HTMLElement;
+        livewireComponent: LivewireComponent;
+        Component: any;
+        // Initial props + prepared slots; the reserved-prop guard already ran.
+        ctx: RenderContext<TNode>;
+    }) => {
+        // Called with the latest context whenever props or slots change.
+        update: (ctx: RenderContext<TNode>) => void;
+        cleanup: CleanupCallback;
+    };
 };
 
 declare global {
@@ -140,7 +179,7 @@ declare global {
                   config: {
                       debug?: boolean;
                       renderers: {
-                          [key: string]: RenderFunction;
+                          [key: string]: MeshRenderer<any>;
                       };
                   };
               }

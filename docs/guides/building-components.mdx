@@ -111,3 +111,67 @@ export default function Counter({ start, label }: { start: number; label: string
 ```
 
 Props are computed on the server each render and passed into the component on mount.
+
+## Slots
+
+Pass inner content to a Mesh component and consume it in React as `children`. Anything between the
+opening and closing tags becomes the **default slot**:
+
+```blade
+<mesh:card>Hello <strong>{{ $name }}</strong></mesh:card>
+```
+
+```tsx
+export default function Card({ children }: { children?: React.ReactNode }) {
+  return <div className="card">{children}</div>
+}
+```
+
+### Named slots
+
+Wrap content in `<livewire:slot name="…">` to send it as a **named slot**. Named slots arrive together
+in a `slots` prop, keyed by name; the rest stays in `children`:
+
+```blade
+<mesh:card>
+  <livewire:slot name="title">Welcome</livewire:slot>
+  Hello <strong>{{ $name }}</strong>
+</mesh:card>
+```
+
+```tsx
+export default function Card({
+  children,
+  slots,
+}: {
+  children?: React.ReactNode
+  slots?: { title?: React.ReactNode }
+}) {
+  return (
+    <div className="card">
+      <h2>{slots?.title}</h2>
+      {children}
+    </div>
+  )
+}
+```
+
+Use the `name="title"` form — Livewire 4 has no `:title` slot shorthand.
+
+### Reactivity and limitations
+
+Slot content is **reactive to the server**: when a parent re-render changes the slot — for example a
+slot that interpolates parent state — Mesh replaces the rendered content live.
+
+It is rendered **statically** from the server HTML, so in v1 **nested interactive Livewire or Alpine
+inside a slot is not supported** — it would run in a hidden holder and render dead in the React copy.
+Pass interactive pieces as their own Mesh components or as props instead.
+
+<Callout type="warn">
+  **Security:** slot content is mirrored into the page with `dangerouslySetInnerHTML`. Blade escapes
+  `{{ }}` interpolation, so slots built from `{{ … }}` are safe. Content written with `{!! … !!}` (or
+  any other unescaped output) is injected as raw HTML — never put unsanitised user input in a slot.
+</Callout>
+
+`children` and `slots` are **reserved** prop names. If `props()` returns a `children` or `slots` key
+while slots are present, Mesh throws rather than silently shadowing the slot content.

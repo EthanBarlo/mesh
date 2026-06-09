@@ -9,8 +9,10 @@ export {
 export type {
     Config,
     MeshRenderer,
-    RenderFunction,
-    RenderedComponent,
+    MeshSlots,
+    SlotRenderer,
+    PreparedSlots,
+    RenderContext,
     LivewireComponent,
     LivewireSnapshot,
     Wire,
