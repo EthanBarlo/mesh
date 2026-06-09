@@ -6,7 +6,9 @@ interface CounterProps {
 }
 
 const Counter: React.FC<CounterProps> = ({ initialCount }) => {
-    const [count, setCount] = useEntangle<number>("count");
+    // live: each click syncs immediately, so the sibling Livewire and Alpine
+    // counters on the page update in real time.
+    const [count, setCount] = useEntangle<number>("count", true);
 
     const handleIncrement = () => {
         setCount(count + 1);
