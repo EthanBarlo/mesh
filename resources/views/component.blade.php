@@ -2,6 +2,7 @@
 <div
     data-mesh-component="{{ $this->component() }}"
     data-mesh-props="{{ json_encode($this->props()) }}"
+    style="display: contents"
 >
     {{-- Hidden, Livewire-MORPHED source of truth for slot content. NOT wire:ignore: Livewire keeps it
          current via fragment morphing; React mirrors it into .mesh-root. Renders skip-markers on
@@ -14,5 +15,5 @@
         </div>
     @endif
 
-    <div wire:ignore class="mesh-root"></div>
+    <div wire:ignore class="mesh-root" style="display: contents"></div>
 </div>
