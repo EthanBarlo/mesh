@@ -11,9 +11,14 @@
             
             <!-- Counter Display -->
             <div class="my-6">
-                <span class="text-7xl font-bold tabular-nums text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-400">
-                    {{ $count }}
-                </span>
+                {{-- wire:text keeps the display in sync when a sibling
+                     (the React or Alpine counter) changes the modelable
+                     value — plain {{ $count }} only updates when this
+                     component re-renders itself. --}}
+                <span
+                    wire:text="count"
+                    class="text-7xl font-bold tabular-nums text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-400"
+                >{{ $count }}</span>
             </div>
 
             <!-- Buttons -->

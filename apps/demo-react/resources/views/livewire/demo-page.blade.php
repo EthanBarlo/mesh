@@ -52,6 +52,13 @@
                     </svg>
                 </a>
                 <a
+                    href="https://mesh.ebarlow.dev"
+                    target="_blank"
+                    class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-slate-300 font-medium hover:bg-white/10 hover:text-white active:scale-95 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-white/30 focus:ring-offset-2 focus:ring-offset-slate-900"
+                >
+                    Read the docs
+                </a>
+                <a
                     href="https://github.com/EthanBarlo/mesh"
                     target="_blank"
                     class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-slate-300 font-medium hover:bg-white/10 hover:text-white active:scale-95 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-white/30 focus:ring-offset-2 focus:ring-offset-slate-900"
