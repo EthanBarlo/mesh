@@ -116,9 +116,15 @@ const Dropzone: React.FC<DropzoneProps> = ({ maxKilobytes, accept }) => {
     };
 
     const handleTryAgain = async () => {
-        // Clear the rejected upload and the validation error bag server-side.
-        await wire.$call("clear");
-        resetLocal();
+        try {
+            // Clear the rejected upload and the validation error bag server-side.
+            await wire.$call("clear");
+        } catch {
+            // Server-side clear failed — still recover the local UI so the
+            // user can retry; the next upload overwrites the stale state.
+        } finally {
+            resetLocal();
+        }
     };
 
     return (

@@ -18,7 +18,7 @@
             </div>
             <button
                 type="button"
-                @click="navigator.clipboard.writeText($refs.panels.children[tab].textContent.trim()); copied = true; setTimeout(() => copied = false, 1500)"
+                @click="navigator.clipboard.writeText($refs.panels.children[tab].textContent.trim()).then(() => { copied = true; setTimeout(() => copied = false, 1500) }).catch(() => {})"
                 class="shrink-0 px-3 py-2.5 text-xs font-medium text-zinc-500 hover:text-white transition-colors"
                 aria-label="Copy code"
             >

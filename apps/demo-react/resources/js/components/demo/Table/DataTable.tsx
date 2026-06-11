@@ -57,9 +57,13 @@ function DataTable<TData>({
                                                     "group inline-flex items-center gap-1.5 hover:text-white transition-colors duration-150 focus:outline-none focus:text-white",
                                                     sorted && "text-white",
                                                 )}
-                                                aria-label={`Sort by ${String(
-                                                    header.column.columnDef.header,
-                                                )}`}
+                                                aria-label={`Sort by ${
+                                                    typeof header.column.columnDef
+                                                        .header === "string"
+                                                        ? header.column.columnDef
+                                                              .header
+                                                        : header.column.id
+                                                }`}
                                             >
                                                 {flexRender(
                                                     header.column.columnDef.header,

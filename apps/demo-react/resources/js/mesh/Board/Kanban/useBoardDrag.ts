@@ -31,6 +31,9 @@ const findColumn = (columns: ColumnType[], id: string): ColumnType | undefined =
 export function useBoardDrag({ board, setColumns, onMove }: UseBoardDragOptions) {
     const [activeCard, setActiveCard] = useState<Card | null>(null);
     const originColumnRef = useRef<string | null>(null);
+    // Board as it was before the drag, so a cancelled drag can undo the
+    // optimistic cross-column moves made in onDragOver.
+    const snapshotRef = useRef<ColumnType[] | null>(null);
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -42,6 +45,7 @@ export function useBoardDrag({ board, setColumns, onMove }: UseBoardDragOptions)
         const column = findColumn(board, activeId);
 
         originColumnRef.current = column?.id ?? null;
+        snapshotRef.current = board;
         setActiveCard(column?.cards.find((card) => card.id === activeId) ?? null);
     };
 
@@ -82,6 +86,7 @@ export function useBoardDrag({ board, setColumns, onMove }: UseBoardDragOptions)
 
     const onDragEnd = async ({ active, over }: DragEndEvent) => {
         setActiveCard(null);
+        snapshotRef.current = null;
 
         const fromColumnId = originColumnRef.current;
         originColumnRef.current = null;
@@ -120,8 +125,14 @@ export function useBoardDrag({ board, setColumns, onMove }: UseBoardDragOptions)
     };
 
     const onDragCancel = () => {
+        // Undo any optimistic moves from onDragOver — the server was never
+        // told, so local state must roll back to match it.
+        if (snapshotRef.current) {
+            setColumns(snapshotRef.current);
+        }
         setActiveCard(null);
         originColumnRef.current = null;
+        snapshotRef.current = null;
     };
 
     return {

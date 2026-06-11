@@ -33,7 +33,7 @@ const PlanPicker: React.FC<PlanPickerProps> = ({
                     <label
                         key={p.id}
                         className={cn(
-                            "relative cursor-pointer rounded-lg border p-4 transition-colors duration-150",
+                            "relative cursor-pointer rounded-lg border p-4 transition-colors duration-150 focus-within:ring-2 focus-within:ring-white/20 focus-within:ring-offset-2 focus-within:ring-offset-zinc-950",
                             selected
                                 ? "border-white/20 bg-white/[0.05]"
                                 : "border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.05]",

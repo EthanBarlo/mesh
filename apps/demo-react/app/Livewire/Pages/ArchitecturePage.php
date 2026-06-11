@@ -54,6 +54,12 @@ class ArchitecturePage extends Component
 
             $id = str_replace('\\', '/', substr($file->getPath(), strlen($base) + 1));
 
+            // A file directly in the mesh root has no component folder — skip
+            // it rather than emit a malformed manifest row.
+            if ($id === '') {
+                continue;
+            }
+
             $entries[] = [
                 'id' => $id,
                 'entry' => 'resources/js/mesh/'.$id.'/'.$file->getFilename(),

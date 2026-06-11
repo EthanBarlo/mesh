@@ -38,8 +38,9 @@ class CodeViewer extends Component
         $path = realpath(base_path($file));
 
         $allowed = collect(['app', 'resources'])
-            ->map(fn (string $dir) => realpath(base_path($dir)).DIRECTORY_SEPARATOR)
-            ->filter();
+            ->map(fn (string $dir) => realpath(base_path($dir)))
+            ->filter()
+            ->map(fn (string $dir) => $dir.DIRECTORY_SEPARATOR);
 
         if ($path === false || ! $allowed->contains(fn (string $dir) => str_starts_with($path, $dir))) {
             report(new \RuntimeException("CodeViewer: file [{$file}] is missing or outside the allowed directories."));
