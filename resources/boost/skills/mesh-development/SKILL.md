@@ -1,13 +1,13 @@
 ---
 name: mesh-development
-description: Build and modify Mesh components — React or Vue frontends for Livewire 4 components. Use when creating components in app/Mesh or resources/js/mesh, using <mesh:*> Blade tags, the useEntangle/useWire/useErrorBag hooks or composables, or debugging Mesh mount/sync issues.
+description: Build and modify Mesh components — React, Vue, or Svelte frontends for Livewire 4 components. Use when creating components in app/Mesh or resources/js/mesh, using <mesh:*> Blade tags, the useEntangle/useWire/useErrorBag hooks or composables, or debugging Mesh mount/sync issues.
 ---
 
 # Mesh Development
 
 ## Mental model
 
-A Mesh component is one logical component with two halves: a Livewire class in `app/Mesh/` that owns all server state, and a React or Vue component in `resources/js/mesh/` that renders it. Data crosses the boundary through three channels:
+A Mesh component is one logical component with two halves: a Livewire class in `app/Mesh/` that owns all server state, and a React, Vue, or Svelte component in `resources/js/mesh/` that renders it. Data crosses the boundary through three channels:
 
 | Channel | Direction | Reactivity | Use for |
 | --- | --- | --- | --- |
@@ -71,6 +71,22 @@ const count = useEntangle<number>("count");
 
 The Vue composables mirror the React hooks, imported from `@mesh/vue` instead of `@mesh/react`: `useEntangle` returns a single **writable ref** (bind it with `v-model` or assign `.value`) rather than a `[value, setValue]` tuple; `useWire` is identical; `useErrorBag` returns a `shallowRef` of the bag (`.value` in script, auto-unwrapped in templates). Replace entangled objects instead of mutating nested fields.
 
+For a Svelte project, pass `--renderer=svelte` (or set `mesh.make.renderer` to `svelte`) and the frontend half is a Svelte 5 component:
+
+```svelte
+<!-- resources/js/mesh/Counter/index.svelte -->
+<script lang="ts">
+import { useEntangle } from "@mesh/svelte";
+
+let { label }: { label: string } = $props();
+const count = useEntangle<number>("count");
+</script>
+
+<button onclick={() => count.value++}>{label}: {count.value}</button>
+```
+
+The Svelte composables come from `@mesh/svelte` (runes-based): `useEntangle` returns a single **writable `{ value }` box** — read and write `.value`, bind with `bind:value={x.value}`; `useWire` is identical; `useErrorBag` returns a read-only `{ value }` box. As in Vue, replace entangled objects instead of mutating nested fields.
+
 Render it in any Blade view:
 
 ```blade
@@ -126,7 +142,7 @@ No routes, controllers, or fetch needed. See `references/wire-api.md` for the fu
 
 ## Pitfall #4: slots are static HTML
 
-Blade slot content is forwarded into React as `children` (default slot) and `slots.{name}` (named slots, via `<livewire:slot name="...">`). In Vue they arrive as **native slots** — render them with `<slot />` and `<slot name="title" />`:
+Blade slot content is forwarded into React as `children` (default slot) and `slots.{name}` (named slots, via `<livewire:slot name="...">`). In Vue they arrive as **native slots** — render them with `<slot />` and `<slot name="title" />`. In Svelte the mapping mirrors React, as **snippet props**: the default slot is the `children` snippet (`{@render children?.()}`) and named slots arrive on a `slots` prop (`{@render slots.title?.()}`):
 
 ```blade
 <mesh:card>
@@ -154,7 +170,7 @@ Before debugging anything else, verify:
 
 ## Real-world examples
 
-The Mesh repository ships two mirrored demo apps at `apps/demo-react` and `apps/demo-vue` (github.com/EthanBarlo/mesh) covering patterns beyond this skill — consult the one matching your framework rather than inventing an approach:
+The Mesh repository ships three mirrored demo apps at `apps/demo-react`, `apps/demo-vue`, and `apps/demo-svelte` (github.com/EthanBarlo/mesh) covering patterns beyond this skill — consult the one matching your framework rather than inventing an approach:
 
 - `Counter` — minimal two-way binding
 - `State/EntangleModes` — deferred vs live sync side by side
@@ -163,7 +179,7 @@ The Mesh repository ships two mirrored demo apps at `apps/demo-react` and `apps/
 - `Wire/EventBridge` — Livewire events across components
 - `Forms/ProjectForm` — validation, error bag, live slug field
 - `Uploads/Dropzone` — file uploads via `$upload`
-- `Charts/RevenueChart`, `Table/OrdersTable`, `Board/Kanban` — integrating ECharts, TanStack Table, and drag-and-drop (dnd-kit in React, @formkit/drag-and-drop in Vue)
+- `Charts/RevenueChart`, `Table/OrdersTable`, `Board/Kanban` — integrating ECharts, TanStack Table, and drag-and-drop (dnd-kit in React; @formkit/drag-and-drop in Vue, and in Svelte via its vanilla API wrapped in a Svelte action)
 - `Kanban/Card` + `Kanban/Column` — composing Mesh components
 - `Slots/Card` — default + named slots
 
