@@ -1,10 +1,11 @@
 import Link from 'next/link';
+import { HeroDiagram } from '@/components/hero-diagram';
 
 const demoUrl = 'https://mesh-demo-react.ebarlow.dev';
 
 export default function HomePage() {
   return (
-    <main className="flex-1 flex items-center px-6 py-16">
+    <main className="flex-1 px-6 py-16">
       <div className="w-full max-w-5xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-fd-border bg-fd-card text-xs font-medium uppercase tracking-widest text-fd-muted-foreground mb-6">
@@ -12,9 +13,9 @@ export default function HomePage() {
             For Livewire 4
           </div>
           <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight mb-4">
-            One Blade tag.{' '}
+            One Mesh tag.{' '}
             <span className="text-fd-muted-foreground">
-              The whole React ecosystem.
+              The whole JavaScript ecosystem.
             </span>
           </h1>
           <p className="text-lg text-fd-muted-foreground leading-relaxed mb-8">
@@ -49,7 +50,11 @@ export default function HomePage() {
           </p>
         </div>
 
-        <div className="space-y-3">
+        <HeroDiagram />
+      </div>
+
+      <div className="w-full max-w-5xl mx-auto mt-20">
+        <div className="grid md:grid-cols-3 gap-3">
           <div className="rounded-xl border border-fd-border bg-fd-card overflow-hidden">
             <div className="px-4 py-2 border-b border-fd-border text-xs font-mono text-fd-muted-foreground">
               app/Mesh/Counter.php
