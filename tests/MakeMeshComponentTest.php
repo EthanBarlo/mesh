@@ -62,8 +62,21 @@ it('lets --renderer override the configured default', function () {
     expect(File::exists($jsEntry))->toBeTrue();
 });
 
+it('creates a vue component with --renderer=vue', function () {
+    $this->artisan('make:mesh', ['name' => 'Counter', '--renderer' => 'vue'])
+        ->assertExitCode(0);
+
+    $jsEntry = $this->appBase.'/resources/js/mesh/Counter/index.vue';
+    expect(File::exists($jsEntry))->toBeTrue();
+
+    $jsContents = File::get($jsEntry);
+    expect($jsContents)->toContain('<script setup lang="ts">');
+    expect($jsContents)->toContain('Counter component');
+    expect($jsContents)->not->toContain('{{ class }}');
+});
+
 it('fails for unsupported renderer', function () {
-    $this->artisan('make:mesh', ['name' => 'Broken', '--renderer' => 'vue'])
+    $this->artisan('make:mesh', ['name' => 'Broken', '--renderer' => 'svelte'])
         ->assertExitCode(1);
 });
 

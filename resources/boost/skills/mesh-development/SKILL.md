@@ -1,13 +1,13 @@
 ---
 name: mesh-development
-description: Build and modify Mesh components — React frontends for Livewire 4 components. Use when creating components in app/Mesh or resources/js/mesh, using <mesh:*> Blade tags, the useEntangle/useWire/useErrorBag hooks, or debugging Mesh mount/sync issues.
+description: Build and modify Mesh components — React or Vue frontends for Livewire 4 components. Use when creating components in app/Mesh or resources/js/mesh, using <mesh:*> Blade tags, the useEntangle/useWire/useErrorBag hooks or composables, or debugging Mesh mount/sync issues.
 ---
 
 # Mesh Development
 
 ## Mental model
 
-A Mesh component is one logical component with two halves: a Livewire class in `app/Mesh/` that owns all server state, and a React component in `resources/js/mesh/` that renders it. Data crosses the boundary through three channels:
+A Mesh component is one logical component with two halves: a Livewire class in `app/Mesh/` that owns all server state, and a React or Vue component in `resources/js/mesh/` that renders it. Data crosses the boundary through three channels:
 
 | Channel | Direction | Reactivity | Use for |
 | --- | --- | --- | --- |
@@ -52,6 +52,24 @@ export default function Counter({ label }: { label: string }) {
     return <button onClick={() => setCount(count + 1)}>{label}: {count}</button>;
 }
 ```
+
+For a Vue project, pass `--renderer=vue` (or set `mesh.make.renderer` to `vue` in `config/mesh.php`) and the frontend half is an SFC instead:
+
+```vue
+<!-- resources/js/mesh/Counter/index.vue -->
+<script setup lang="ts">
+import { useEntangle } from "@mesh/vue";
+
+defineProps<{ label: string }>();
+const count = useEntangle<number>("count");
+</script>
+
+<template>
+    <button @click="count++">{{ label }}: {{ count }}</button>
+</template>
+```
+
+The Vue composables mirror the React hooks, imported from `@mesh/vue` instead of `@mesh/react`: `useEntangle` returns a single **writable ref** (bind it with `v-model` or assign `.value`) rather than a `[value, setValue]` tuple; `useWire` is identical; `useErrorBag` returns a `shallowRef` of the bag (`.value` in script, auto-unwrapped in templates). Replace entangled objects instead of mutating nested fields.
 
 Render it in any Blade view:
 
@@ -108,7 +126,7 @@ No routes, controllers, or fetch needed. See `references/wire-api.md` for the fu
 
 ## Pitfall #4: slots are static HTML
 
-Blade slot content is forwarded into React as `children` (default slot) and `slots.{name}` (named slots, via `<livewire:slot name="...">`):
+Blade slot content is forwarded into React as `children` (default slot) and `slots.{name}` (named slots, via `<livewire:slot name="...">`). In Vue they arrive as **native slots** — render them with `<slot />` and `<slot name="title" />`:
 
 ```blade
 <mesh:card>
@@ -136,7 +154,7 @@ Before debugging anything else, verify:
 
 ## Real-world examples
 
-The Mesh repository ships a demo app at `apps/demo-react` (github.com/EthanBarlo/mesh) covering patterns beyond this skill — consult it rather than inventing an approach:
+The Mesh repository ships two mirrored demo apps at `apps/demo-react` and `apps/demo-vue` (github.com/EthanBarlo/mesh) covering patterns beyond this skill — consult the one matching your framework rather than inventing an approach:
 
 - `Counter` — minimal two-way binding
 - `State/EntangleModes` — deferred vs live sync side by side
@@ -145,7 +163,7 @@ The Mesh repository ships a demo app at `apps/demo-react` (github.com/EthanBarlo
 - `Wire/EventBridge` — Livewire events across components
 - `Forms/ProjectForm` — validation, error bag, live slug field
 - `Uploads/Dropzone` — file uploads via `$upload`
-- `Charts/RevenueChart`, `Table/OrdersTable`, `Board/Kanban` — integrating ECharts, TanStack Table, dnd-kit
+- `Charts/RevenueChart`, `Table/OrdersTable`, `Board/Kanban` — integrating ECharts, TanStack Table, and drag-and-drop (dnd-kit in React, @formkit/drag-and-drop in Vue)
 - `Kanban/Card` + `Kanban/Column` — composing Mesh components
 - `Slots/Card` — default + named slots
 
