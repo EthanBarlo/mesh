@@ -84,6 +84,10 @@ Livewire.start()
 - [Renderers (React/Vue/Svelte)](docs/advanced/renderers.mdx)
 - [Troubleshooting](docs/advanced/troubleshooting.mdx)
 
+## Laravel Boost
+
+Mesh ships AI guidelines and a `mesh-development` agent skill for [Laravel Boost](https://github.com/laravel/boost). If your app has Boost installed, `php artisan boost:install` (or `boost:update --discover`) picks them up automatically, teaching AI coding agents Mesh's conventions — component scaffolding, ID matching, entangle modes, and slots.
+
 ## Requirements
 
 - PHP 8.2+, Laravel 11+
