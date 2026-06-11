@@ -3,6 +3,7 @@
   "pages": [
     "---Getting Started---",
     "index",
+    "why",
     "installation",
     "guides",
     "api",

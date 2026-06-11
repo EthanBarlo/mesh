@@ -1,0 +1,55 @@
+---
+title: Why Mesh
+description: The problems Mesh solves, and when to reach for it.
+---
+
+# Why Mesh
+
+The vast majority of interactions in a Livewire app don't need a JavaScript framework. Livewire handles the server round-trips, Alpine handles the client-side sprinkles, and that combination comfortably covers most of what an app does — forms, modals, tabs, filtering, live updates.
+
+But every app has a few edge cases where reaching for a JS framework is simply the easier path:
+
+- **The component already exists.** A virtualized table (TanStack Table), a drag-and-drop board (dnd-kit), a rich text editor (TipTap), a live chart (ECharts) — these are mature, battle-tested packages. Rebuilding even a fraction of one in Alpine is slow to write and worse to maintain.
+- **The interaction is genuinely complex.** Heavy client-side state, coordinated drag interactions, canvas rendering — the kind of logic component frameworks were built for.
+- **You already have the component.** A React/Vue/Svelte component from another project (or a component library) that you'd rather reuse than translate.
+
+The usual answers to those edge cases are bad trades: rebuild the widget by hand in Alpine, switch the whole app to Inertia for the sake of one page, or bolt a one-off React mount onto the page — and then own the bundling, the prop plumbing, the state syncing, and the teardown yourself, for every widget, forever.
+
+Mesh exists so the edge case stays small: keep Livewire as the backbone, and drop a framework component **exactly where you need it** — as an island inside the Livewire view. Mesh bridges the gap and manages the complexity — props, two-way state, server actions, bundling, lifecycle — so you can just focus on building.
+
+```blade
+<div>
+    <h2>{{ $project->name }}</h2>
+
+    {{-- A React island, receiving live props from this Livewire component --}}
+    <mesh:kanban.board :columns="$columns" wire:key="board" />
+</div>
+```
+
+## What Mesh handles for you
+
+### Use the ecosystem instead of rebuilding it
+
+dnd-kit, ECharts, TanStack Table, TipTap, headless UI libraries — anything that runs in a React (or Vue/Svelte) component runs in an island. The [React demo](https://mesh-demo-react.ebarlow.dev) shows a sortable [data table](https://mesh-demo-react.ebarlow.dev/table), [live charts](https://mesh-demo-react.ebarlow.dev/charts), and a [drag-and-drop board](https://mesh-demo-react.ebarlow.dev/board) all driven by Livewire state.
+
+### Adopt incrementally — no rewrite
+
+An island is one Blade tag. You can add the first one to an existing Livewire app this afternoon, and the rest of the page doesn't change. There is no "migration"; pages without islands ship no framework code at all, because every component is auto-discovered and code-split into its own lazy chunk.
+
+### The server stays the source of truth
+
+Props flow from the PHP class's `props()` method; two-way state goes through [`useEntangle`](api/hooks.mdx); actions, events, and uploads go through [`useWire`](api/hooks.mdx). Validation, authorization, and persistence stay in PHP, where they already live. The island is a view of server state, not a second copy of it.
+
+### No glue code to maintain
+
+Mesh owns the lifecycle: mounting, prop updates on re-render, morph survival, and teardown when Livewire removes the element. You write a PHP class and a component folder; there is no per-component registration, bundler config, or bridge code.
+
+## When *not* to use Mesh
+
+- **Alpine and Livewire already cover it.** Most interactions don't need an island — a dropdown, a tab switcher, an inline edit. Reach for Mesh when the JS-framework version is genuinely the simpler path, not by default.
+- **The whole app is client-driven.** If every page is a React app, Inertia (or a plain SPA) is the better fit — Mesh is for apps where Livewire owns the page.
+- **You need React context to span multiple islands.** Each island is its own React root in v1 — see [Troubleshooting](advanced/troubleshooting.mdx) for the boundaries.
+
+## See it running
+
+The [React demo](https://mesh-demo-react.ebarlow.dev) is a full showcase app — every page pairs a working example with the exact PHP, Blade, and TSX files behind it, from a [first counter](https://mesh-demo-react.ebarlow.dev) to a [Blade-composed Kanban board](https://mesh-demo-react.ebarlow.dev/kanban) where Livewire owns the board and React handles only the drag-and-drop.
