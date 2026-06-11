@@ -7,9 +7,11 @@ interface CounterProps {
 }
 
 const Counter: React.FC<CounterProps> = ({ initialCount }) => {
-    // live: each click syncs immediately, so the sibling Livewire and Alpine
-    // counters on the page update in real time.
-    const [count, setCount] = useEntangle<number>("count", true);
+    // Deferred (lazy) entangle: clicks write to the shared client-side
+    // Livewire store, so the Alpine card follows instantly with zero
+    // network requests — the server hears about it piggybacked on the
+    // next Livewire round-trip (e.g. the Pure Livewire card's buttons).
+    const [count, setCount] = useEntangle<number>("count");
 
     return (
         <GlowCard contentClassName="p-8">
