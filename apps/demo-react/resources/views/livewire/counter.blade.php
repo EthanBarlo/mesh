@@ -8,14 +8,13 @@
 
             <!-- Counter Display -->
             <div class="my-6">
-                {{-- wire:text keeps the display in sync when a sibling
-                     (the React or Alpine counter) changes the modelable
-                     value — plain {{ $count }} only updates when this
-                     component re-renders itself. --}}
-                <span
-                    wire:text="count"
-                    class="text-7xl font-semibold tracking-tight tabular-nums text-white"
-                >{{ $count }}</span>
+                {{-- Deliberately server-rendered: this card shows what the
+                     SERVER currently knows. Siblings move it client-side via
+                     the entangled store, but this number only changes when
+                     this component re-renders on a request. --}}
+                <span class="text-7xl font-semibold tracking-tight tabular-nums text-white">
+                    {{ $count }}
+                </span>
             </div>
 
             <!-- Buttons -->

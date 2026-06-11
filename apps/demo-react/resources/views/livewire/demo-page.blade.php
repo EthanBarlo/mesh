@@ -153,7 +153,7 @@
         <p class="mt-6 text-sm text-zinc-500 text-center">
             Same Livewire property. Three frontends. The React one is Mesh.
             <span class="block mt-1 text-xs text-zinc-600">
-                The Alpine and React cards share the client-side Livewire store, so they stay in sync with each other instantly &mdash; watch the network tab: no requests. The Pure Livewire card's buttons go to the server, carry the deferred changes with them, and bring all three back in line.
+                The Alpine and React cards share the client-side Livewire store, so they stay in sync with each other instantly &mdash; watch the network tab: no requests. The Pure Livewire card shows what the <em>server</em> knows, so it sits still until a request happens &mdash; click its buttons and the deferred changes ride along, the server catches up, and all three line up again.
             </span>
         </p>
 
