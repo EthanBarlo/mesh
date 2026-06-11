@@ -1,6 +1,7 @@
 import React from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { cn } from "@/components/ui";
 import CardItem from "./CardItem";
 import type { Column as ColumnType } from "./types";
 
@@ -22,7 +23,7 @@ const Column: React.FC<ColumnProps> = ({ column }) => {
         <div className="flex flex-col rounded-2xl bg-slate-900/60 border border-white/10 overflow-hidden">
             <header className="flex items-center gap-2.5 px-4 py-3 border-b border-white/5">
                 <span
-                    className={`h-2 w-2 rounded-full ${ACCENTS[column.id] ?? "bg-slate-400"}`}
+                    className={cn("h-2 w-2 rounded-full", ACCENTS[column.id] ?? "bg-slate-400")}
                     aria-hidden="true"
                 />
                 <h3 className="text-sm font-semibold text-white">{column.title}</h3>
@@ -34,9 +35,10 @@ const Column: React.FC<ColumnProps> = ({ column }) => {
             <SortableContext items={column.cards.map((card) => card.id)} strategy={verticalListSortingStrategy}>
                 <ul
                     ref={setNodeRef}
-                    className={`flex-1 p-3 space-y-2.5 min-h-36 transition-colors duration-150 ${
-                        isOver ? "bg-rose-500/5" : ""
-                    }`}
+                    className={cn(
+                        "flex-1 p-3 space-y-2.5 min-h-36 transition-colors duration-150",
+                        isOver && "bg-rose-500/5",
+                    )}
                     aria-label={`${column.title} column`}
                 >
                     {column.cards.map((card) => (

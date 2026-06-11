@@ -1,5 +1,6 @@
 import React from "react";
 import { useEntangle } from "@mesh/react";
+import { BigNumber, Button, Eyebrow, GlowCard } from "@/components/ui";
 
 interface CounterProps {
     initialCount: number;
@@ -10,72 +11,51 @@ const Counter: React.FC<CounterProps> = ({ initialCount }) => {
     // counters on the page update in real time.
     const [count, setCount] = useEntangle<number>("count", true);
 
-    const handleIncrement = () => {
-        setCount(count + 1);
-    };
-
-    const handleDecrement = () => {
-        setCount(count - 1);
-    };
-
-    const handleReset = () => {
-        setCount(initialCount);
-    };
-
     return (
-        <div className="relative group">
-            {/* Glow effect */}
-            <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-3xl blur-xl opacity-25 group-hover:opacity-40 transition-opacity duration-500" />
+        <GlowCard
+            glow="from-cyan-500 to-blue-500"
+            glowClassName="opacity-25 group-hover:opacity-40"
+            contentClassName="p-8"
+        >
+            <div className="text-center">
+                <Eyebrow className="mb-4 block">React Counter</Eyebrow>
 
-            {/* Card */}
-            <div className="relative p-8 rounded-2xl bg-slate-800/80 border border-white/10 backdrop-blur-xl">
-                <div className="text-center">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-4 block">
-                        React Counter
-                    </span>
+                <div className="my-6">
+                    <BigNumber className="text-7xl">{count}</BigNumber>
+                </div>
 
-                    {/* Counter Display */}
-                    <div className="my-6">
-                        <span className="text-7xl font-bold tabular-nums text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-400">
-                            {count}
-                        </span>
-                    </div>
+                <div className="flex items-center justify-center gap-3">
+                    <Button
+                        variant="secondary"
+                        size="icon"
+                        className="focus:ring-cyan-500 focus:ring-offset-slate-800"
+                        onClick={() => setCount(count - 1)}
+                        aria-label="Decrement counter"
+                    >
+                        -
+                    </Button>
 
-                    {/* Buttons */}
-                    <div className="flex items-center justify-center gap-3">
-                        <button
-                            onClick={handleDecrement}
-                            type="button"
-                            className="w-14 h-14 rounded-xl bg-slate-700/50 border border-white/10 text-white text-2xl font-medium hover:bg-slate-700 hover:border-white/20 active:scale-95 transition-all duration-150 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-slate-800"
-                            aria-label="Decrement counter"
-                            tabIndex={0}
-                        >
-                            -
-                        </button>
+                    <Button
+                        variant="ghost"
+                        className="px-5 h-14 focus:ring-offset-slate-800"
+                        onClick={() => setCount(initialCount)}
+                        aria-label="Reset counter"
+                    >
+                        Reset
+                    </Button>
 
-                        <button
-                            onClick={handleReset}
-                            type="button"
-                            className="px-5 h-14 rounded-xl bg-slate-700/30 border border-white/5 text-slate-400 text-sm font-medium hover:bg-slate-700/50 hover:text-slate-300 active:scale-95 transition-all duration-150 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-slate-800"
-                            aria-label="Reset counter"
-                            tabIndex={0}
-                        >
-                            Reset
-                        </button>
-
-                        <button
-                            onClick={handleIncrement}
-                            type="button"
-                            className="w-14 h-14 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-500 text-white text-2xl font-medium hover:from-cyan-600 hover:to-blue-600 active:scale-95 transition-all duration-150 shadow-lg shadow-cyan-500/25 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-slate-800"
-                            aria-label="Increment counter"
-                            tabIndex={0}
-                        >
-                            +
-                        </button>
-                    </div>
+                    <Button
+                        variant="accent"
+                        size="icon"
+                        className="font-medium focus:ring-offset-slate-800"
+                        onClick={() => setCount(count + 1)}
+                        aria-label="Increment counter"
+                    >
+                        +
+                    </Button>
                 </div>
             </div>
-        </div>
+        </GlowCard>
     );
 };
 

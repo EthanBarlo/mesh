@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { useWire } from "@mesh/react";
+import { Button, Eyebrow, Panel, Stat, Textarea } from "@/components/ui";
+import Die from "@/components/demo/Wire/Die";
 
 interface ServerActionsProps {
     placeholder: string;
@@ -16,46 +18,6 @@ interface AnalysisResult {
     longestWord: string;
     analyzedAt: string;
 }
-
-const Spinner: React.FC = () => (
-    <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-        <path className="opacity-90" fill="currentColor" d="M12 2a10 10 0 0110 10h-4a6 6 0 00-6-6V2z" />
-    </svg>
-);
-
-// Pip positions on a 3x3 grid for each die face.
-const PIPS: Record<number, number[]> = {
-    1: [4],
-    2: [2, 6],
-    3: [2, 4, 6],
-    4: [0, 2, 6, 8],
-    5: [0, 2, 4, 6, 8],
-    6: [0, 2, 3, 5, 6, 8],
-};
-
-const Die: React.FC<{ value: number }> = ({ value }) => (
-    <div
-        className="w-14 h-14 rounded-xl bg-slate-700/60 border border-white/10 grid grid-cols-3 grid-rows-3 p-2.5 shadow-inner"
-        role="img"
-        aria-label={`Die showing ${value}`}
-    >
-        {Array.from({ length: 9 }, (_, i) => (
-            <span key={i} className="flex items-center justify-center">
-                {(PIPS[value] ?? []).includes(i) && <span className="w-2 h-2 rounded-full bg-white" />}
-            </span>
-        ))}
-    </div>
-);
-
-const Stat: React.FC<{ label: string; value: string | number }> = ({ label, value }) => (
-    <div className="p-3 rounded-xl bg-slate-900/50 border border-white/5 text-center">
-        <p className="text-lg font-bold text-white tabular-nums truncate" title={String(value)}>
-            {value}
-        </p>
-        <p className="mt-0.5 text-[11px] uppercase tracking-wider text-slate-500">{label}</p>
-    </div>
-);
 
 const ServerActions: React.FC<ServerActionsProps> = ({ placeholder }) => {
     const wire = useWire();
@@ -92,30 +54,26 @@ const ServerActions: React.FC<ServerActionsProps> = ({ placeholder }) => {
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Analyze panel */}
-            <div className="p-5 rounded-2xl bg-slate-800/60 border border-white/10 flex flex-col">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                    await wire.$call("analyze", text)
-                </span>
+            <Panel className="flex flex-col">
+                <Eyebrow>await wire.$call("analyze", text)</Eyebrow>
 
-                <textarea
+                <Textarea
                     value={text}
                     onChange={(e) => setText(e.target.value)}
                     placeholder={placeholder}
                     rows={3}
-                    className="mt-3 w-full rounded-xl bg-slate-900/60 border border-white/10 px-4 py-3 text-sm text-white placeholder-slate-500 resize-none focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-transparent transition"
+                    className="mt-3 resize-none focus:ring-rose-500 focus:ring-offset-0 focus:border-transparent"
                     aria-label="Text to analyze on the server"
                 />
 
-                <button
-                    type="button"
+                <Button
                     onClick={handleAnalyze}
-                    disabled={analyzing || text.trim() === ""}
-                    className="mt-3 self-start inline-flex items-center gap-2 px-5 h-11 rounded-xl bg-gradient-to-br from-rose-500 to-orange-500 text-white text-sm font-semibold hover:from-rose-600 hover:to-orange-600 active:scale-95 transition-all duration-150 shadow-lg shadow-rose-500/25 disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:ring-offset-slate-900"
+                    disabled={text.trim() === ""}
+                    loading={analyzing}
+                    className="mt-3 self-start"
                 >
-                    {analyzing && <Spinner />}
                     {analyzing ? "Analyzing on server…" : "Analyze on server"}
-                </button>
+                </Button>
 
                 {analysis ? (
                     <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -129,13 +87,10 @@ const ServerActions: React.FC<ServerActionsProps> = ({ placeholder }) => {
                         The result object below is the PHP method's return value — no route, no controller, no fetch.
                     </p>
                 )}
-            </div>
+            </Panel>
 
-            {/* Dice panel */}
-            <div className="p-5 rounded-2xl bg-slate-800/60 border border-white/10 flex flex-col">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                    await wire.$call("rollDice")
-                </span>
+            <Panel className="flex flex-col">
+                <Eyebrow>await wire.$call("rollDice")</Eyebrow>
 
                 <div className="flex-1 flex flex-col items-center justify-center py-6">
                     {roll ? (
@@ -158,16 +113,15 @@ const ServerActions: React.FC<ServerActionsProps> = ({ placeholder }) => {
                     )}
                 </div>
 
-                <button
-                    type="button"
+                <Button
+                    variant="secondary"
+                    loading={rolling}
                     onClick={handleRoll}
-                    disabled={rolling}
-                    className="self-center inline-flex items-center gap-2 px-5 h-11 rounded-xl bg-slate-700/50 border border-white/10 text-white text-sm font-semibold hover:bg-slate-700 hover:border-white/20 active:scale-95 transition-all duration-150 disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 focus:ring-offset-slate-900"
+                    className="self-center font-semibold focus:ring-orange-500"
                 >
-                    {rolling && <Spinner />}
                     {rolling ? "Rolling…" : "Roll dice"}
-                </button>
-            </div>
+                </Button>
+            </Panel>
         </div>
     );
 };

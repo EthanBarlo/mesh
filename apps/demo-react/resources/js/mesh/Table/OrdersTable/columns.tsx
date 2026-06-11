@@ -1,8 +1,9 @@
 import React from "react";
 import { createColumnHelper, type ColumnDef, type RowData } from "@tanstack/react-table";
+import { Badge, Spinner, cn, type BadgeColor } from "@/components/ui";
 
 declare module "@tanstack/react-table" {
-    // Per-column styling hooks consumed by index.tsx when rendering th/td.
+    // Per-column styling hooks consumed by the DataTable renderer for th/td.
     interface ColumnMeta<TData extends RowData, TValue> {
         headerClass?: string;
         cellClass?: string;
@@ -29,59 +30,17 @@ const currency = new Intl.NumberFormat("en-US", {
 
 export const formatAmount = (cents: number): string => currency.format(cents / 100);
 
-const statusStyles: Record<OrderStatus, { badge: string; dot: string }> = {
-    pending: {
-        badge: "bg-amber-500/10 text-amber-300 border-amber-500/30",
-        dot: "bg-amber-400",
-    },
-    paid: {
-        badge: "bg-emerald-500/10 text-emerald-300 border-emerald-500/30",
-        dot: "bg-emerald-400",
-    },
-    shipped: {
-        badge: "bg-cyan-500/10 text-cyan-300 border-cyan-500/30",
-        dot: "bg-cyan-400",
-    },
-    refunded: {
-        badge: "bg-slate-500/10 text-slate-300 border-slate-500/30",
-        dot: "bg-slate-400",
-    },
+const statusColors: Record<OrderStatus, BadgeColor> = {
+    pending: "amber",
+    paid: "emerald",
+    shipped: "cyan",
+    refunded: "slate",
 };
 
-const StatusBadge: React.FC<{ status: OrderStatus }> = ({ status }) => {
-    const styles = statusStyles[status];
-
-    return (
-        <span
-            className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-xs font-medium capitalize ${styles.badge}`}
-        >
-            <span className={`w-1.5 h-1.5 rounded-full ${styles.dot}`} aria-hidden="true" />
-            {status}
-        </span>
-    );
-};
-
-const Spinner: React.FC = () => (
-    <svg
-        className="w-4 h-4 animate-spin"
-        viewBox="0 0 24 24"
-        fill="none"
-        aria-hidden="true"
-    >
-        <circle
-            className="opacity-25"
-            cx="12"
-            cy="12"
-            r="10"
-            stroke="currentColor"
-            strokeWidth="4"
-        />
-        <path
-            className="opacity-75"
-            fill="currentColor"
-            d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-        />
-    </svg>
+const StatusBadge: React.FC<{ status: OrderStatus }> = ({ status }) => (
+    <Badge color={statusColors[status]} dot className="capitalize">
+        {status}
+    </Badge>
 );
 
 const FlagIcon: React.FC<{ filled: boolean }> = ({ filled }) => (
@@ -112,11 +71,12 @@ const FlagButton: React.FC<{
             order.flagged ? `Unflag order ${order.id}` : `Flag order ${order.id}`
         }
         title={order.flagged ? "Unflag (server call)" : "Flag (server call)"}
-        className={`inline-flex items-center justify-center w-8 h-8 rounded-lg border transition-all duration-150 active:scale-95 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:cursor-wait ${
+        className={cn(
+            "inline-flex items-center justify-center w-8 h-8 rounded-lg border transition-all duration-150 active:scale-95 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:cursor-wait",
             order.flagged
                 ? "bg-rose-500/15 border-rose-500/30 text-rose-400 hover:bg-rose-500/25"
-                : "bg-white/5 border-white/10 text-slate-500 hover:text-slate-200 hover:border-white/20"
-        }`}
+                : "bg-white/5 border-white/10 text-slate-500 hover:text-slate-200 hover:border-white/20",
+        )}
     >
         {pending ? <Spinner /> : <FlagIcon filled={order.flagged} />}
     </button>

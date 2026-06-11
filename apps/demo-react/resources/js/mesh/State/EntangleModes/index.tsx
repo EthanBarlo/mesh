@@ -1,35 +1,13 @@
 import React from "react";
 import { useEntangle, useWire } from "@mesh/react";
+import { BigNumber, Button, Input, Panel } from "@/components/ui";
+import ServerValue from "@/components/demo/State/ServerValue";
 
 interface EntangleModesProps {
     requests: number;
     serverMessage: string;
     serverLiveMessage: string;
 }
-
-const fieldClasses =
-    "w-full px-4 py-3 rounded-xl bg-slate-800/80 border border-white/10 text-white placeholder-slate-500 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900";
-
-const ServerValue: React.FC<{ value: string; synced: boolean }> = ({
-    value,
-    synced,
-}) => (
-    <p className="mt-2 flex items-baseline gap-2 text-xs">
-        <span
-            className={`shrink-0 font-semibold uppercase tracking-wider ${
-                synced ? "text-emerald-400" : "text-amber-400"
-            }`}
-        >
-            {synced ? "Server in sync" : "Server behind"}
-        </span>
-        <span className="truncate text-slate-400">
-            server has:{" "}
-            <span className="font-mono text-slate-300">
-                {value === "" ? "(empty)" : `"${value}"`}
-            </span>
-        </span>
-    </p>
-);
 
 const EntangleModes: React.FC<EntangleModesProps> = ({
     requests,
@@ -52,7 +30,7 @@ const EntangleModes: React.FC<EntangleModesProps> = ({
         <div className="space-y-6">
             <div className="grid gap-4 sm:grid-cols-2">
                 {/* Deferred input */}
-                <div className="p-5 rounded-2xl bg-slate-800/60 border border-white/10">
+                <Panel>
                     <label
                         htmlFor="entangle-deferred"
                         className="block text-sm font-semibold text-white"
@@ -62,22 +40,22 @@ const EntangleModes: React.FC<EntangleModesProps> = ({
                     <p className="mt-0.5 mb-3 font-mono text-xs text-cyan-300/80">
                         useEntangle("message")
                     </p>
-                    <input
+                    <Input
                         id="entangle-deferred"
-                        type="text"
                         value={message ?? ""}
                         onChange={(e) => setMessage(e.target.value)}
                         placeholder="Type — nothing is sent yet"
-                        className={`${fieldClasses} focus:ring-cyan-500`}
+                        className="bg-slate-800/80 px-4 py-3 text-base focus:border-white/10 focus:ring-cyan-500"
                     />
                     <ServerValue
+                        className="mt-2"
                         value={serverMessage}
                         synced={serverMessage === (message ?? "")}
                     />
-                </div>
+                </Panel>
 
                 {/* Live input */}
-                <div className="p-5 rounded-2xl bg-slate-800/60 border border-white/10">
+                <Panel>
                     <label
                         htmlFor="entangle-live"
                         className="block text-sm font-semibold text-white"
@@ -87,27 +65,25 @@ const EntangleModes: React.FC<EntangleModesProps> = ({
                     <p className="mt-0.5 mb-3 font-mono text-xs text-rose-300/80">
                         useEntangle("liveMessage", true)
                     </p>
-                    <input
+                    <Input
                         id="entangle-live"
-                        type="text"
                         value={liveMessage ?? ""}
                         onChange={(e) => setLiveMessage(e.target.value)}
                         placeholder="Type — every keystroke syncs"
-                        className={`${fieldClasses} focus:ring-rose-500`}
+                        className="bg-slate-800/80 px-4 py-3 text-base focus:border-white/10 focus:ring-rose-500"
                     />
                     <ServerValue
+                        className="mt-2"
                         value={serverLiveMessage}
                         synced={serverLiveMessage === (liveMessage ?? "")}
                     />
-                </div>
+                </Panel>
             </div>
 
             {/* Round-trip panel */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-5 rounded-2xl bg-slate-800/60 border border-white/10">
+            <Panel className="flex flex-col sm:flex-row sm:items-center gap-4">
                 <div className="flex items-center gap-4 grow">
-                    <span className="text-5xl font-bold tabular-nums text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-400">
-                        {requests}
-                    </span>
+                    <BigNumber className="text-5xl">{requests}</BigNumber>
                     <div>
                         <p className="text-sm font-semibold text-white">
                             Server round-trips
@@ -122,15 +98,14 @@ const EntangleModes: React.FC<EntangleModesProps> = ({
                         </p>
                     </div>
                 </div>
-                <button
-                    type="button"
+                <Button
                     onClick={handleFlush}
-                    className="shrink-0 px-5 py-3 rounded-xl bg-gradient-to-br from-rose-500 to-orange-500 text-white text-sm font-semibold hover:from-rose-600 hover:to-orange-600 active:scale-95 transition-all duration-150 shadow-lg shadow-rose-500/25 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:ring-offset-slate-900"
+                    className="shrink-0"
                     aria-label="Flush deferred changes to the server now"
                 >
                     Flush deferred now
-                </button>
-            </div>
+                </Button>
+            </Panel>
         </div>
     );
 };

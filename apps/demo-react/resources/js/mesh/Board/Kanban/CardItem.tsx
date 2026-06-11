@@ -1,6 +1,7 @@
 import React from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { cn } from "@/components/ui";
 import type { Card } from "./types";
 
 const TAG_STYLES: Record<string, string> = {
@@ -24,17 +25,19 @@ interface CardFaceProps {
 export const CardFace: React.FC<CardFaceProps> = ({ card, lifted = false }) => {
     return (
         <div
-            className={`p-3.5 rounded-xl bg-slate-800/90 border space-y-2.5 transition-shadow duration-150 ${
+            className={cn(
+                "p-3.5 rounded-xl bg-slate-800/90 border space-y-2.5 transition-shadow duration-150",
                 lifted
                     ? "border-rose-500/40 shadow-2xl shadow-rose-500/20 rotate-2 scale-105"
-                    : "border-white/10 shadow-sm hover:border-white/20"
-            }`}
+                    : "border-white/10 shadow-sm hover:border-white/20",
+            )}
         >
             <p className="text-sm font-medium text-white leading-snug">{card.title}</p>
             <span
-                className={`inline-flex px-2 py-0.5 rounded-md border text-[11px] font-semibold uppercase tracking-wide ${
-                    TAG_STYLES[card.tag] ?? TAG_FALLBACK
-                }`}
+                className={cn(
+                    "inline-flex px-2 py-0.5 rounded-md border text-[11px] font-semibold uppercase tracking-wide",
+                    TAG_STYLES[card.tag] ?? TAG_FALLBACK,
+                )}
             >
                 {card.tag}
             </span>
@@ -57,9 +60,10 @@ const CardItem: React.FC<CardItemProps> = ({ card }) => {
             style={{ transform: CSS.Transform.toString(transform), transition }}
             {...attributes}
             {...listeners}
-            className={`rounded-xl cursor-grab active:cursor-grabbing touch-none select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 ${
-                isDragging ? "opacity-30" : ""
-            }`}
+            className={cn(
+                "rounded-xl cursor-grab active:cursor-grabbing touch-none select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
+                isDragging && "opacity-30",
+            )}
             aria-label={`${card.title} (${card.tag})`}
         >
             <CardFace card={card} />

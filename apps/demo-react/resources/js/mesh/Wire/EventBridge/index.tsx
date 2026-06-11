@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useWire } from "@mesh/react";
+import { Button, Eyebrow, Input, Panel } from "@/components/ui";
 
 interface EventBridgeProps {
     /** Count of page.ping events handled by the PHP class, fed back via props(). */
@@ -20,9 +21,9 @@ const EventBridge: React.FC<EventBridgeProps> = ({ received }) => {
     };
 
     return (
-        <div className="p-5 rounded-2xl bg-slate-800/60 border border-white/10">
+        <Panel>
             <div className="flex items-center justify-between gap-3">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">React island · EventBridge</span>
+                <Eyebrow>React island · EventBridge</Eyebrow>
                 {sent > 0 && (
                     <span className="text-xs font-medium text-rose-400 tabular-nums">
                         {sent} dispatched
@@ -32,22 +33,17 @@ const EventBridge: React.FC<EventBridgeProps> = ({ received }) => {
 
             {/* Outbound: React -> Livewire event bus */}
             <div className="mt-4 flex flex-col sm:flex-row gap-2">
-                <input
-                    type="text"
+                <Input
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handlePing()}
-                    className="flex-1 min-w-0 rounded-xl bg-slate-900/60 border border-white/10 px-4 h-11 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-transparent transition"
+                    className="flex-1 min-w-0 h-11 py-0 focus:ring-rose-500 focus:ring-offset-0 focus:border-transparent"
                     placeholder="Message to send with the event"
                     aria-label="Message to dispatch with mesh.ping"
                 />
-                <button
-                    type="button"
-                    onClick={handlePing}
-                    className="shrink-0 px-5 h-11 rounded-xl bg-gradient-to-br from-rose-500 to-orange-500 text-white text-sm font-semibold hover:from-rose-600 hover:to-orange-600 active:scale-95 transition-all duration-150 shadow-lg shadow-rose-500/25 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:ring-offset-slate-900"
-                >
+                <Button onClick={handlePing} className="shrink-0">
                     Dispatch mesh.ping
-                </button>
+                </Button>
             </div>
             <p className="mt-2 text-xs text-slate-500">
                 <code className="text-rose-300">wire.$dispatch("mesh.ping", {"{ message }"})</code> — the plain Livewire toast on
@@ -71,7 +67,7 @@ const EventBridge: React.FC<EventBridgeProps> = ({ received }) => {
                     </p>
                 </div>
             </div>
-        </div>
+        </Panel>
     );
 };
 
