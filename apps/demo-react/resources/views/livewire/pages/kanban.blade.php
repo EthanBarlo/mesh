@@ -11,6 +11,7 @@
             'app/Livewire/Kanban/Board.php',
             'app/Mesh/Kanban/Card.php',
             'resources/js/mesh/Kanban/Card/index.tsx',
+            'app/Mesh/Kanban/Column.php',
             'resources/js/mesh/Kanban/Column/index.tsx',
         ]">
         <livewire:kanban.board />
