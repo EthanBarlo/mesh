@@ -15,7 +15,7 @@ const ProgressBar: React.FC<ProgressBarProps> = ({
 }) => (
     <div
         className={cn(
-            "h-2.5 overflow-hidden rounded-full bg-slate-700/60",
+            "h-2.5 overflow-hidden rounded-full bg-white/5",
             className,
         )}
         role="progressbar"
@@ -25,7 +25,7 @@ const ProgressBar: React.FC<ProgressBarProps> = ({
         aria-label={ariaLabel}
     >
         <div
-            className="h-full rounded-full bg-gradient-to-r from-rose-500 to-orange-500 transition-[width] duration-200"
+            className="h-full rounded-full bg-white transition-[width] duration-200"
             style={{ width: `${value}%` }}
         />
     </div>

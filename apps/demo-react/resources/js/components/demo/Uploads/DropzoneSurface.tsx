@@ -46,20 +46,20 @@ const DropzoneSurface: React.FC<DropzoneSurfaceProps> = ({
             onDragLeave={onDragLeave}
             onDrop={onDrop}
             className={cn(
-                "relative cursor-pointer rounded-2xl border-2 border-dashed p-10 text-center transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:ring-offset-slate-900",
+                "relative cursor-pointer rounded-xl border border-dashed p-10 text-center transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-white/20 focus:ring-offset-2 focus:ring-offset-zinc-950",
                 isDragging
-                    ? "border-rose-400 bg-rose-500/10 scale-[1.01]"
-                    : "border-white/15 bg-white/5 hover:border-white/30 hover:bg-white/10",
+                    ? "border-white/20 bg-white/[0.05]"
+                    : "border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.05]",
                 className,
             )}
         >
             <div className="pointer-events-none flex flex-col items-center gap-3">
                 <div
                     className={cn(
-                        "flex h-14 w-14 items-center justify-center rounded-2xl transition-colors duration-200",
+                        "flex h-14 w-14 items-center justify-center rounded-xl transition-colors duration-150",
                         isDragging
-                            ? "bg-gradient-to-br from-rose-500 to-orange-500 text-white"
-                            : "bg-slate-700/50 text-slate-300",
+                            ? "bg-white/5 text-rose-400"
+                            : "bg-white/5 text-zinc-400",
                     )}
                 >
                     <svg
@@ -83,7 +83,7 @@ const DropzoneSurface: React.FC<DropzoneSurfaceProps> = ({
                             ? "Drop it here"
                             : "Drag an image here, or click to browse"}
                     </p>
-                    <p className="mt-1 text-sm text-slate-400">{hint}</p>
+                    <p className="mt-1 text-sm text-zinc-500">{hint}</p>
                 </div>
             </div>
         </div>

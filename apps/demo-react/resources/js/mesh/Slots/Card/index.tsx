@@ -1,13 +1,6 @@
 import React from "react";
 import { GlowCard } from "@/components/ui";
 
-// Per-variant accent: one gradient string (halo + top bar) and a label tint.
-const ACCENTS: Record<string, { glow: string; label: string }> = {
-    default: { glow: "from-rose-500 to-orange-500", label: "text-rose-400" },
-    cyan: { glow: "from-cyan-500 to-blue-500", label: "text-cyan-400" },
-    emerald: { glow: "from-emerald-500 to-teal-500", label: "text-emerald-400" },
-};
-
 const Card = ({
     variant,
     children,
@@ -21,31 +14,28 @@ const Card = ({
     children?: React.ReactNode;
     slots?: { title?: React.ReactNode; footer?: React.ReactNode };
 }) => {
-    const accent = ACCENTS[variant] ?? ACCENTS.default;
+    // `variant` still selects behaviour upstream; styling is mono regardless.
+    void variant;
 
     return (
-        <GlowCard glow={accent.glow} contentClassName="overflow-hidden p-0">
-            <div className={`h-1 bg-gradient-to-r ${accent.glow}`} />
-
+        <GlowCard contentClassName="overflow-hidden p-0">
             {slots?.title && (
-                <header className="px-6 pt-5 pb-4 border-b border-white/10">
-                    <span
-                        className={`block text-[10px] font-semibold uppercase tracking-widest ${accent.label} mb-1.5`}
-                    >
+                <header className="px-6 pt-5 pb-4 border-b border-white/5">
+                    <span className="block text-xs font-medium uppercase tracking-widest text-zinc-500 mb-1.5">
                         slots.title
                     </span>
-                    <h3 className="text-lg font-bold text-white leading-snug">
+                    <h3 className="text-lg font-semibold text-white tracking-tight leading-snug">
                         {slots.title}
                     </h3>
                 </header>
             )}
 
-            <div className="px-6 py-5 text-sm text-slate-300 leading-relaxed">
+            <div className="px-6 py-5 text-sm text-zinc-300 leading-relaxed">
                 {children}
             </div>
 
             {slots?.footer && (
-                <footer className="px-6 py-3 border-t border-white/10 bg-white/[0.03] text-xs text-slate-500">
+                <footer className="px-6 py-3 border-t border-white/5 text-xs text-zinc-500">
                     {slots.footer}
                 </footer>
             )}

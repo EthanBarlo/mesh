@@ -8,15 +8,15 @@ const tones: Record<
     { panel: string; title: string; body: string; icon: string }
 > = {
     error: {
-        panel: "border-rose-500/30 bg-rose-500/10",
-        title: "text-rose-300",
-        body: "text-rose-200/80",
+        panel: "border-white/10 bg-white/[0.02]",
+        title: "text-rose-400",
+        body: "text-zinc-400",
         icon: "text-rose-400",
     },
     success: {
-        panel: "border-emerald-500/30 bg-emerald-500/10",
-        title: "text-emerald-300",
-        body: "text-emerald-200/90",
+        panel: "border-white/10 bg-white/[0.02]",
+        title: "text-emerald-400",
+        body: "text-zinc-400",
         icon: "text-emerald-400",
     },
 };
@@ -44,7 +44,7 @@ const Alert: React.FC<AlertProps> = ({
     return (
         <div
             className={cn(
-                "flex items-start justify-between gap-4 rounded-2xl border p-5",
+                "flex items-start justify-between gap-4 rounded-xl border p-5",
                 t.panel,
                 className,
             )}

@@ -2,13 +2,13 @@
 
 <section {{ $attributes->class(['space-y-4']) }}>
     <div>
-        <h2 class="text-xl font-bold text-white">{{ $title }}</h2>
+        <h2 class="text-xl font-semibold text-white tracking-tight">{{ $title }}</h2>
         @if ($description)
-            <p class="mt-1 text-sm text-slate-400 leading-relaxed max-w-2xl">{{ $description }}</p>
+            <p class="mt-1 text-sm text-zinc-400 leading-relaxed max-w-2xl">{{ $description }}</p>
         @endif
     </div>
 
-    <div class="p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
+    <div class="p-6 rounded-xl bg-white/[0.02] border border-white/5">
         {{ $slot }}
     </div>
 

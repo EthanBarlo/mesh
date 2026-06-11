@@ -23,9 +23,9 @@ const ServerValue: React.FC<ServerValueProps> = ({
         >
             {synced ? "Server in sync" : "Server behind"}
         </span>
-        <span className="truncate text-slate-400">
+        <span className="truncate text-zinc-500">
             server has:{" "}
-            <span className="font-mono text-slate-300">
+            <span className="font-mono text-zinc-300">
                 {value === "" ? "(empty)" : `"${value}"`}
             </span>
         </span>

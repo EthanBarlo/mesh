@@ -37,7 +37,7 @@ const EntangleModes: React.FC<EntangleModesProps> = ({
                     >
                         Deferred
                     </label>
-                    <p className="mt-0.5 mb-3 font-mono text-xs text-cyan-300/80">
+                    <p className="mt-0.5 mb-3 font-mono text-xs text-zinc-500">
                         useEntangle("message")
                     </p>
                     <Input
@@ -45,7 +45,7 @@ const EntangleModes: React.FC<EntangleModesProps> = ({
                         value={message ?? ""}
                         onChange={(e) => setMessage(e.target.value)}
                         placeholder="Type — nothing is sent yet"
-                        className="bg-slate-800/80 px-4 py-3 text-base focus:border-white/10 focus:ring-cyan-500"
+                        className="px-4 py-3 text-base"
                     />
                     <ServerValue
                         className="mt-2"
@@ -62,7 +62,7 @@ const EntangleModes: React.FC<EntangleModesProps> = ({
                     >
                         Live
                     </label>
-                    <p className="mt-0.5 mb-3 font-mono text-xs text-rose-300/80">
+                    <p className="mt-0.5 mb-3 font-mono text-xs text-zinc-500">
                         useEntangle("liveMessage", true)
                     </p>
                     <Input
@@ -70,7 +70,7 @@ const EntangleModes: React.FC<EntangleModesProps> = ({
                         value={liveMessage ?? ""}
                         onChange={(e) => setLiveMessage(e.target.value)}
                         placeholder="Type — every keystroke syncs"
-                        className="bg-slate-800/80 px-4 py-3 text-base focus:border-white/10 focus:ring-rose-500"
+                        className="px-4 py-3 text-base"
                     />
                     <ServerValue
                         className="mt-2"
@@ -88,9 +88,9 @@ const EntangleModes: React.FC<EntangleModesProps> = ({
                         <p className="text-sm font-semibold text-white">
                             Server round-trips
                         </p>
-                        <p className="text-xs text-slate-400 leading-relaxed max-w-sm">
+                        <p className="text-xs text-zinc-500 leading-relaxed max-w-sm">
                             Counted in the component's Livewire{" "}
-                            <code className="font-mono text-slate-300">
+                            <code className="font-mono text-zinc-300">
                                 updated()
                             </code>{" "}
                             hooks — only requests that actually delivered a

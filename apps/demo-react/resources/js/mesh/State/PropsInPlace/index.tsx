@@ -29,15 +29,15 @@ const PropsInPlace: React.FC<PropsInPlaceProps> = ({ theme, palette }) => {
                 />
 
                 {/* Local React state that survives prop updates */}
-                <div className="shrink-0 sm:w-56 p-4 rounded-xl bg-slate-900/60 border border-white/10 text-center">
+                <div className="shrink-0 sm:w-56 p-4 rounded-xl bg-white/[0.02] border border-white/5 text-center">
                     <Eyebrow>Mounted for</Eyebrow>
                     <p
-                        className="my-2 text-4xl font-bold tabular-nums"
+                        className="my-2 text-4xl font-semibold tracking-tight tabular-nums"
                         style={{ color: palette.accent }}
                     >
                         {seconds}s
                     </p>
-                    <p className="text-xs text-slate-400 leading-relaxed">
+                    <p className="text-xs text-zinc-500 leading-relaxed">
                         Local state survives server re-renders — this component
                         never remounts.
                     </p>

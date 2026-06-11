@@ -7,7 +7,7 @@ const Kbd: React.FC<React.HTMLAttributes<HTMLElement>> = ({
 }) => (
     <kbd
         className={cn(
-            "px-1.5 py-0.5 rounded-md bg-white/5 border border-white/10 font-mono",
+            "px-1.5 py-0.5 rounded-md bg-white/5 border border-white/10 font-mono text-zinc-300",
             className,
         )}
         {...rest}

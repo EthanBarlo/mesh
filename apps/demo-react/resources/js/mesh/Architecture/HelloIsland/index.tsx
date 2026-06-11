@@ -23,22 +23,16 @@ const HelloIsland: React.FC<HelloIslandProps> = ({ greeting, chunkNote }) => {
     }, []);
 
     return (
-        <GlowCard
-            glow="from-emerald-500 to-cyan-500"
-            glowClassName="group-hover:opacity-30"
-            contentClassName="p-6 flex flex-col sm:flex-row sm:items-center gap-5"
-        >
+        <GlowCard contentClassName="p-6 flex flex-col sm:flex-row sm:items-center gap-5">
             <div className="flex-1">
-                <Eyebrow className="text-emerald-400">
-                    Architecture/HelloIsland
-                </Eyebrow>
-                <h3 className="mt-1 text-xl font-bold text-white">{greeting}</h3>
-                <p className="mt-1 text-sm text-slate-400 leading-relaxed">{chunkNote}</p>
+                <Eyebrow>Architecture/HelloIsland</Eyebrow>
+                <h3 className="mt-1 text-xl font-semibold tracking-tight text-white">{greeting}</h3>
+                <p className="mt-1 text-sm text-zinc-400 leading-relaxed">{chunkNote}</p>
             </div>
 
-            <div className="shrink-0 px-5 py-4 rounded-xl bg-slate-900/70 border border-white/10 text-center">
+            <div className="shrink-0 px-5 py-4 rounded-xl bg-white/[0.02] border border-white/5 text-center">
                 <BigNumber className="text-3xl">{elapsed.toFixed(1)}s</BigNumber>
-                <div className="mt-1 text-[11px] font-medium uppercase tracking-wider text-slate-500">
+                <div className="mt-1 text-[11px] font-medium uppercase tracking-widest text-zinc-500">
                     since mount
                 </div>
             </div>

@@ -150,12 +150,12 @@ const Dropzone: React.FC<DropzoneProps> = ({ maxKilobytes, accept }) => {
             />
 
             {status === "uploading" && (
-                <Panel className="bg-slate-800/80">
+                <Panel>
                     <div className="mb-2 flex items-center justify-between text-sm">
                         <span className="font-medium text-white">
                             Uploading to temporary storage…
                         </span>
-                        <span className="tabular-nums text-slate-400">
+                        <span className="tabular-nums text-zinc-400">
                             {progress}%
                         </span>
                     </div>

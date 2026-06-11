@@ -17,22 +17,22 @@
             [x-cloak] { display: none !important; }
         </style>
     </head>
-    <body class="font-sans antialiased bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 min-h-screen">
+    <body class="font-sans antialiased bg-zinc-950 min-h-screen">
         <div x-data="{ sidebarOpen: false }" class="min-h-screen lg:flex">
             {{-- Mobile top bar --}}
-            <header class="lg:hidden sticky top-0 z-40 flex items-center justify-between px-4 py-3 border-b border-white/10 bg-slate-900/90 backdrop-blur-sm">
+            <header class="lg:hidden sticky top-0 z-40 flex items-center justify-between px-4 py-3 border-b border-white/5 bg-zinc-950">
                 <a href="{{ route('home') }}" class="flex items-center gap-2">
-                    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-rose-500 to-orange-500 flex items-center justify-center">
-                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    <div class="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
+                        <svg class="w-4.5 h-4.5 text-zinc-950" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
                         </svg>
                     </div>
-                    <span class="text-lg font-bold text-white">Mesh</span>
+                    <span class="text-base font-semibold text-white tracking-tight">Mesh</span>
                 </a>
                 <button
                     type="button"
                     @click="sidebarOpen = !sidebarOpen"
-                    class="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
+                    class="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
                     aria-label="Toggle navigation"
                 >
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -14,7 +14,7 @@ interface ColumnProps {
 }
 
 const ACCENTS: Record<string, string> = {
-    backlog: "bg-slate-400",
+    backlog: "bg-zinc-500",
     "in-progress": "bg-amber-400",
     done: "bg-emerald-400",
 };
@@ -63,12 +63,12 @@ const Column: React.FC<ColumnProps> = ({ columnId, title, count }) => {
         <>
             <header className="flex items-center gap-2.5 px-4 py-3 border-b border-white/5">
                 <span
-                    className={cn("h-2 w-2 rounded-full", ACCENTS[columnId] ?? "bg-slate-400")}
+                    className={cn("h-2 w-2 rounded-full", ACCENTS[columnId] ?? "bg-zinc-500")}
                     aria-hidden="true"
                 />
                 <h3 className="text-sm font-semibold text-white">{title}</h3>
                 {/* Live count — a reactive prop straight from the Board. */}
-                <span className="ml-auto px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-xs font-medium tabular-nums text-slate-400">
+                <span className="ml-auto px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-xs font-medium tabular-nums text-zinc-400">
                     {count}
                 </span>
             </header>
@@ -81,13 +81,13 @@ const Column: React.FC<ColumnProps> = ({ columnId, title, count }) => {
                 onDragLeave={() => setOver(false)}
                 onDrop={handleDrop}
                 className={cn(
-                    "order-1 flex-1 m-3 min-h-14 rounded-xl flex items-center justify-center transition-colors duration-150",
+                    "order-1 flex-1 m-3 min-h-14 rounded-lg flex items-center justify-center transition-colors duration-150",
                     (drag || count === 0) && "border border-dashed border-white/10",
-                    over && "border-rose-400/60 bg-rose-500/10",
+                    over && "border-solid border-white/30 bg-white/[0.06]",
                 )}
             >
                 {(drag || count === 0) && (
-                    <span className="text-xs text-slate-500 pointer-events-none">
+                    <span className="text-xs text-zinc-500 pointer-events-none">
                         {drag ? "Drop here" : "No cards — drag one in"}
                     </span>
                 )}

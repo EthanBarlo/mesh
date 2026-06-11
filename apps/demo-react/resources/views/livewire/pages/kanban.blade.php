@@ -28,33 +28,33 @@
     </x-demo.section>
 
     {{-- Fine print --}}
-    <div class="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
-        <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-400">Fine print</h2>
-        <ul class="mt-4 space-y-3 text-sm text-slate-400 leading-relaxed list-disc pl-5 marker:text-slate-600">
+    <div class="rounded-xl border border-white/5 bg-white/[0.02] p-6">
+        <h2 class="text-xs font-medium uppercase tracking-widest text-zinc-500">Fine print</h2>
+        <ul class="mt-4 space-y-3 text-sm text-zinc-400 leading-relaxed list-disc pl-5 marker:text-zinc-600">
             <li>
-                <span class="text-slate-300 font-medium">Why not dnd-kit here?</span>
+                <span class="text-zinc-300 font-medium">Why not dnd-kit here?</span>
                 Each Mesh island is its own React root, and React context — including dnd-kit's
-                <code class="font-mono text-slate-300">DndContext</code> — cannot span roots. Native HTML5
+                <code class="font-mono text-zinc-300">DndContext</code> — cannot span roots. Native HTML5
                 drag-and-drop belongs to the page, not to React, so it crosses island boundaries freely.
-                The <a href="{{ route('board') }}" class="text-rose-300 hover:text-rose-200 underline underline-offset-2">Drag &amp; Drop Board</a>
+                The <a href="{{ route('board') }}" class="text-white hover:text-zinc-300 underline underline-offset-2">Drag &amp; Drop Board</a>
                 remains the single-island, dnd-kit version with full keyboard support.
             </li>
             <li>
-                <span class="text-slate-300 font-medium">Why aren't the cards slot children of the column?</span>
+                <span class="text-zinc-300 font-medium">Why aren't the cards slot children of the column?</span>
                 In Mesh v1, interactive Livewire or Mesh components inside a slot render dead (slots are
                 static server HTML mirrored into React). Instead, the cards are Blade <em>siblings</em> of the
-                column island — Mesh wrappers render <code class="font-mono text-slate-300">display: contents</code>,
-                so the column's header and its <code class="font-mono text-slate-300">order-1</code> drop tail
+                column island — Mesh wrappers render <code class="font-mono text-zinc-300">display: contents</code>,
+                so the column's header and its <code class="font-mono text-zinc-300">order-1</code> drop tail
                 sandwich the cards inside one flex column. True nesting via a shared React root is an open
-                proposal: <a href="https://github.com/EthanBarlo/mesh/issues/7" class="text-rose-300 hover:text-rose-200 underline underline-offset-2">island groups (#7)</a>.
+                proposal: <a href="https://github.com/EthanBarlo/mesh/issues/7" class="text-white hover:text-zinc-300 underline underline-offset-2">island groups (#7)</a>.
             </li>
             <li>
-                <span class="text-slate-300 font-medium">Native DnD is pointer-only.</span>
+                <span class="text-zinc-300 font-medium">Native DnD is pointer-only.</span>
                 No keyboard path and patchy touch support — a limitation of the browser API this composition
                 uses, not of Mesh.
             </li>
             <li>
-                <span class="text-slate-300 font-medium">Cross-column moves remount the card island.</span>
+                <span class="text-zinc-300 font-medium">Cross-column moves remount the card island.</span>
                 Livewire morphs the card into its new cell as a fresh component (same id, new React root), so
                 the cards are deliberately stateless — board state lives on the server, where it survives anyway.
             </li>

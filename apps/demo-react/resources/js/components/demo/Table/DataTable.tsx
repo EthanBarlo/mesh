@@ -26,7 +26,7 @@ function DataTable<TData>({
     return (
         <div
             className={cn(
-                "overflow-x-auto rounded-xl border border-white/10 bg-slate-900/40",
+                "overflow-x-auto rounded-xl border border-white/5 bg-white/[0.02]",
                 className,
             )}
         >
@@ -35,7 +35,7 @@ function DataTable<TData>({
                     {table.getHeaderGroups().map((headerGroup) => (
                         <tr
                             key={headerGroup.id}
-                            className="border-b border-white/10 bg-white/[0.03]"
+                            className="border-b border-white/5 bg-white/[0.02]"
                         >
                             {headerGroup.headers.map((header) => {
                                 const canSort = header.column.getCanSort();
@@ -45,7 +45,7 @@ function DataTable<TData>({
                                     <th
                                         key={header.id}
                                         className={cn(
-                                            "px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400",
+                                            "px-4 py-3 text-left text-xs font-medium uppercase tracking-widest text-zinc-500",
                                             header.column.columnDef.meta?.headerClass,
                                         )}
                                     >
@@ -69,8 +69,8 @@ function DataTable<TData>({
                                                     className={cn(
                                                         "text-[10px]",
                                                         sorted
-                                                            ? "text-rose-400"
-                                                            : "text-slate-600 group-hover:text-slate-400",
+                                                            ? "text-zinc-300"
+                                                            : "text-zinc-600 group-hover:text-zinc-400",
                                                     )}
                                                     aria-hidden="true"
                                                 >
@@ -93,12 +93,12 @@ function DataTable<TData>({
                         </tr>
                     ))}
                 </thead>
-                <tbody className="divide-y divide-white/10">
+                <tbody className="divide-y divide-white/5">
                     {rows.length === 0 ? (
                         <tr>
                             <td
                                 colSpan={table.getAllLeafColumns().length}
-                                className="px-4 py-10 text-center text-slate-500"
+                                className="px-4 py-10 text-center text-zinc-500"
                             >
                                 {emptyMessage}
                             </td>

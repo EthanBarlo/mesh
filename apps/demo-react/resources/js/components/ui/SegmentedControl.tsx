@@ -9,7 +9,7 @@ interface SegmentedControlProps<T extends string> {
     className?: string;
 }
 
-/** Pill-shaped exclusive choice group with a gradient active segment. */
+/** Pill-shaped exclusive choice group with a solid white active segment. */
 function SegmentedControl<T extends string>({
     options,
     value,
@@ -20,7 +20,7 @@ function SegmentedControl<T extends string>({
     return (
         <div
             className={cn(
-                "inline-flex items-center gap-1 p-1 rounded-xl bg-slate-800/80 border border-white/10",
+                "inline-flex items-center gap-1 p-1 rounded-lg bg-white/[0.02] border border-white/10",
                 className,
             )}
             role="group"
@@ -35,10 +35,10 @@ function SegmentedControl<T extends string>({
                         onClick={() => onChange(option.value)}
                         aria-pressed={isActive}
                         className={cn(
-                            "px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-150 active:scale-95 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:ring-offset-slate-900",
+                            "px-4 py-1.5 rounded-md text-sm font-medium transition-colors duration-150 active:scale-95 focus:outline-none focus:ring-2 focus:ring-white/20 focus:ring-offset-2 focus:ring-offset-zinc-950",
                             isActive
-                                ? "bg-gradient-to-r from-rose-500 to-orange-500 text-white shadow-lg shadow-rose-500/25"
-                                : "text-slate-400 hover:text-white hover:bg-white/5",
+                                ? "bg-white text-zinc-950"
+                                : "text-zinc-400 hover:text-white hover:bg-white/5",
                         )}
                     >
                         {option.label}

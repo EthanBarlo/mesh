@@ -62,7 +62,7 @@ const ServerActions: React.FC<ServerActionsProps> = ({ placeholder }) => {
                     onChange={(e) => setText(e.target.value)}
                     placeholder={placeholder}
                     rows={3}
-                    className="mt-3 resize-none focus:ring-rose-500 focus:ring-offset-0 focus:border-transparent"
+                    className="mt-3 resize-none"
                     aria-label="Text to analyze on the server"
                 />
 
@@ -83,7 +83,7 @@ const ServerActions: React.FC<ServerActionsProps> = ({ placeholder }) => {
                         <Stat label="Server time" value={analysis.analyzedAt} />
                     </div>
                 ) : (
-                    <p className="mt-4 text-sm text-slate-500">
+                    <p className="mt-4 text-sm text-zinc-500">
                         The result object below is the PHP method's return value — no route, no controller, no fetch.
                     </p>
                 )}
@@ -100,14 +100,14 @@ const ServerActions: React.FC<ServerActionsProps> = ({ placeholder }) => {
                                     <Die key={i} value={value} />
                                 ))}
                             </div>
-                            <p className="mt-4 text-sm text-slate-400">
+                            <p className="mt-4 text-sm text-zinc-400">
                                 Server total:{" "}
-                                <span className="text-xl font-bold text-white tabular-nums align-middle">{roll.total}</span>
+                                <span className="text-xl font-semibold text-white tabular-nums align-middle">{roll.total}</span>
                             </p>
                         </>
                     ) : (
-                        <p className="text-sm text-slate-500 text-center max-w-xs">
-                            PHP's <code className="text-orange-300">random_int()</code> rolls the dice — the array comes back as a
+                        <p className="text-sm text-zinc-500 text-center max-w-xs">
+                            PHP's <code className="font-mono text-zinc-400">random_int()</code> rolls the dice — the array comes back as a
                             resolved Promise.
                         </p>
                     )}
@@ -117,7 +117,7 @@ const ServerActions: React.FC<ServerActionsProps> = ({ placeholder }) => {
                     variant="secondary"
                     loading={rolling}
                     onClick={handleRoll}
-                    className="self-center font-semibold focus:ring-orange-500"
+                    className="self-center"
                 >
                     {rolling ? "Rolling…" : "Roll dice"}
                 </Button>

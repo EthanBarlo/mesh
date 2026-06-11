@@ -87,7 +87,8 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ plans }) => {
                     label="Slug"
                     htmlFor="project-slug"
                     corner={
-                        <span className="text-[11px] font-medium uppercase tracking-wider text-cyan-400/80">
+                        <span className="inline-flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+                            <span className="inline-flex rounded-full h-1.5 w-1.5 bg-rose-400" />
                             live — validates per keystroke
                         </span>
                     }
@@ -118,7 +119,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ plans }) => {
                 <div>
                     <PlanPicker plans={plans} value={plan} onChange={setPlan} />
                     {errors.plan && errors.plan.length > 0 && (
-                        <p className="mt-1.5 text-xs text-red-400" role="alert">
+                        <p className="mt-1.5 text-xs text-rose-400" role="alert">
                             {errors.plan[0]}
                         </p>
                     )}
@@ -128,7 +129,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ plans }) => {
                     type="submit"
                     variant="primary"
                     loading={submitting}
-                    className="w-full py-3 bg-gradient-to-r"
+                    className="w-full py-3"
                 >
                     {submitting ? "Creating…" : "Create project"}
                 </Button>
@@ -140,7 +141,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ plans }) => {
                     tone="success"
                     className="mt-6 rounded-xl p-4"
                     icon={
-                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/20 text-xs text-emerald-300">
+                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/5 text-xs text-emerald-400">
                             ✓
                         </span>
                     }
@@ -150,21 +151,18 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ plans }) => {
                         </span>
                     }
                 >
-                    <JsonDump
-                        value={created}
-                        className="mt-1.5 rounded-lg border-0 text-emerald-200/90"
-                    />
+                    <JsonDump value={created} className="mt-1.5" />
                 </Alert>
             )}
 
             {/* Raw error bag — exactly the object useErrorBag() hands back. */}
             <details className="mt-6 group">
-                <summary className="cursor-pointer select-none text-xs font-medium text-slate-500 hover:text-slate-300 transition-colors duration-150">
+                <summary className="cursor-pointer select-none text-xs font-medium text-zinc-500 hover:text-white transition-colors duration-150">
                     <span className="group-open:hidden">▸</span>
                     <span className="hidden group-open:inline">▾</span>{" "}
                     Error bag, raw — exactly what useErrorBag() returns
                 </summary>
-                <JsonDump value={errors} className="mt-2 text-amber-200/80" />
+                <JsonDump value={errors} className="mt-2" />
             </details>
         </div>
     );

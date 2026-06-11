@@ -19,7 +19,7 @@ const FilterInput: React.FC<FilterInputProps> = ({
 }) => (
     <div className={cn("relative", className)}>
         <svg
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none"
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 pointer-events-none"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -36,7 +36,7 @@ const FilterInput: React.FC<FilterInputProps> = ({
             onChange={(event) => onChange(event.target.value)}
             placeholder={placeholder}
             aria-label={ariaLabel}
-            className="w-64 pl-9 pr-3 py-2 bg-slate-800/80 transition-all focus:border-transparent focus:ring-rose-500 focus:ring-offset-0"
+            className="w-64 pl-9 pr-3 py-2"
         />
     </div>
 );

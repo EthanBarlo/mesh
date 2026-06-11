@@ -10,13 +10,13 @@ interface StatProps extends React.HTMLAttributes<HTMLDivElement> {
 const Stat: React.FC<StatProps> = ({ label, value, className, ...rest }) => (
     <div
         className={cn(
-            "p-3 rounded-xl bg-slate-900/50 border border-white/5 text-center",
+            "p-3 rounded-lg bg-white/[0.02] border border-white/5 text-center",
             className,
         )}
         {...rest}
     >
         <p
-            className="text-lg font-bold text-white tabular-nums truncate"
+            className="text-lg font-semibold text-white tabular-nums truncate"
             title={
                 typeof value === "string" || typeof value === "number"
                     ? String(value)
@@ -25,7 +25,7 @@ const Stat: React.FC<StatProps> = ({ label, value, className, ...rest }) => (
         >
             {value}
         </p>
-        <p className="mt-0.5 text-[11px] uppercase tracking-wider text-slate-500">
+        <p className="mt-0.5 text-[11px] font-medium uppercase tracking-widest text-zinc-500">
             {label}
         </p>
     </div>

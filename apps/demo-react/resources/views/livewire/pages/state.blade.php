@@ -16,13 +16,13 @@
         :files="['app/Mesh/State/PropsInPlace.php', 'resources/js/mesh/State/PropsInPlace/index.tsx', 'resources/views/livewire/pages/state.blade.php']">
         <div class="space-y-6">
             <div class="flex items-center gap-3">
-                <label for="theme-select" class="text-sm font-medium text-slate-300">
-                    Theme <span class="font-mono text-xs text-slate-500">(Blade select, wire:model.live)</span>
+                <label for="theme-select" class="text-sm font-medium text-zinc-300">
+                    Theme <span class="font-mono text-xs text-zinc-500">(Blade select, wire:model.live)</span>
                 </label>
                 <select
                     id="theme-select"
                     wire:model.live="theme"
-                    class="px-4 py-2.5 rounded-xl bg-slate-800/80 border border-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:ring-offset-slate-900"
+                    class="px-4 py-2.5 rounded-lg bg-white/[0.02] border border-white/10 text-white text-sm focus:outline-none focus:border-white/20 focus:ring-2 focus:ring-white/20 focus:ring-offset-2 focus:ring-offset-zinc-950"
                 >
                     <option value="rose">Rose</option>
                     <option value="amber">Amber</option>

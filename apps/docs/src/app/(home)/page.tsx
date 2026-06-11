@@ -7,13 +7,13 @@ export default function HomePage() {
     <main className="flex-1 flex items-center px-6 py-16">
       <div className="w-full max-w-5xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-fd-border bg-fd-card text-sm text-fd-muted-foreground mb-6">
-            <span className="h-2 w-2 rounded-full bg-gradient-to-r from-rose-500 to-orange-500" />
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-fd-border bg-fd-card text-xs font-medium uppercase tracking-widest text-fd-muted-foreground mb-6">
+            <span className="h-1.5 w-1.5 rounded-full bg-rose-400" />
             For Livewire 4
           </div>
-          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight mb-4">
+          <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight mb-4">
             One Blade tag.{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-500 to-orange-500">
+            <span className="text-fd-muted-foreground">
               The whole React ecosystem.
             </span>
           </h1>
@@ -25,7 +25,7 @@ export default function HomePage() {
           <div className="flex flex-wrap items-center gap-3">
             <Link
               href="/docs"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-orange-500 text-white font-semibold shadow-lg shadow-rose-500/25 hover:from-rose-600 hover:to-orange-600 transition-colors"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-fd-foreground text-fd-background font-medium hover:opacity-90 transition-opacity"
             >
               Get started
             </Link>
@@ -33,7 +33,7 @@ export default function HomePage() {
               href={demoUrl}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-fd-border bg-fd-card font-medium hover:bg-fd-accent transition-colors"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-fd-border text-fd-muted-foreground font-medium hover:text-fd-foreground hover:bg-fd-accent transition-colors"
             >
               See the live demo
             </a>

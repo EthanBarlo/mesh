@@ -2,18 +2,21 @@ import React from "react";
 import { cn } from "./cn";
 
 interface GlowCardProps extends React.HTMLAttributes<HTMLDivElement> {
-    /** Gradient stops for the blur halo, e.g. "from-cyan-500 to-blue-500". */
+    /** @deprecated No-op — the mono design renders no halo. Kept so call sites compile. */
     glow?: string;
-    /** Extra classes for the halo layer (e.g. to tweak its opacity). */
+    /** @deprecated No-op — the mono design renders no halo. Kept so call sites compile. */
     glowClassName?: string;
     /** Classes for the inner card surface (padding, layout, …). */
     contentClassName?: string;
 }
 
-/** A card with a soft gradient halo behind it that brightens on hover. */
+/**
+ * A flat mono card. The `glow` and `glowClassName` props are accepted for
+ * backwards compatibility but are visual no-ops — no halo is rendered.
+ */
 const GlowCard: React.FC<GlowCardProps> = ({
-    glow = "from-rose-500 to-orange-500",
-    glowClassName,
+    glow: _glow,
+    glowClassName: _glowClassName,
     contentClassName,
     className,
     children,
@@ -22,15 +25,7 @@ const GlowCard: React.FC<GlowCardProps> = ({
     <div className={cn("relative group", className)} {...rest}>
         <div
             className={cn(
-                "absolute -inset-1 bg-gradient-to-r rounded-3xl blur-xl opacity-20 group-hover:opacity-35 transition-opacity duration-500",
-                glow,
-                glowClassName,
-            )}
-            aria-hidden="true"
-        />
-        <div
-            className={cn(
-                "relative rounded-2xl bg-slate-800/80 border border-white/10 backdrop-blur-xl",
+                "relative rounded-xl bg-white/[0.02] border border-white/5",
                 contentClassName,
             )}
         >

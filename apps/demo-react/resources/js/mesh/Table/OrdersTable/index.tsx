@@ -76,11 +76,11 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders }) => {
                     ariaLabel="Filter orders"
                 />
 
-                <p className="text-xs text-slate-500 tabular-nums">
+                <p className="text-xs text-zinc-500 tabular-nums">
                     {filteredCount === orders.length
                         ? `${orders.length} orders`
                         : `${filteredCount} of ${orders.length} orders`}
-                    <span className="mx-1.5 text-slate-700">·</span>
+                    <span className="mx-1.5 text-zinc-700">·</span>
                     sorted, filtered &amp; paged client-side
                 </p>
             </div>
@@ -93,8 +93,8 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders }) => {
                 // the row with its tint.
                 rowClassName={(row) =>
                     row.original.flagged
-                        ? "bg-rose-500/10 hover:bg-rose-500/15"
-                        : "hover:bg-white/5"
+                        ? "bg-rose-500/10 hover:bg-rose-500/[0.14]"
+                        : "hover:bg-white/[0.04]"
                 }
             />
 

@@ -23,7 +23,7 @@ const PlanPicker: React.FC<PlanPickerProps> = ({
     className,
 }) => (
     <fieldset className={cn(className)}>
-        <legend className="block text-sm font-medium text-slate-300 mb-1.5">
+        <legend className="block text-sm font-medium text-zinc-300 mb-1.5">
             Plan
         </legend>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -33,10 +33,10 @@ const PlanPicker: React.FC<PlanPickerProps> = ({
                     <label
                         key={p.id}
                         className={cn(
-                            "relative cursor-pointer rounded-xl border p-4 transition-all duration-150",
+                            "relative cursor-pointer rounded-lg border p-4 transition-colors duration-150",
                             selected
-                                ? "border-rose-400/60 bg-gradient-to-br from-rose-500/15 to-orange-500/10 shadow-lg shadow-rose-500/10"
-                                : "border-white/10 bg-slate-900/40 hover:border-white/20 hover:bg-slate-900/60",
+                                ? "border-white/20 bg-white/[0.05]"
+                                : "border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.05]",
                         )}
                     >
                         <input
@@ -51,25 +51,25 @@ const PlanPicker: React.FC<PlanPickerProps> = ({
                             <span
                                 className={cn(
                                     "text-sm font-semibold",
-                                    selected ? "text-white" : "text-slate-300",
+                                    selected ? "text-white" : "text-zinc-300",
                                 )}
                             >
                                 {p.label}
                             </span>
                             <span
                                 className={cn(
-                                    "text-xs font-bold",
-                                    selected ? "text-rose-300" : "text-slate-500",
+                                    "text-xs font-medium tabular-nums",
+                                    selected ? "text-white" : "text-zinc-500",
                                 )}
                             >
                                 {p.price}
                             </span>
                         </span>
-                        <span className="mt-1 block text-xs text-slate-500 leading-snug">
+                        <span className="mt-1 block text-xs text-zinc-500 leading-snug">
                             {p.blurb}
                         </span>
                         {selected && (
-                            <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-orange-500 text-[10px] text-white shadow">
+                            <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-white text-[10px] text-zinc-950">
                                 ✓
                             </span>
                         )}

@@ -20,7 +20,7 @@ export interface DieProps {
 const Die: React.FC<DieProps> = ({ value, className }) => (
     <div
         className={cn(
-            "w-14 h-14 rounded-xl bg-slate-700/60 border border-white/10 grid grid-cols-3 grid-rows-3 p-2.5 shadow-inner",
+            "w-14 h-14 rounded-xl bg-white/5 border border-white/10 grid grid-cols-3 grid-rows-3 p-2.5",
             className,
         )}
         role="img"

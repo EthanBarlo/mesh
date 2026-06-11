@@ -41,9 +41,9 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ labels, series, range }) =>
         <div className="space-y-5">
             <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
-                    <h3 className="text-sm font-semibold text-white">Revenue &amp; orders</h3>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                        Series recomputed in <code className="font-mono text-slate-400">props()</code> on
+                    <h3 className="text-sm font-semibold tracking-tight text-white">Revenue &amp; orders</h3>
+                    <p className="text-xs text-zinc-500 mt-0.5">
+                        Series recomputed in <code className="font-mono text-zinc-400">props()</code> on
                         every range change
                     </p>
                 </div>
@@ -68,7 +68,7 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ labels, series, range }) =>
             </div>
 
             {/* Stat row computed from the current props */}
-            <div className="flex flex-wrap items-center gap-x-10 gap-y-3 pt-4 border-t border-white/10">
+            <div className="flex flex-wrap items-center gap-x-10 gap-y-3 pt-4 border-t border-white/5">
                 <div>
                     <Eyebrow className="block font-normal">Total revenue</Eyebrow>
                     <span className="text-lg font-semibold tabular-nums text-white">
@@ -83,12 +83,12 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ labels, series, range }) =>
                 </div>
                 <div>
                     <Eyebrow className="block font-normal">Orders</Eyebrow>
-                    <span className="text-lg font-semibold tabular-nums text-cyan-300">
+                    <span className="text-lg font-semibold tabular-nums text-white">
                         {totalOrders.toLocaleString("en-US")}
                     </span>
                 </div>
-                <div className="ml-auto text-xs text-slate-500">
-                    Showing <span className="text-slate-300 font-medium">{labels.length}</span>{" "}
+                <div className="ml-auto text-xs text-zinc-500">
+                    Showing <span className="text-zinc-300 font-medium">{labels.length}</span>{" "}
                     {range === "90d" ? "weekly" : "daily"} points
                 </div>
             </div>

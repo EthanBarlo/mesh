@@ -27,7 +27,7 @@ const Field: React.FC<FieldProps> = ({
         <div className="flex items-baseline justify-between mb-1.5">
             <label
                 htmlFor={htmlFor}
-                className="block text-sm font-medium text-slate-300"
+                className="block text-sm font-medium text-zinc-300"
             >
                 {label}
             </label>
@@ -35,11 +35,11 @@ const Field: React.FC<FieldProps> = ({
         </div>
         {children}
         {error && error.length > 0 && (
-            <p className="mt-1.5 text-xs text-red-400" role="alert">
+            <p className="mt-1.5 text-xs text-rose-400" role="alert">
                 {error[0]}
             </p>
         )}
-        {hint && <p className="mt-1.5 text-xs text-slate-500">{hint}</p>}
+        {hint && <p className="mt-1.5 text-xs text-zinc-500">{hint}</p>}
     </div>
 );
 

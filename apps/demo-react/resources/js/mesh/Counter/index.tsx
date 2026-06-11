@@ -12,11 +12,7 @@ const Counter: React.FC<CounterProps> = ({ initialCount }) => {
     const [count, setCount] = useEntangle<number>("count", true);
 
     return (
-        <GlowCard
-            glow="from-cyan-500 to-blue-500"
-            glowClassName="opacity-25 group-hover:opacity-40"
-            contentClassName="p-8"
-        >
+        <GlowCard contentClassName="p-8">
             <div className="text-center">
                 <Eyebrow className="mb-4 block">React Counter</Eyebrow>
 
@@ -28,7 +24,6 @@ const Counter: React.FC<CounterProps> = ({ initialCount }) => {
                     <Button
                         variant="secondary"
                         size="icon"
-                        className="focus:ring-cyan-500 focus:ring-offset-slate-800"
                         onClick={() => setCount(count - 1)}
                         aria-label="Decrement counter"
                     >
@@ -37,7 +32,7 @@ const Counter: React.FC<CounterProps> = ({ initialCount }) => {
 
                     <Button
                         variant="ghost"
-                        className="px-5 h-14 focus:ring-offset-slate-800"
+                        className="px-5 h-14"
                         onClick={() => setCount(initialCount)}
                         aria-label="Reset counter"
                     >
@@ -45,9 +40,8 @@ const Counter: React.FC<CounterProps> = ({ initialCount }) => {
                     </Button>
 
                     <Button
-                        variant="accent"
+                        variant="primary"
                         size="icon"
-                        className="font-medium focus:ring-offset-slate-800"
                         onClick={() => setCount(count + 1)}
                         aria-label="Increment counter"
                     >

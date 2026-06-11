@@ -1,10 +1,10 @@
 <div class="space-y-4">
     {{-- Toolbar: all plain Blade, re-rendered by this component --}}
     <div class="flex flex-wrap items-center justify-between gap-3">
-        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs text-slate-400">
-            <span @class(['h-1.5 w-1.5 rounded-full', 'bg-emerald-400' => $syncCount > 0, 'bg-slate-500' => $syncCount === 0]) aria-hidden="true"></span>
+        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs text-zinc-400">
+            <span @class(['h-1.5 w-1.5 rounded-full', 'bg-emerald-400' => $syncCount > 0, 'bg-zinc-500' => $syncCount === 0]) aria-hidden="true"></span>
             @if ($syncCount > 0)
-                <span>Synced <span class="font-semibold text-slate-200 tabular-nums">{{ $syncCount }}</span> {{ $syncCount === 1 ? 'move' : 'moves' }} · last <span class="font-mono text-slate-300">{{ $lastSyncAt }}</span></span>
+                <span>Synced <span class="font-semibold text-zinc-200 tabular-nums">{{ $syncCount }}</span> {{ $syncCount === 1 ? 'move' : 'moves' }} · last <span class="font-mono text-zinc-300">{{ $lastSyncAt }}</span></span>
             @else
                 <span>No moves synced yet — drag a card</span>
             @endif
@@ -13,7 +13,7 @@
         <button
             type="button"
             wire:click="resetBoard"
-            class="px-4 py-2 rounded-xl bg-slate-800/80 border border-white/10 text-sm font-medium text-slate-300 hover:bg-slate-700/80 hover:text-white active:scale-95 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:ring-offset-slate-900"
+            class="px-4 py-2 rounded-lg border border-white/10 text-sm font-medium text-zinc-400 hover:text-white hover:border-white/20 active:scale-95 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-white/20 focus:ring-offset-2 focus:ring-offset-zinc-950"
         >
             Reset board
         </button>
@@ -29,7 +29,7 @@
         @foreach ($columns as $column)
             <div
                 wire:key="col-{{ $column['id'] }}"
-                class="flex flex-col rounded-2xl bg-slate-900/60 border border-white/10 overflow-hidden"
+                class="flex flex-col rounded-xl bg-white/[0.02] border border-white/5 overflow-hidden"
             >
                 <mesh:kanban.column
                     :column-id="$column['id']"

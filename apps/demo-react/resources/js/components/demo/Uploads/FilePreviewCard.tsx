@@ -23,7 +23,7 @@ const FilePreviewCard: React.FC<FilePreviewCardProps> = ({
 }) => (
     <div
         className={cn(
-            "overflow-hidden rounded-2xl border border-white/10 bg-slate-800/80",
+            "overflow-hidden rounded-xl border border-white/5 bg-white/[0.02]",
             className,
         )}
     >
@@ -31,7 +31,7 @@ const FilePreviewCard: React.FC<FilePreviewCardProps> = ({
             <img
                 src={meta.previewUrl}
                 alt={`Preview of ${meta.name}`}
-                className="h-40 w-full rounded-xl border border-white/10 object-cover sm:w-56"
+                className="h-40 w-full rounded-lg border border-white/10 object-cover sm:w-56"
             />
             <div className="flex min-w-0 flex-1 flex-col justify-between gap-4">
                 <div className="min-w-0 space-y-2">
@@ -43,24 +43,24 @@ const FilePreviewCard: React.FC<FilePreviewCardProps> = ({
                     </p>
                     <dl className="space-y-1.5 text-sm">
                         <div className="flex gap-2">
-                            <dt className="w-16 shrink-0 text-slate-500">
+                            <dt className="w-16 shrink-0 text-zinc-500">
                                 Size
                             </dt>
-                            <dd className="tabular-nums text-slate-300">
+                            <dd className="tabular-nums text-zinc-300">
                                 {formatBytes(meta.size)}
                             </dd>
                         </div>
                         <div className="flex gap-2">
-                            <dt className="w-16 shrink-0 text-slate-500">
+                            <dt className="w-16 shrink-0 text-zinc-500">
                                 Type
                             </dt>
-                            <dd className="text-slate-300">{meta.mime}</dd>
+                            <dd className="text-zinc-300">{meta.mime}</dd>
                         </div>
                         <div className="flex gap-2">
-                            <dt className="w-16 shrink-0 text-slate-500">
+                            <dt className="w-16 shrink-0 text-zinc-500">
                                 Stored
                             </dt>
-                            <dd className="text-slate-300">
+                            <dd className="text-zinc-300">
                                 Livewire temp storage (auto-cleaned, never
                                 persisted)
                             </dd>
@@ -74,7 +74,7 @@ const FilePreviewCard: React.FC<FilePreviewCardProps> = ({
                     <Button
                         variant="secondary"
                         onClick={onRemove}
-                        className="h-auto px-4 py-2 focus:ring-offset-slate-800"
+                        className="h-auto px-4 py-2"
                     >
                         Remove
                     </Button>

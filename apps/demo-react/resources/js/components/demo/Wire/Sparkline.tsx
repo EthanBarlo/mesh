@@ -44,21 +44,17 @@ const Sparkline: React.FC<SparklineProps> = ({
             aria-label={ariaLabel}
         >
             <defs>
-                <linearGradient id="price-watcher-stroke" x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stopColor="#22d3ee" />
-                    <stop offset="100%" stopColor="#3b82f6" />
-                </linearGradient>
                 <linearGradient id="price-watcher-fill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.25" />
-                    <stop offset="100%" stopColor="#22d3ee" stopOpacity="0" />
+                    <stop offset="0%" stopColor="#fafafa" stopOpacity="0.12" />
+                    <stop offset="100%" stopColor="#fafafa" stopOpacity="0" />
                 </linearGradient>
             </defs>
             <polygon points={area} fill="url(#price-watcher-fill)" />
             <polyline
                 points={points}
                 fill="none"
-                stroke="url(#price-watcher-stroke)"
-                strokeWidth="2.5"
+                stroke="#a1a1aa"
+                strokeWidth="2"
                 strokeLinejoin="round"
                 strokeLinecap="round"
                 vectorEffect="non-scaling-stroke"
@@ -68,7 +64,7 @@ const Sparkline: React.FC<SparklineProps> = ({
                 cy={lastY}
                 r="4"
                 fill={direction === "down" ? "#fb7185" : "#34d399"}
-                stroke="#0f172a"
+                stroke="#09090b"
                 strokeWidth="2"
             />
         </svg>

@@ -33,7 +33,7 @@ export const formatAmount = (cents: number): string => currency.format(cents / 1
 const statusColors: Record<OrderStatus, BadgeColor> = {
     pending: "amber",
     paid: "emerald",
-    shipped: "cyan",
+    shipped: "slate",
     refunded: "slate",
 };
 
@@ -72,10 +72,10 @@ const FlagButton: React.FC<{
         }
         title={order.flagged ? "Unflag (server call)" : "Flag (server call)"}
         className={cn(
-            "inline-flex items-center justify-center w-8 h-8 rounded-lg border transition-all duration-150 active:scale-95 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:cursor-wait",
+            "inline-flex items-center justify-center w-8 h-8 rounded-lg border transition-colors duration-150 active:scale-95 focus:outline-none focus:ring-2 focus:ring-white/20 focus:ring-offset-2 focus:ring-offset-zinc-950 disabled:cursor-wait",
             order.flagged
-                ? "bg-rose-500/15 border-rose-500/30 text-rose-400 hover:bg-rose-500/25"
-                : "bg-white/5 border-white/10 text-slate-500 hover:text-slate-200 hover:border-white/20",
+                ? "bg-rose-500/10 border-rose-400/30 text-rose-400 hover:bg-rose-500/15"
+                : "bg-white/5 border-white/10 text-zinc-500 hover:text-white hover:border-white/20",
         )}
     >
         {pending ? <Spinner /> : <FlagIcon filled={order.flagged} />}
@@ -94,7 +94,7 @@ export function buildColumns(options: {
         columnHelper.accessor("id", {
             header: "Order",
             cell: (info) => (
-                <span className="font-mono text-slate-400">#{info.getValue()}</span>
+                <span className="font-mono text-zinc-400">#{info.getValue()}</span>
             ),
         }),
         columnHelper.accessor("customer", {
@@ -111,14 +111,14 @@ export function buildColumns(options: {
             header: "Amount",
             meta: { headerClass: "text-right", cellClass: "text-right" },
             cell: (info) => (
-                <span className="font-mono tabular-nums text-slate-200">
+                <span className="font-mono tabular-nums text-zinc-300">
                     {formatAmount(info.getValue())}
                 </span>
             ),
         }),
         columnHelper.accessor("date", {
             header: "Date",
-            cell: (info) => <span className="text-slate-400">{info.getValue()}</span>,
+            cell: (info) => <span className="text-zinc-400">{info.getValue()}</span>,
         }),
         columnHelper.display({
             id: "actions",

@@ -8,7 +8,7 @@ const Eyebrow: React.FC<React.HTMLAttributes<HTMLSpanElement>> = ({
 }) => (
     <span
         className={cn(
-            "text-xs font-semibold uppercase tracking-wider text-slate-500",
+            "text-xs font-medium uppercase tracking-widest text-zinc-500",
             className,
         )}
         {...rest}

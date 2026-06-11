@@ -54,7 +54,7 @@ const PriceWatcher: React.FC<PriceWatcherProps> = ({ symbol, initialPrice }) => 
                         {/* Key by history length so each server tick re-renders a fresh node */}
                         <span
                             key={history.length}
-                            className={`text-4xl font-bold tabular-nums transition-colors duration-300 ${priceColor}`}
+                            className={`text-4xl font-semibold tracking-tight tabular-nums transition-colors duration-300 ${priceColor}`}
                         >
                             ${price.toFixed(2)}
                         </span>
@@ -74,7 +74,6 @@ const PriceWatcher: React.FC<PriceWatcherProps> = ({ symbol, initialPrice }) => 
                     variant="secondary"
                     size="sm"
                     onClick={() => setPaused((p) => !p)}
-                    className="focus:ring-cyan-500"
                     aria-pressed={paused}
                 >
                     {paused ? "Resume ticks" : "Pause ticks"}
@@ -88,14 +87,14 @@ const PriceWatcher: React.FC<PriceWatcherProps> = ({ symbol, initialPrice }) => 
                 ariaLabel={`Sparkline of the last ${history.length} prices for ${symbol}`}
             />
 
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-500">
                 <span>
-                    Low <span className="text-slate-300 tabular-nums">${min.toFixed(2)}</span> · High{" "}
-                    <span className="text-slate-300 tabular-nums">${max.toFixed(2)}</span> · {history.length} points
+                    Low <span className="text-zinc-300 tabular-nums">${min.toFixed(2)}</span> · High{" "}
+                    <span className="text-zinc-300 tabular-nums">${max.toFixed(2)}</span> · {history.length} points
                 </span>
                 <span>
-                    <code className="text-cyan-300">wire.$call("tick")</code> every 2s ·{" "}
-                    <code className="text-cyan-300">wire.$watch("price", …)</code> streams it back
+                    <code className="font-mono text-zinc-400">wire.$call("tick")</code> every 2s ·{" "}
+                    <code className="font-mono text-zinc-400">wire.$watch("price", …)</code> streams it back
                 </span>
             </div>
         </Panel>

@@ -24,7 +24,7 @@ function TablePagination<TData>({
                 className,
             )}
         >
-            <label className="flex items-center gap-2 text-xs text-slate-500">
+            <label className="flex items-center gap-2 text-xs text-zinc-500">
                 Rows per page
                 <Select
                     value={pageSize}
@@ -40,7 +40,7 @@ function TablePagination<TData>({
             </label>
 
             <div className="flex items-center gap-3">
-                <span className="text-xs text-slate-500 tabular-nums">
+                <span className="text-xs text-zinc-500 tabular-nums">
                     Page {pageIndex + 1} of {pageCount}
                 </span>
                 <div className="flex items-center gap-2">
@@ -58,7 +58,7 @@ function TablePagination<TData>({
                         size="xs"
                         onClick={() => table.nextPage()}
                         disabled={!table.getCanNextPage()}
-                        className="bg-gradient-to-r font-medium disabled:opacity-40"
+                        className="font-medium disabled:opacity-40"
                     >
                         Next
                     </Button>

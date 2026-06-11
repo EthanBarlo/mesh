@@ -10,7 +10,7 @@ interface JsonDumpProps {
 const JsonDump: React.FC<JsonDumpProps> = ({ value, className }) => (
     <pre
         className={cn(
-            "overflow-x-auto rounded-xl border border-white/10 bg-slate-950/60 p-3 text-xs leading-relaxed text-slate-300",
+            "overflow-x-auto rounded-lg bg-black/30 p-3 font-mono text-xs leading-relaxed text-zinc-400",
             className,
         )}
     >

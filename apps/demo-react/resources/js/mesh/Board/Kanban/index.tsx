@@ -55,20 +55,20 @@ const Kanban: React.FC<KanbanProps> = ({ syncCount, lastSyncAt }) => {
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <Badge
                     color="slate"
-                    className="gap-2 px-3 py-1.5 bg-white/5 border-white/10 font-normal text-slate-400"
+                    className="gap-2 px-3 py-1.5 bg-white/5 border-white/10 font-normal text-zinc-400"
                 >
                     <span
                         className={cn(
                             "h-1.5 w-1.5 rounded-full",
-                            syncCount > 0 ? "bg-emerald-400" : "bg-slate-500",
+                            syncCount > 0 ? "bg-emerald-400" : "bg-zinc-500",
                         )}
                         aria-hidden="true"
                     />
                     {syncCount > 0 ? (
                         <span>
-                            Synced <span className="font-semibold text-slate-200 tabular-nums">{syncCount}</span>{" "}
+                            Synced <span className="font-semibold text-zinc-200 tabular-nums">{syncCount}</span>{" "}
                             {syncCount === 1 ? "move" : "moves"} · last{" "}
-                            <span className="font-mono text-slate-300">{lastSyncAt}</span>
+                            <span className="font-mono text-zinc-300">{lastSyncAt}</span>
                         </span>
                     ) : (
                         <span>No moves synced yet — drag a card</span>
@@ -80,7 +80,7 @@ const Kanban: React.FC<KanbanProps> = ({ syncCount, lastSyncAt }) => {
                     size="xs"
                     onClick={handleReset}
                     disabled={resetting}
-                    className="px-4 py-2 bg-slate-800/80 text-slate-300 hover:bg-slate-700/80 hover:border-white/10 hover:text-white"
+                    className="px-4 py-2"
                 >
                     {resetting ? "Resetting…" : "Reset board"}
                 </Button>
@@ -102,7 +102,7 @@ const Kanban: React.FC<KanbanProps> = ({ syncCount, lastSyncAt }) => {
                 <DragOverlay>{activeCard ? <CardFace card={activeCard} lifted /> : null}</DragOverlay>
             </DndContext>
 
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-zinc-500">
                 Keyboard: <Kbd>Tab</Kbd> to a card, <Kbd>Space</Kbd> to lift, <Kbd>↑ ↓ ← →</Kbd> to move,{" "}
                 <Kbd>Space</Kbd> to drop.
             </p>
