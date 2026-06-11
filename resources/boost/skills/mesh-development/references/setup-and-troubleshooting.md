@@ -111,7 +111,7 @@ Renderer is inferred from the entry file extension — components never declare 
 | `index.svelte` | `svelte` |
 | anything else | **throws** (`Mesh: cannot infer renderer ... unknown extension`) — no silent default |
 
-The inferred renderer must appear in the `renderers` array. React ships built in (`@mesh/react`); Vue and Svelte renderers are pluggable — implement the `MeshRenderer` interface (`type`, `renderSlot`, `mount` returning `{ update, cleanup }`) and add it to the array. A duplicate component id in the registry also throws at init.
+The inferred renderer must appear in the `renderers` array. React, Vue, and Svelte all ship built in (`@mesh/react`, `@mesh/vue`, `@mesh/svelte`); custom renderers implement the `MeshRenderer` interface (`type`, `renderSlot`, `mount` returning `{ update, cleanup }`) and are added to the same array. A duplicate component id in the registry also throws at init.
 
 ## Troubleshooting matrix
 

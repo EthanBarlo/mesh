@@ -118,7 +118,7 @@ is the component **id** in kebab-case (`Counter` → `counter`), and props pass 
 - The component **id** is what links the two sides — a simple string like `Counter` (or `Forms/Input`),
   derived identically from the PHP class name and the folder path. `make:mesh` keeps them in sync.
 - Read the [building components guide](docs/guides/building-components.mdx).
-- See [renderers](docs/advanced/renderers.mdx) to add Vue or Svelte.
+- See [renderers](docs/advanced/renderers.mdx) to use the built-in Vue or Svelte renderers instead of React.
 - See [troubleshooting](docs/advanced/troubleshooting.mdx) if a component doesn't mount.
 
 ## Notes
