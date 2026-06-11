@@ -1,17 +1,18 @@
 <div class="relative group">
-    <!-- Glow effect -->
-    <div class="absolute -inset-1 bg-gradient-to-r from-rose-500 to-orange-500 rounded-3xl blur-xl opacity-25 group-hover:opacity-40 transition-opacity duration-500"></div>
-    
     <!-- Card -->
-    <div class="relative p-8 rounded-2xl bg-slate-800/80 border border-white/10 backdrop-blur-xl">
+    <div class="relative p-8 rounded-xl bg-white/[0.02] border border-white/5">
         <div class="text-center">
-            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-4 block">
+            <span class="text-xs font-medium uppercase tracking-widest text-zinc-500 mb-4 block">
                 Pure Livewire Counter
             </span>
-            
+
             <!-- Counter Display -->
             <div class="my-6">
-                <span class="text-7xl font-bold tabular-nums text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-400">
+                {{-- Deliberately server-rendered: this card shows what the
+                     SERVER currently knows. Siblings move it client-side via
+                     the entangled store, but this number only changes when
+                     this component re-renders on a request. --}}
+                <span class="text-7xl font-semibold tracking-tight tabular-nums text-white">
                     {{ $count }}
                 </span>
             </div>
@@ -21,7 +22,7 @@
                 <button
                     wire:click="decrement"
                     type="button"
-                    class="w-14 h-14 rounded-xl bg-slate-700/50 border border-white/10 text-white text-2xl font-medium hover:bg-slate-700 hover:border-white/20 active:scale-95 transition-all duration-150 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:ring-offset-slate-800"
+                    class="w-14 h-14 rounded-lg border border-white/10 text-zinc-400 text-2xl font-medium hover:text-white hover:border-white/20 active:scale-95 transition-colors duration-150 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-white/20 focus:ring-offset-2 focus:ring-offset-zinc-950"
                     aria-label="Decrement counter"
                     tabindex="0"
                 >
@@ -31,7 +32,7 @@
                 <button
                     wire:click="$set('count', 0)"
                     type="button"
-                    class="px-5 h-14 rounded-xl bg-slate-700/30 border border-white/5 text-slate-400 text-sm font-medium hover:bg-slate-700/50 hover:text-slate-300 active:scale-95 transition-all duration-150 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:ring-offset-slate-800"
+                    class="px-5 h-14 rounded-lg text-zinc-500 text-sm font-medium hover:text-white active:scale-95 transition-colors duration-150 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-white/20 focus:ring-offset-2 focus:ring-offset-zinc-950"
                     aria-label="Reset counter"
                     tabindex="0"
                 >
@@ -41,7 +42,7 @@
                 <button
                     wire:click="increment"
                     type="button"
-                    class="w-14 h-14 rounded-xl bg-gradient-to-br from-rose-500 to-orange-500 text-white text-2xl font-medium hover:from-rose-600 hover:to-orange-600 active:scale-95 transition-all duration-150 shadow-lg shadow-rose-500/25 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:ring-offset-slate-800"
+                    class="w-14 h-14 rounded-lg bg-white text-zinc-950 text-2xl font-medium hover:bg-zinc-200 active:scale-95 transition-colors duration-150 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-white/40 focus:ring-offset-2 focus:ring-offset-zinc-950"
                     aria-label="Increment counter"
                     tabindex="0"
                 >

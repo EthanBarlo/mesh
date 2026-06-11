@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "3cc3e983ef3b6cbe5923ea6fefc9bdf5",
+    "content-hash": "86b4b9bd0a07333f08efd3704165fed2",
     "packages": [
         {
             "name": "brick/math",
@@ -510,14 +510,14 @@
         },
         {
             "name": "ethanbarlo/mesh",
-            "version": "dev-require-livewire-4",
+            "version": "dev-better-demo",
             "dist": {
                 "type": "path",
                 "url": "../..",
-                "reference": "fd9b09e48194179a2daa1b86c3ca5a37e7699071"
+                "reference": "5753e60049fe43cfe75adadc20d9c8beb06bbf8d"
             },
             "require": {
-                "illuminate/contracts": "^10.0||^11.0||^12.0",
+                "illuminate/contracts": "^11.0||^12.0",
                 "livewire/livewire": "^4.0",
                 "php": "^8.3",
                 "spatie/laravel-package-tools": "^1.16"
@@ -527,9 +527,9 @@
                 "laravel/pint": "^1.14",
                 "nunomaduro/collision": "^8.1.1||^7.10.0",
                 "orchestra/testbench": "^9.0.0||^8.22.0||^10.0",
-                "pestphp/pest": "^3.0",
-                "pestphp/pest-plugin-arch": "^3.0",
-                "pestphp/pest-plugin-laravel": "^3.0",
+                "pestphp/pest": "^4.0",
+                "pestphp/pest-plugin-arch": "^4.0",
+                "pestphp/pest-plugin-laravel": "^4.0",
                 "phpstan/extension-installer": "^1.3",
                 "phpstan/phpstan-deprecation-rules": "^1.1||^2.0",
                 "phpstan/phpstan-phpunit": "^1.3||^2.0"
@@ -549,7 +549,8 @@
             },
             "autoload-dev": {
                 "psr-4": {
-                    "EthanBarlo\\Mesh\\Tests\\": "tests/"
+                    "EthanBarlo\\Mesh\\Tests\\": "tests/",
+                    "App\\Mesh\\": "tests/Fixtures/Mesh/"
                 }
             },
             "scripts": {
@@ -2695,6 +2696,80 @@
                 }
             ],
             "time": "2026-02-16T23:10:27+00:00"
+        },
+        {
+            "name": "phiki/phiki",
+            "version": "v2.2.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/phikiphp/phiki.git",
+                "reference": "24375dbc474dbc484de7d53c6bab0bb9e198f647"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/phikiphp/phiki/zipball/24375dbc474dbc484de7d53c6bab0bb9e198f647",
+                "reference": "24375dbc474dbc484de7d53c6bab0bb9e198f647",
+                "shasum": ""
+            },
+            "require": {
+                "ext-mbstring": "*",
+                "php": "^8.2",
+                "psr/simple-cache": "^3.0"
+            },
+            "require-dev": {
+                "illuminate/support": "^11.45",
+                "laravel/pint": "^1.18.1",
+                "league/commonmark": "^2.5.3",
+                "orchestra/testbench": "^9.15",
+                "pestphp/pest": "^3.5.1",
+                "phpstan/extension-installer": "^1.4.3",
+                "phpstan/phpstan": "^2.0",
+                "symfony/var-dumper": "^7.1.6"
+            },
+            "suggest": {
+                "league/commonmark": "Required to use the CommonMark adapter (^2.5.3)"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Phiki\\Adapters\\Laravel\\PhikiServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Phiki\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Ryan Chandler",
+                    "email": "support@ryangjchandler.co.uk",
+                    "homepage": "https://ryangjchandler.co.uk",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Syntax highlighting using TextMate grammars in PHP.",
+            "support": {
+                "issues": "https://github.com/phikiphp/phiki/issues",
+                "source": "https://github.com/phikiphp/phiki/tree/v2.2.0"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/sponsors/ryangjchandler",
+                    "type": "github"
+                },
+                {
+                    "url": "https://buymeacoffee.com/ryangjchandler",
+                    "type": "other"
+                }
+            ],
+            "time": "2026-04-01T15:56:08+00:00"
         },
         {
             "name": "phpoption/phpoption",
