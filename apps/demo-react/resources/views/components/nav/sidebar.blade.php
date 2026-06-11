@@ -15,6 +15,9 @@
             ['label' => 'Live Charts', 'route' => 'charts'],
             ['label' => 'Drag & Drop Board', 'route' => 'board'],
         ],
+        'Advanced' => [
+            ['label' => 'Blade-Composed Kanban', 'route' => 'kanban'],
+        ],
         'Under the Hood' => [
             ['label' => 'Auto-discovery & Splitting', 'route' => 'architecture'],
         ],

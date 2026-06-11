@@ -14,4 +14,5 @@ Route::get('/uploads', Pages\UploadsPage::class)->name('uploads');
 Route::get('/table', Pages\TablePage::class)->name('table');
 Route::get('/charts', Pages\ChartsPage::class)->name('charts');
 Route::get('/board', Pages\BoardPage::class)->name('board');
+Route::get('/kanban', Pages\KanbanPage::class)->name('kanban');
 Route::get('/architecture', Pages\ArchitecturePage::class)->name('architecture');
