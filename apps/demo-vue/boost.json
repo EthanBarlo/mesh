@@ -1,0 +1,14 @@
+{
+    "cloud": false,
+    "guidelines": true,
+    "packages": [
+        "ethanbarlo/mesh"
+    ],
+    "skills": [
+        "laravel-best-practices",
+        "livewire-development",
+        "pest-testing",
+        "tailwindcss-development",
+        "mesh-development"
+    ]
+}

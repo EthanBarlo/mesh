@@ -5,7 +5,7 @@ description: How Mesh mounts React, Vue, and Svelte components.
 
 # Renderers
 
-A **renderer** teaches Mesh how to mount a given framework's components. React ships built in; Vue and Svelte follow the same interface.
+A **renderer** teaches Mesh how to mount a given framework's components. React and Vue ship built in; Svelte follows the same interface.
 
 ## Registering renderers
 
@@ -133,20 +133,22 @@ For React, mounting and updating are the same operation, so `update` is just the
 Because the core reuses the same prepared slot nodes across props-only updates, React skips
 re-rendering unchanged slot content.
 
-## Vue and Svelte
+## Built-in Vue renderer
 
-To support other frameworks, just pass their renderers. Mesh auto-discovers `.vue` and `.svelte`
-entries the same way it discovers `.tsx`/`.jsx`, so no extra component config is needed:
+The Vue renderer ships at `@mesh/vue`, alongside Vue equivalents of the React hooks:
+`useWire`, `useEntangle` (a writable `Ref`), `useErrorBag` (a `shallowRef`), and
+`useLivewireComponent` (provide/inject — each island is its own Vue app). The shipped
+implementation matches the sketch in "Adding a custom renderer" below, with one deliberate
+difference from React: named slots are passed as **native Vue slots**
+(`<slot name="header" />`), not as a `slots` prop.
 
 ```ts
 import { Livewire, Alpine } from '../../vendor/livewire/livewire/dist/livewire.esm'
 import { initMesh } from '@mesh'
-import reactRenderer from '@mesh/react'
 import vueRenderer from '@mesh/vue'
-import svelteRenderer from '@mesh/svelte'
 
 initMesh(Livewire, {
-  renderers: [reactRenderer, vueRenderer, svelteRenderer],
+  renderers: [vueRenderer],
   debug: true,
 })
 
@@ -154,6 +156,12 @@ Livewire.start()
 ```
 
 A component written as `index.vue` is inferred to use the `vue` renderer automatically.
+Renderers compose freely — pass `[reactRenderer, vueRenderer]` to mix frameworks in one app.
+
+## Svelte
+
+Svelte follows the same interface but does not ship built in yet — implement it as a custom
+renderer (see below); Mesh already auto-discovers `.svelte` entries and infers the `svelte` type.
 
 ## Choosing a renderer per component
 

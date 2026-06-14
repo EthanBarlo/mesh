@@ -96,11 +96,14 @@ export type Wire = {
     $set: (key: string, value: any, live: boolean) => void;
     $toggle: (key: string, live: boolean) => void;
     $call: (method: string, ...args: any[]) => Promise<any>;
-    $watch: (key: string, callback: (value: any) => void) => void;
+    // Returns Livewire's unsubscribe function (also auto-cleaned on
+    // component teardown via addCleanup).
+    $watch: (key: string, callback: (value: any) => void) => () => void;
     $refresh: () => Promise<void>;
     $commit: () => void;
     $on: (event: string, callback: (...args: any[]) => void) => void;
-    $hook: (event: string, callback: (...args: any[]) => void) => void;
+    // Returns Livewire's unhook function (also auto-cleaned on teardown).
+    $hook: (event: string, callback: (...args: any[]) => void) => () => void;
     $dispatch: (event: string, params: object) => void;
     $dispatchTo: (component: string, event: string, params: object) => void;
     $dispatchSelf: (event: string, params: object) => void;
