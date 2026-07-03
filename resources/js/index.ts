@@ -8,6 +8,7 @@ export {
 
 export type {
     Config,
+    MeshSource,
     MeshRenderer,
     MeshSlots,
     SlotRenderer,

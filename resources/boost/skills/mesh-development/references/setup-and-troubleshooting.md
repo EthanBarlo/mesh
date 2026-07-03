@@ -94,11 +94,34 @@ The full `Config` type is:
 ```ts
 type Config = {
   renderers: MeshRenderer<any>[]  // required; keyed internally by renderer.type
+  sources?: MeshSource[]          // extra discovery inputs for package components (see below)
   debug?: boolean                 // enables debugLog output (init, component.init per id)
 }
+
+type MeshSource =
+  | GlobResult                              // a raw import.meta.glob result
+  | { modules: GlobResult; prefix?: string } // same, with every id namespaced under prefix
 ```
 
-There are no other options. The component directory is hardcoded to `resources/js/mesh` (`MESH_BASE` in buildRegistry.ts) — it is not configurable.
+There are no other options. The auto-discovery directory is hardcoded to the host app's `resources/js/mesh` (`MESH_BASE` in buildRegistry.ts).
+
+## Components from Composer packages (`sources`)
+
+`import.meta.glob` only accepts literal patterns, so the host app writes the glob for the package and hands Mesh the result:
+
+```ts
+initMesh(Livewire, {
+  renderers: [reactRenderer],
+  sources: [
+    { modules: import.meta.glob('/vendor/acme/widgets/resources/js/mesh/**/index.{tsx,jsx,vue,svelte}'), prefix: 'Acme' },
+  ],
+})
+```
+
+- Source entries must live under a `resources/js/mesh/` directory somewhere in their path — id derivation starts at that marker (`.../resources/js/mesh/Chart/index.tsx` → `Chart`, or `Acme/Chart` with the prefix). An entry without the marker **throws at init** rather than silently skipping.
+- The package's PHP component class lives outside `App\Mesh`, so it must override `component()` to return the matching id (e.g. `'Acme/Chart'`).
+- Duplicate ids across the host app and all sources throw at init; use `prefix` to disambiguate.
+- Source components are code-split into lazy chunks exactly like auto-discovered ones.
 
 ## Renderer / extension mapping
 

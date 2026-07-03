@@ -72,7 +72,7 @@ Components are auto-discovered (no registration). The PHP class and the frontend
 | `App\Mesh\Counter` | `resources/js/mesh/Counter/index.tsx` | `Counter` |
 | `App\Mesh\Forms\Input` | `resources/js/mesh/Forms/Input/index.tsx` | `Forms/Input` |
 
-- `resources/js/mesh` is **hardcoded** — not configurable. Components elsewhere are silently ignored.
+- Auto-discovery only scans the host app's `resources/js/mesh` — components elsewhere are silently ignored. Components shipped by Composer packages register via the `sources` option of `initMesh` (host-authored `import.meta.glob`, optional id `prefix`; entries must live under a `resources/js/mesh/` directory inside the package) — see `references/setup-and-troubleshooting.md`.
 - Both sides are StudlyCase. A case mismatch (`counter/` vs `Counter.php`) **works on macOS but breaks on Linux/CI** because macOS filesystems are case-insensitive. When a component fails to mount, compare the namespace path and folder path character-for-character first.
 
 ## Pitfall #2: props are snapshots — don't mirror them into state

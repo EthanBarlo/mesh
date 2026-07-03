@@ -67,6 +67,52 @@ initMesh(Livewire, {
 Add a new component just by creating its folder under `resources/js/mesh` — Mesh picks it up
 automatically. There is no per-component Vite input and no `registerComponent` call.
 
+### Components from Composer packages
+
+The built-in glob only scans the host app's `resources/js/mesh`. Components that ship inside a
+Composer package (or anywhere else) can be added through the `sources` option. `import.meta.glob`
+only accepts literal patterns, so the host app owns the glob and hands Mesh the result:
+
+```ts
+// resources/js/app.ts
+initMesh(Livewire, {
+  renderers: [reactRenderer],
+  sources: [
+    import.meta.glob('/vendor/acme/widgets/resources/js/mesh/**/index.{tsx,jsx,vue,svelte}'),
+  ],
+})
+```
+
+Source entries must still live under a `resources/js/mesh/` directory somewhere in their path — id
+derivation starts at that marker, so `/vendor/acme/widgets/resources/js/mesh/Chart/index.tsx`
+registers as `Chart`, exactly as if it lived in the host app. An entry without the marker throws at
+init (a silent skip would look like a missing component at render time).
+
+To namespace a package's ids — for example to avoid colliding with a host component of the same
+name — use the wrapped form with a `prefix`:
+
+```ts
+sources: [
+  {
+    modules: import.meta.glob('/vendor/acme/widgets/resources/js/mesh/**/index.{tsx,jsx,vue,svelte}'),
+    prefix: 'Acme',
+  },
+],
+```
+
+Now `Chart` registers as `Acme/Chart`. On the PHP side a package component lives outside `App\Mesh`,
+so its class overrides `component()` to return the matching id:
+
+```php
+public function component(): string
+{
+    return 'Acme/Chart';
+}
+```
+
+Duplicate ids across the host app and all sources throw at init. Source components are code-split
+into lazy chunks exactly like auto-discovered ones.
+
 ## A simple id, derived identically on both sides
 
 Each component is identified by a short **id** string — `Counter`, or `Forms/Input` for a nested

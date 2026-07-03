@@ -85,8 +85,10 @@ return [
 ];
 ```
 
-The component directory is fixed at `resources/js/mesh` and is not configurable. The only published
-option is the default renderer used by `make:mesh`.
+The component directory for auto-discovery is fixed at `resources/js/mesh`. Components shipped by
+Composer packages can be registered through the `sources` option of `initMesh` — see
+[building components](/docs/guides/building-components#components-from-composer-packages). The only
+published PHP option is the default renderer used by `make:mesh`.
 
 ## Step 5 — Create your first component
 

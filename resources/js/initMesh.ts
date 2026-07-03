@@ -61,12 +61,12 @@ function loadComponent(id: string): Promise<any> {
 }
 
 export default async function initMesh(Livewire: any, config: Config) {
-    const { renderers, debug } = config;
+    const { renderers, debug, sources } = config;
 
     // Initialize the Mesh global object synchronously (before any await) so the
     // registry is available the moment Livewire begins initializing components.
     window.Mesh = {
-        registry: buildRegistry(componentModules),
+        registry: buildRegistry(componentModules, sources),
         resolved: {},
         renderedComponents: {},
         config: {
