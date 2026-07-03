@@ -72,3 +72,98 @@ describe("buildRegistry", () => {
         expect(() => buildRegistry(globbed)).toThrow();
     });
 });
+
+describe("buildRegistry sources", () => {
+    const hostGlob: GlobResult = {
+        "/resources/js/mesh/Counter/index.tsx": loader,
+    };
+
+    it("merges a bare glob-result source", () => {
+        const source: GlobResult = {
+            "/vendor/acme/widgets/resources/js/mesh/Chart/index.tsx": loader,
+        };
+
+        const registry = buildRegistry(hostGlob, [source]);
+
+        expect(Object.keys(registry).sort()).toEqual(["Chart", "Counter"]);
+        expect(registry["Chart"].renderer).toBe("react");
+    });
+
+    it("derives nested ids from a source entry", () => {
+        const source: GlobResult = {
+            "/vendor/acme/widgets/resources/js/mesh/Forms/Input/index.tsx":
+                loader,
+        };
+
+        const registry = buildRegistry(hostGlob, [source]);
+
+        expect(registry["Forms/Input"]).toBeDefined();
+    });
+
+    it("prefixes every id from a wrapped source", () => {
+        const registry = buildRegistry(hostGlob, [
+            {
+                modules: {
+                    "/vendor/acme/widgets/resources/js/mesh/Chart/index.tsx":
+                        loader,
+                    "/vendor/acme/widgets/resources/js/mesh/Forms/Input/index.tsx":
+                        loader,
+                },
+                prefix: "Acme",
+            },
+        ]);
+
+        expect(Object.keys(registry).sort()).toEqual([
+            "Acme/Chart",
+            "Acme/Forms/Input",
+            "Counter",
+        ]);
+    });
+
+    it("throws on an id collision between host and source", () => {
+        const source: GlobResult = {
+            "/vendor/acme/widgets/resources/js/mesh/Counter/index.tsx": loader,
+        };
+
+        expect(() => buildRegistry(hostGlob, [source])).toThrow(
+            /duplicate component id "Counter"/
+        );
+    });
+
+    it("a prefix avoids the collision", () => {
+        const registry = buildRegistry(hostGlob, [
+            {
+                modules: {
+                    "/vendor/acme/widgets/resources/js/mesh/Counter/index.tsx":
+                        loader,
+                },
+                prefix: "Acme",
+            },
+        ]);
+
+        expect(Object.keys(registry).sort()).toEqual([
+            "Acme/Counter",
+            "Counter",
+        ]);
+    });
+
+    it("throws when a source entry is not under a mesh directory", () => {
+        const source: GlobResult = {
+            "/vendor/acme/widgets/resources/js/other/Chart/index.tsx": loader,
+        };
+
+        expect(() => buildRegistry(hostGlob, [source])).toThrow(
+            /does not live under/
+        );
+    });
+
+    it("infers non-react renderers for source entries", () => {
+        const source: GlobResult = {
+            "/vendor/acme/widgets/resources/js/mesh/Chart/index.vue": loader,
+        };
+
+        const registry = buildRegistry(hostGlob, [source]);
+
+        expect(registry["Chart"].renderer).toBe("vue");
+    });
+});
