@@ -5,7 +5,7 @@ description: How Mesh mounts React, Vue, and Svelte components.
 
 # Renderers
 
-A **renderer** teaches Mesh how to mount a given framework's components. React and Vue ship built in; Svelte follows the same interface.
+A **renderer** teaches Mesh how to mount a given framework's components. React, Vue, and Svelte all ship built in, and all three implement the same small interface.
 
 ## Registering renderers
 
@@ -29,7 +29,7 @@ Livewire.start()
 ## The renderer interface
 
 The only things that are genuinely framework-specific are turning a slot's HTML **string** into a node
-(React `dangerouslySetInnerHTML`, Vue `v-html`, Svelte `{@html}`) and mounting/updating/unmounting a
+(React `dangerouslySetInnerHTML`, Vue `v-html`, Svelte `createRawSnippet`) and mounting/updating/unmounting a
 component — so that is the entire renderer contract. A renderer is an object with a `type` (the string
 Mesh infers from the file extension) plus those two operations:
 
@@ -189,10 +189,65 @@ Livewire.start()
 A component written as `index.vue` is inferred to use the `vue` renderer automatically.
 Renderers compose freely — pass `[reactRenderer, vueRenderer]` to mix frameworks in one app.
 
-## Svelte
+## Built-in Svelte renderer
 
-Svelte follows the same interface but does not ship built in yet — implement it as a custom
-renderer (see below); Mesh already auto-discovers `.svelte` entries and infers the `svelte` type.
+The Svelte renderer ships at `@mesh/svelte`, alongside Svelte equivalents of the React hooks
+(implemented as runes in `.svelte.ts` modules): `useWire` (identical to React/Vue),
+`useEntangle` (a writable `{ value }` box — read and write `.value`, bind with
+`bind:value={x.value}`, and replace entangled objects rather than mutating nested fields),
+`useErrorBag` (a read-only `{ value }` box), and `useLivewireComponent` (Svelte context — the
+renderer provides it via `mount`'s `context` option). Svelte 5 is an optional peer dependency;
+you only need it installed if you pass the Svelte renderer.
+
+Install Svelte and its Vite plugin in the host app:
+
+```bash
+npm install svelte
+npm install --save-dev @sveltejs/vite-plugin-svelte
+```
+
+Add the Svelte plugin to your existing `vite.config.ts`, alongside the Laravel plugin and the
+`@mesh` alias shown in [installation](../installation.mdx):
+
+```ts
+import { defineConfig } from 'vite'
+import laravel from 'laravel-vite-plugin'
+import { svelte } from '@sveltejs/vite-plugin-svelte'
+
+export default defineConfig({
+  plugins: [
+    laravel({ input: ['resources/css/app.css', 'resources/js/app.ts'] }),
+    svelte(),
+  ],
+  resolve: {
+    alias: { '@mesh': '/vendor/ethanbarlo/mesh/resources/js' },
+  },
+})
+```
+
+Keep any other Vite plugins and entrypoints your app already uses. The Svelte plugin compiles
+both `index.svelte` components and Mesh's `.svelte.ts` rune modules.
+
+```ts
+import { Livewire, Alpine } from '../../vendor/livewire/livewire/dist/livewire.esm'
+import { initMesh } from '@mesh'
+import svelteRenderer from '@mesh/svelte'
+
+initMesh(Livewire, {
+  renderers: [svelteRenderer],
+  debug: true,
+})
+
+Livewire.start()
+```
+
+A component written as `index.svelte` is inferred to use the `svelte` renderer automatically.
+
+One deliberate design choice: slots map like **React, not Vue**. The Blade default slot arrives as
+a `children` snippet prop — render it with `{@render children?.()}` — and named Blade slots arrive
+as a `slots` prop of type `Record<string, Snippet>` — render them with `{@render slots.header?.()}`.
+Svelte 5 already treats `children` as a prop rather than special syntax, so the React-style mapping
+is the natural fit; `children` and `slots` are reserved prop names, exactly as in React.
 
 ## Choosing a renderer per component
 
@@ -239,9 +294,11 @@ const vueRenderer: MeshRenderer<VueSlot> = {
 }
 ```
 
-Svelte 5 is symmetric: `renderSlot` can build a snippet with `createRawSnippet`, `mount` calls
-Svelte's `mount(Component, { target: el, props })` once with `$state`-backed props, `update` mutates
-that state, and `cleanup` calls `unmount`.
+The shipped Svelte renderer is symmetric and follows the same mount-once-then-mutate shape:
+`renderSlot` builds a snippet with `createRawSnippet`, wrapping the HTML in a `display: contents`
+div; `mount` calls Svelte's `mount(Component, { target: el, props })` once with `$state`-backed
+props (and passes the Livewire component through `mount`'s `context` option); `update` mutates that
+state; and `cleanup` calls Svelte's `unmount`.
 
 ## Wiring renderers into `initMesh`
 

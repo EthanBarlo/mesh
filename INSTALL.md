@@ -1,6 +1,6 @@
 # Installing Mesh
 
-> This guide sets up a React island inside Livewire 4. Mesh also ships a Vue renderer; see the [renderer guide](docs/advanced/renderers.mdx) for its host-app setup.
+> This guide sets up a React island inside Livewire 4. Mesh also ships Vue and Svelte renderers; see the [renderer guide](docs/advanced/renderers.mdx) for their host-app setup.
 
 ## 1. Require the package
 
@@ -85,7 +85,7 @@ This scaffolds:
 - `resources/js/mesh/Counter/index.tsx` — your React component (its **default export** is the component)
 
 The component directory is fixed at `resources/js/mesh`. In this React example, the component is a
-folder whose `index.{tsx,jsx}` default-exports it. Vue entries use `index.vue`. Nested components live in nested folders, e.g.
+folder whose `index.{tsx,jsx}` default-exports it. Vue entries use `index.vue`, and Svelte entries use `index.svelte`. Nested components live in nested folders, e.g.
 `resources/js/mesh/Forms/Input/index.tsx`.
 
 ## 5. Set up your layout and render
@@ -118,7 +118,7 @@ is the component **id** in kebab-case (`Counter` → `counter`), and props pass 
 - The component **id** is what links the two sides — a simple string like `Counter` (or `Forms/Input`),
   derived identically from the PHP class name and the folder path. `make:mesh` keeps them in sync.
 - Read the [building components guide](docs/guides/building-components.mdx).
-- See [renderers](docs/advanced/renderers.mdx) to add Vue or Svelte.
+- See [renderers](docs/advanced/renderers.mdx) to use the built-in Vue or Svelte renderers instead of React.
 - See [troubleshooting](docs/advanced/troubleshooting.mdx) if a component doesn't mount.
 
 ## Notes

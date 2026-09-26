@@ -75,8 +75,21 @@ it('creates a vue component with --renderer=vue', function () {
     expect($jsContents)->not->toContain('{{ class }}');
 });
 
+it('creates a svelte component with --renderer=svelte', function () {
+    $this->artisan('make:mesh', ['name' => 'Counter', '--renderer' => 'svelte'])
+        ->assertExitCode(0);
+
+    $jsEntry = $this->appBase.'/resources/js/mesh/Counter/index.svelte';
+    expect(File::exists($jsEntry))->toBeTrue();
+
+    $jsContents = File::get($jsEntry);
+    expect($jsContents)->toContain('<script lang="ts">');
+    expect($jsContents)->toContain('Counter component');
+    expect($jsContents)->not->toContain('{{ class }}');
+});
+
 it('fails for unsupported renderer', function () {
-    $this->artisan('make:mesh', ['name' => 'Broken', '--renderer' => 'svelte'])
+    $this->artisan('make:mesh', ['name' => 'Broken', '--renderer' => 'solid'])
         ->assertExitCode(1);
 });
 

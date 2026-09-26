@@ -38,8 +38,8 @@ class Counter extends Component
 
 ## The React component
 
-A React component is a **folder** whose `index.{tsx,jsx}` default-exports it. Vue uses `index.vue`;
-co-located helper files in the same folder are ignored.
+A React component is a **folder** whose `index.{tsx,jsx}` default-exports it. Vue uses `index.vue`
+and Svelte uses `index.svelte`. Co-located helper files in the same folder are ignored.
 
 ```tsx
 // resources/js/mesh/Counter/index.tsx
@@ -236,6 +236,6 @@ Pass interactive pieces as their own Mesh components or as props instead.
   any other unescaped output) is injected as raw HTML — never put unsanitised user input in a slot.
 </Callout>
 
-For React, `children` and `slots` are **reserved** prop names. If `props()` returns one of those keys
+For React and Svelte, `children` and `slots` are **reserved** prop names. If `props()` returns one of those keys
 while the corresponding slot is present, Mesh throws rather than shadowing the slot content. Vue
 receives native slots separately, so these names can also be ordinary Vue props.

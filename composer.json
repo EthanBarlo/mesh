@@ -1,12 +1,14 @@
 {
     "name": "ethanbarlo/mesh",
-    "description": "Render React (and other frameworks) as the frontend of your Livewire components.",
+    "description": "Render React, Vue, or Svelte components as the frontend of your Livewire components.",
     "keywords": [
         "Ethan Barlow",
         "laravel",
         "livewire",
         "mesh",
-        "react"
+        "react",
+        "vue",
+        "svelte"
     ],
     "homepage": "https://github.com/ethanbarlo/mesh",
     "license": "MIT",

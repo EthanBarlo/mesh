@@ -5,7 +5,7 @@ description: Set up Mesh in a host Laravel app.
 
 # Installation
 
-Mesh bridges Livewire 4 with React or Vue islands. The frontend ships inside the Composer package and is consumed through a Vite **alias** (`@mesh`), not npm.
+Mesh bridges Livewire 4 with React, Vue, or Svelte islands. The frontend ships inside the Composer package and is consumed through a Vite **alias** (`@mesh`), not npm.
 
 ## Requirements
 
@@ -24,8 +24,8 @@ composer require ethanbarlo/mesh
 Mesh auto-discovers components from `resources/js/mesh`, so they do **not** need individual Vite input
 entries. Your `input` array only lists your real app entrypoints.
 
-This example uses React. For a Vue host app, install `vue` and `@vitejs/plugin-vue`, add `vue()`
-to the Vite plugins, and register `@mesh/vue` as shown in [renderers](advanced/renderers.mdx).
+This example uses React. For Vue or Svelte, install the corresponding framework and Vite plugin,
+then register `@mesh/vue` or `@mesh/svelte` as shown in [renderers](advanced/renderers.mdx).
 
 ```ts
 // vite.config.ts
@@ -107,7 +107,7 @@ php artisan make:mesh Counter
 ```
 
 This creates `app/Mesh/Counter.php` and `resources/js/mesh/Counter/index.tsx` (whose default export
-is the component). Pass `--renderer=vue` to create `index.vue` instead.
+is the component). Pass `--renderer=vue` for `index.vue` or `--renderer=svelte` for `index.svelte`.
 
 ## Step 6 — Render in Blade
 

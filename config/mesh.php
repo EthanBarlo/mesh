@@ -8,7 +8,8 @@ return [
     | Make Defaults
     |--------------------------------------------------------------------------
     |
-    | Default settings for the make:mesh generator command.
+    | Default settings for the make:mesh generator command. Supported
+    | renderers: 'react', 'vue', 'svelte'.
     |
     */
     'make' => [

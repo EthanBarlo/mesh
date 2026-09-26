@@ -1,0 +1,13 @@
+# FrankenPHP (classic php_server mode) for the Mesh demo Laravel app.
+# SERVER_NAME=:8000 (set in the image) makes Caddy serve plain HTTP on :8000 with
+# no automatic TLS — Coolify's proxy terminates TLS in front of it.
+{
+	frankenphp
+}
+
+{$SERVER_NAME:localhost} {
+	# The app lives in the monorepo at /app/apps/demo-svelte; serve its public/.
+	root * /app/apps/demo-svelte/public
+	encode zstd br gzip
+	php_server
+}
