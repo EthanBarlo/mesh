@@ -60,13 +60,19 @@ import { Livewire, Alpine } from '../../vendor/livewire/livewire/dist/livewire.e
 import { initMesh } from '@mesh'
 import reactRenderer from '@mesh/react'
 
-@livewireScriptConfig
 initMesh(Livewire, {
   renderers: [reactRenderer],
   debug: true,
 })
 
 Livewire.start()
+```
+
+Put `@livewireScriptConfig` in the Blade layout that loads this bundle, not in `app.ts`:
+
+```blade
+@vite(['resources/css/app.css', 'resources/js/app.ts'])
+@livewireScriptConfig
 ```
 
 ## Step 4 — Publish config (optional)
@@ -85,8 +91,10 @@ return [
 ];
 ```
 
-The component directory is fixed at `resources/js/mesh` and is not configurable. The only published
-option is the default renderer used by `make:mesh`.
+The component directory for auto-discovery is fixed at `resources/js/mesh`. Frontend entries shipped by
+Composer packages can be added through the `sources` option of `initMesh` — see
+[building components](/docs/guides/building-components#components-from-composer-packages). The only
+published PHP option is the default renderer used by `make:mesh`.
 
 ## Step 5 — Create your first component
 
