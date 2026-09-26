@@ -29,7 +29,7 @@ Livewire.start()
 ## The renderer interface
 
 The only things that are genuinely framework-specific are turning a slot's HTML **string** into a node
-(React `dangerouslySetInnerHTML`, Vue `v-html`, Svelte `{@html}`) and mounting/updating/unmounting a
+(React `dangerouslySetInnerHTML`, Vue `v-html`, Svelte `createRawSnippet`) and mounting/updating/unmounting a
 component — so that is the entire renderer contract. A renderer is an object with a `type` (the string
 Mesh infers from the file extension) plus those two operations:
 
@@ -167,6 +167,35 @@ The Svelte renderer ships at `@mesh/svelte`, alongside Svelte equivalents of the
 `useErrorBag` (a read-only `{ value }` box), and `useLivewireComponent` (Svelte context — the
 renderer provides it via `mount`'s `context` option). Svelte 5 is an optional peer dependency;
 you only need it installed if you pass the Svelte renderer.
+
+Install Svelte and its Vite plugin in the host app:
+
+```bash
+npm install svelte
+npm install --save-dev @sveltejs/vite-plugin-svelte
+```
+
+Add the Svelte plugin to your existing `vite.config.ts`, alongside the Laravel plugin and the
+`@mesh` alias shown in [installation](../installation.mdx):
+
+```ts
+import { defineConfig } from 'vite'
+import laravel from 'laravel-vite-plugin'
+import { svelte } from '@sveltejs/vite-plugin-svelte'
+
+export default defineConfig({
+  plugins: [
+    laravel({ input: ['resources/css/app.css', 'resources/js/app.ts'] }),
+    svelte(),
+  ],
+  resolve: {
+    alias: { '@mesh': '/vendor/ethanbarlo/mesh/resources/js' },
+  },
+})
+```
+
+Keep any other Vite plugins and entrypoints your app already uses. The Svelte plugin compiles
+both `index.svelte` components and Mesh's `.svelte.ts` rune modules.
 
 ```ts
 import { Livewire, Alpine } from '../../vendor/livewire/livewire/dist/livewire.esm'
