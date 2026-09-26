@@ -1,0 +1,29 @@
+{
+    "compilerOptions": {
+        "target": "ESNext",
+        "module": "ESNext",
+        "moduleResolution": "bundler",
+        "strict": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true,
+        "resolveJsonModule": true,
+        "isolatedModules": true,
+        "noEmit": true,
+        "baseUrl": ".",
+        "paths": {
+            "@/*": ["resources/js/*"],
+            "@mesh": ["vendor/ethanbarlo/mesh/resources/js/index.ts"],
+            "@mesh/*": ["vendor/ethanbarlo/mesh/resources/js/*"]
+        }
+    },
+    "include": [
+        "resources/js/**/*.ts",
+        "resources/js/**/*.vue",
+        "vendor/ethanbarlo/mesh/resources/js/**/*.ts"
+    ],
+    "exclude": [
+        "node_modules",
+        "vendor/ethanbarlo/mesh/resources/js/react"
+    ]
+}

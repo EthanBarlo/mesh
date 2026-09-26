@@ -118,10 +118,11 @@ interactive children as their own Mesh components or props instead.
   any other unescaped output) is injected as raw HTML — never put unsanitised user input in a slot.
 </Callout>
 
-`children` and `slots` are **reserved** prop names. Mesh throws when `props()` returns a `children`
-key while any slot is present, or a `slots` key while named slots are present, so the collision can't
-silently shadow the slot content. (A `slots` prop is fine when only the default slot is used — Mesh
-only passes the `slots` prop for named slots.)
+For React and other renderers that pass slots through props, `children` and `slots` are **reserved**
+prop names. Mesh throws when `props()` returns a `children` key while any slot is present, or a
+`slots` key while named slots are present, so the collision cannot shadow slot content. Vue uses
+native slots, so these names remain available as ordinary props. (A `slots` prop is fine in React
+when only the default slot is used.)
 
 ### `meshSlots(): array`
 

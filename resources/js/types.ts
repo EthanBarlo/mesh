@@ -44,7 +44,7 @@ export type PreparedSlots<T> = {
 };
 
 // What Mesh hands a renderer on mount and on every update: the latest props
-// and prepared slots. The reserved-prop guard has already run.
+// and prepared slots. The renderer's reserved-prop policy has already run.
 export type RenderContext<T> = {
     props: Record<string, any>;
     slots: PreparedSlots<T>;
@@ -108,11 +108,14 @@ export type Wire = {
     $set: (key: string, value: any, live: boolean) => void;
     $toggle: (key: string, live: boolean) => void;
     $call: (method: string, ...args: any[]) => Promise<any>;
-    $watch: (key: string, callback: (value: any) => void) => void;
+    // Returns Livewire's unsubscribe function (also auto-cleaned on
+    // component teardown via addCleanup).
+    $watch: (key: string, callback: (value: any) => void) => () => void;
     $refresh: () => Promise<void>;
     $commit: () => void;
     $on: (event: string, callback: (...args: any[]) => void) => void;
-    $hook: (event: string, callback: (...args: any[]) => void) => void;
+    // Returns Livewire's unhook function (also auto-cleaned on teardown).
+    $hook: (event: string, callback: (...args: any[]) => void) => () => void;
     $dispatch: (event: string, params: object) => void;
     $dispatchTo: (component: string, event: string, params: object) => void;
     $dispatchSelf: (event: string, params: object) => void;
@@ -163,6 +166,9 @@ export type RenderedComponent = {
 // references stable across props-only updates) is owned by the Mesh core.
 export type MeshRenderer<TNode = unknown> = {
     type: string;
+    // Native slot APIs keep Blade slots separate from ordinary component props.
+    // Omit this for renderers that pass slot content through `children`/`slots`.
+    nativeSlots?: boolean;
     // HTML string -> framework node. Must be pure: it is called per slot,
     // outside any mount, so it cannot rely on per-mount state.
     renderSlot: SlotRenderer<TNode>;

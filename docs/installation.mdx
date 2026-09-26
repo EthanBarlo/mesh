@@ -5,7 +5,7 @@ description: Set up Mesh in a host Laravel app.
 
 # Installation
 
-Mesh is a React + Livewire 4 islands bridge. The frontend ships inside the Composer package and is consumed through a Vite **alias** (`@mesh`), not npm.
+Mesh bridges Livewire 4 with React or Vue islands. The frontend ships inside the Composer package and is consumed through a Vite **alias** (`@mesh`), not npm.
 
 ## Requirements
 
@@ -23,6 +23,9 @@ composer require ethanbarlo/mesh
 
 Mesh auto-discovers components from `resources/js/mesh`, so they do **not** need individual Vite input
 entries. Your `input` array only lists your real app entrypoints.
+
+This example uses React. For a Vue host app, install `vue` and `@vitejs/plugin-vue`, add `vue()`
+to the Vite plugins, and register `@mesh/vue` as shown in [renderers](advanced/renderers.mdx).
 
 ```ts
 // vite.config.ts
@@ -51,8 +54,9 @@ export default defineConfig({
 ## Step 3 — Configure `app.ts`
 
 Register your renderers — that's all. Mesh auto-discovers every component under the fixed
-`resources/js/mesh` directory: only `index.{tsx,jsx}` entries are picked up (co-located helper files
-are ignored), and each becomes its own lazy, code-split chunk fetched on first render.
+`resources/js/mesh` directory: `index.{tsx,jsx,vue,svelte}` entries are picked up (co-located helper files
+are ignored), and each becomes its own lazy, code-split chunk fetched on first render. Register a
+matching renderer for each extension you use.
 
 ```ts
 // resources/js/app.ts
@@ -103,7 +107,7 @@ php artisan make:mesh Counter
 ```
 
 This creates `app/Mesh/Counter.php` and `resources/js/mesh/Counter/index.tsx` (whose default export
-is the component).
+is the component). Pass `--renderer=vue` to create `index.vue` instead.
 
 ## Step 6 — Render in Blade
 
@@ -126,7 +130,8 @@ component. It is derived the same way on each side:
   file extension and the trailing `/index` (`/resources/js/mesh/Forms/Input/index.tsx` → `Forms/Input`).
 
 Because `make:mesh` StudlyCases both the class segments and the folder names, the ids match. The
-renderer is inferred from the entry's file extension (`tsx`/`jsx` → React). See
+renderer is inferred from the entry's file extension (`tsx`/`jsx` → React, `vue` → Vue,
+`svelte` → Svelte). See
 [building components](guides/building-components.mdx).
 
 ## Step 7 — Production build

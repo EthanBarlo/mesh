@@ -41,20 +41,26 @@ class MakeMeshComponentCommand extends Command
         $phpTargetDir = app_path('Mesh'.($namespaceSuffix ? str_replace('\\', '/', $namespaceSuffix) : ''));
         $phpTarget = $phpTargetDir.'/'.$className.'.php';
 
-        $jsTargetDir = base_path(self::COMPONENT_BASE.'/'.$relative);
-        $jsEntry = $jsTargetDir.'/index.tsx';
+        // Validate renderer before writing anything. Each renderer's stub dir
+        // contains a single `index.<ext>.stub`, whose name (minus `.stub`)
+        // becomes the entry filename — the extension is what Mesh later uses
+        // to infer the renderer, so the two stay in sync by construction.
+        $rendererStubDir = __DIR__.'/../../stubs/renderers/'.$renderer;
+        $entryStub = File::isDirectory($rendererStubDir)
+            ? (File::glob($rendererStubDir.'/index.*.stub')[0] ?? null)
+            : null;
 
-        if (File::exists($phpTarget) || File::exists($jsTargetDir)) {
-            $this->error('Component already exists.');
+        if ($entryStub === null) {
+            $this->error("Unsupported renderer [{$renderer}].");
 
             return self::FAILURE;
         }
 
-        // Validate renderer before writing anything.
-        $rendererStubDir = __DIR__.'/../../stubs/renderers/'.$renderer;
+        $jsTargetDir = base_path(self::COMPONENT_BASE.'/'.$relative);
+        $jsEntry = $jsTargetDir.'/'.basename($entryStub, '.stub');
 
-        if (! File::isDirectory($rendererStubDir)) {
-            $this->error("Unsupported renderer [{$renderer}].");
+        if (File::exists($phpTarget) || File::exists($jsTargetDir)) {
+            $this->error('Component already exists.');
 
             return self::FAILURE;
         }
@@ -71,7 +77,7 @@ class MakeMeshComponentCommand extends Command
         $indexStub = str_replace(
             '{{ class }}',
             $className,
-            File::get($rendererStubDir.'/index.tsx.stub')
+            File::get($entryStub)
         );
 
         // PHP class

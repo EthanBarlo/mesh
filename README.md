@@ -1,6 +1,6 @@
 # Mesh
 
-> A React + Livewire 4 islands bridge. Render interactive framework components inside Livewire, with props flowing across the boundary.
+> A React and Vue bridge for Livewire 4. Render interactive framework components inside Livewire, with props flowing across the boundary.
 
 ## What it does
 
