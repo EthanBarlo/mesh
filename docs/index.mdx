@@ -71,5 +71,6 @@ initMesh(Livewire, {
 
 A component is a folder under the fixed `resources/js/mesh` directory containing an
 `index.{tsx,jsx}` whose default export is the component. The folder name is the component id segment
-and must match the StudlyCase PHP class name (case-sensitive on Linux). Components shipped by
-Composer packages register through the `sources` option of `initMesh`.
+and must match the StudlyCase PHP class name (case-sensitive on Linux). Frontend entries shipped by
+Composer packages use the `sources` option of `initMesh`; their PHP classes also need Livewire
+registration.

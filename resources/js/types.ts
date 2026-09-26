@@ -1,6 +1,8 @@
 export type CleanupCallback = () => void;
 
-export type ComponentLoader = () => Promise<{ default: any }>;
+// Vite's plain import.meta.glob returns Promise<unknown>; loadComponent checks
+// for a default export when the chunk is actually loaded.
+export type ComponentLoader = () => Promise<unknown>;
 
 export type RegistryEntry = {
     renderer: string;

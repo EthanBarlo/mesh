@@ -42,7 +42,12 @@ function loadComponent(id: string): Promise<any> {
         cache[id] = entry
             .load()
             .then((m) => {
-                if (!m || !m.default) {
+                if (
+                    !m ||
+                    typeof m !== "object" ||
+                    !("default" in m) ||
+                    !m.default
+                ) {
                     throw new Error(
                         "Mesh: component \"" +
                             id +

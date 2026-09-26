@@ -113,15 +113,17 @@ There are no other options. The auto-discovery directory is hardcoded to the hos
 initMesh(Livewire, {
   renderers: [reactRenderer],
   sources: [
-    { modules: import.meta.glob('/vendor/acme/widgets/resources/js/mesh/**/index.{tsx,jsx,vue,svelte}'), prefix: 'Acme' },
+    { modules: import.meta.glob('/vendor/acme/widgets/resources/js/mesh/**/index.{tsx,jsx}'), prefix: 'Acme' },
   ],
 })
 ```
 
 - Source entries must live under a `resources/js/mesh/` directory somewhere in their path — id derivation starts at that marker (`.../resources/js/mesh/Chart/index.tsx` → `Chart`, or `Acme/Chart` with the prefix). An entry without the marker **throws at init** rather than silently skipping.
-- The package's PHP component class lives outside `App\Mesh`, so it must override `component()` to return the matching id (e.g. `'Acme/Chart'`).
+- The package's PHP component class lives outside `App\Mesh`, so it must override `component()` to return the matching frontend id (e.g. `'Acme/Chart'`). In the package service provider's `boot()` method, register it with Livewire, for example `Livewire::component('acme-chart', \Acme\Widgets\Mesh\Chart::class)`, and render `<livewire:acme-chart />`. The `<mesh:...>` shorthand only resolves classes under `App\Mesh`.
 - Duplicate ids across the host app and all sources throw at init; use `prefix` to disambiguate.
 - Source components are code-split into lazy chunks exactly like auto-discovered ones.
+
+For Vue or Svelte entries, include their extensions in the glob and configure the matching renderer and Vite plugin in the host app.
 
 ## Renderer / extension mapping
 

@@ -69,7 +69,7 @@ automatically. There is no per-component Vite input and no `registerComponent` c
 
 ### Components from Composer packages
 
-The built-in glob only scans the host app's `resources/js/mesh`. Components that ship inside a
+The built-in glob only scans the host app's `resources/js/mesh`. Frontend entries that ship inside a
 Composer package (or anywhere else) can be added through the `sources` option. `import.meta.glob`
 only accepts literal patterns, so the host app owns the glob and hands Mesh the result:
 
@@ -78,7 +78,7 @@ only accepts literal patterns, so the host app owns the glob and hands Mesh the 
 initMesh(Livewire, {
   renderers: [reactRenderer],
   sources: [
-    import.meta.glob('/vendor/acme/widgets/resources/js/mesh/**/index.{tsx,jsx,vue,svelte}'),
+    import.meta.glob('/vendor/acme/widgets/resources/js/mesh/**/index.{tsx,jsx}'),
   ],
 })
 ```
@@ -94,7 +94,7 @@ name — use the wrapped form with a `prefix`:
 ```ts
 sources: [
   {
-    modules: import.meta.glob('/vendor/acme/widgets/resources/js/mesh/**/index.{tsx,jsx,vue,svelte}'),
+    modules: import.meta.glob('/vendor/acme/widgets/resources/js/mesh/**/index.{tsx,jsx}'),
     prefix: 'Acme',
   },
 ],
@@ -109,6 +109,23 @@ public function component(): string
     return 'Acme/Chart';
 }
 ```
+
+The frontend id is separate from Livewire's component name. In the package service provider's
+`boot()` method, register the PHP class:
+
+```php
+Livewire::component('acme-chart', \Acme\Widgets\Mesh\Chart::class);
+```
+
+Render it with the registered Livewire tag:
+
+```blade
+<livewire:acme-chart />
+```
+
+The `<mesh:...>` shorthand resolves classes under the host app's `App\Mesh` namespace, so it does
+not mount a package class by default. For Vue or Svelte source entries, include their file extensions
+in the glob and configure the matching renderer and Vite plugin in the host app.
 
 Duplicate ids across the host app and all sources throw at init. Source components are code-split
 into lazy chunks exactly like auto-discovered ones.
