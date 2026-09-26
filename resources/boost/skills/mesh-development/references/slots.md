@@ -99,7 +99,7 @@ The Blade view renders slot content into a hidden `[data-mesh-slots]` holder tha
 
 ## Reserved prop names: `children` and `slots`
 
-Mesh throws (fail-fast, on every render) when `props()` collides with slot content:
+For React and other renderers that pass slots through props, Mesh throws (fail-fast, on every render) when `props()` collides with slot content. Vue uses native slots and permits these as ordinary props:
 
 - `props()` returns a `children` key while **any** slot is present →
   ``Mesh: `children` is reserved for slot content — rename the prop from props().``

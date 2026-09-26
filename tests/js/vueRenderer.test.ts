@@ -70,6 +70,43 @@ describe("vueRenderer", () => {
         rc.cleanup();
     });
 
+    it("keeps `children` and `slots` props separate from native Blade slots", async () => {
+        const lw = fakeLivewire();
+        const Comp = defineComponent({
+            props: {
+                children: { type: String, required: true },
+                slots: { type: String, required: true },
+            },
+            setup: (props, { slots }) => () =>
+                h("section", [
+                    h("p", `${props.children}/${props.slots}`),
+                    h("main", slots.default?.()),
+                    h("header", slots.header?.()),
+                ]),
+        });
+
+        const rc = mountComponent(
+            vueRenderer,
+            lw,
+            Comp,
+            { children: "prop child", slots: "prop slots" },
+            { default: "Blade default", header: "Blade header" }
+        );
+
+        expect(meshRoot(lw).querySelector("p")!.textContent).toBe("prop child/prop slots");
+        expect(meshRoot(lw).querySelector("main")!.textContent).toBe("Blade default");
+        expect(meshRoot(lw).querySelector("header")!.textContent).toBe("Blade header");
+
+        rc.updateProps({ children: "new child", slots: "new slots" });
+        rc.updateSlots({ default: "New default", header: "New header" });
+        await nextTick();
+
+        expect(meshRoot(lw).querySelector("p")!.textContent).toBe("new child/new slots");
+        expect(meshRoot(lw).querySelector("main")!.textContent).toBe("New default");
+        expect(meshRoot(lw).querySelector("header")!.textContent).toBe("New header");
+        rc.cleanup();
+    });
+
     it("re-renders in place on prop updates (no remount)", async () => {
         const lw = fakeLivewire();
         let setups = 0;

@@ -13,6 +13,8 @@ npm install -D @vitejs/plugin-react
 ```
 
 The frontend runtime ships inside the Composer package — host apps consume it through a Vite alias, not npm. React is an optional peer dependency, installed in the host app only when using the React renderer.
+For Vue, install `vue` and `@vitejs/plugin-vue`, add `vue()` to the Vite plugins, and register the renderer from `@mesh/vue` in `app.ts`.
+For Svelte, install `svelte` and `@sveltejs/vite-plugin-svelte`, add `svelte()` to the Vite plugins, and register the renderer from `@mesh/svelte` in `app.ts`.
 
 ### 2. Vite alias + React plugin
 
@@ -78,9 +80,11 @@ Because the host app bundles Livewire itself, the layout **must** emit `@livewir
 php artisan make:mesh Counter              # app/Mesh/Counter.php + resources/js/mesh/Counter/index.tsx
 php artisan make:mesh Forms/Input          # nested: app/Mesh/Forms/Input.php + resources/js/mesh/Forms/Input/index.tsx
 php artisan make:mesh Counter --renderer=react   # explicit renderer (default: config('mesh.make.renderer', 'react'))
+php artisan make:mesh Counter --renderer=vue     # Vue single-file component
+php artisan make:mesh Counter --renderer=svelte  # Svelte 5 component
 ```
 
-Only a `react` stub ships today; an unsupported `--renderer` value errors before writing anything. Render with the kebab-cased id as a tag:
+React, Vue, and Svelte stubs ship with Mesh; an unsupported `--renderer` value errors before writing anything. Render with the kebab-cased id as a tag:
 
 ```blade
 <mesh:counter />
@@ -94,11 +98,36 @@ The full `Config` type is:
 ```ts
 type Config = {
   renderers: MeshRenderer<any>[]  // required; keyed internally by renderer.type
+  sources?: MeshSource[]          // extra discovery inputs for package components (see below)
   debug?: boolean                 // enables debugLog output (init, component.init per id)
 }
+
+type MeshSource =
+  | GlobResult                              // a raw import.meta.glob result
+  | { modules: GlobResult; prefix?: string } // same, with every id namespaced under prefix
 ```
 
-There are no other options. The component directory is hardcoded to `resources/js/mesh` (`MESH_BASE` in buildRegistry.ts) — it is not configurable.
+There are no other options. The auto-discovery directory is hardcoded to the host app's `resources/js/mesh` (`MESH_BASE` in buildRegistry.ts).
+
+## Components from Composer packages (`sources`)
+
+`import.meta.glob` only accepts literal patterns, so the host app writes the glob for the package and hands Mesh the result:
+
+```ts
+initMesh(Livewire, {
+  renderers: [reactRenderer],
+  sources: [
+    { modules: import.meta.glob('/vendor/acme/widgets/resources/js/mesh/**/index.{tsx,jsx}'), prefix: 'Acme' },
+  ],
+})
+```
+
+- Source entries must live under a `resources/js/mesh/` directory somewhere in their path — id derivation starts at that marker (`.../resources/js/mesh/Chart/index.tsx` → `Chart`, or `Acme/Chart` with the prefix). An entry without the marker **throws at init** rather than silently skipping.
+- The package's PHP component class lives outside `App\Mesh`, so it must override `component()` to return the matching frontend id (e.g. `'Acme/Chart'`). In the package service provider's `boot()` method, register it with Livewire, for example `Livewire::component('acme-chart', \Acme\Widgets\Mesh\Chart::class)`, and render `<livewire:acme-chart />`. The `<mesh:...>` shorthand only resolves classes under `App\Mesh`.
+- Duplicate ids across the host app and all sources throw at init; use `prefix` to disambiguate.
+- Source components are code-split into lazy chunks exactly like auto-discovered ones.
+
+For Vue or Svelte entries, include their extensions in the glob and configure the matching renderer and Vite plugin in the host app.
 
 ## Renderer / extension mapping
 

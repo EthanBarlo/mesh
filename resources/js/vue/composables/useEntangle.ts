@@ -1,4 +1,4 @@
-import { onScopeDispose, ref, watch, type Ref } from "vue";
+import { onScopeDispose, shallowRef, watch, type Ref } from "vue";
 import useWire from "./useWire";
 
 // Two-way binding to a Livewire property, as a writable ref.
@@ -11,7 +11,7 @@ export function useEntangle<T = string>(
 ): Ref<T> {
     const wire = useWire();
 
-    const value = ref(wire.$get(key)) as Ref<T>;
+    const value = shallowRef(wire.$get(key)) as Ref<T>;
 
     // Keep our ref in sync with the livewire property
     const unwatch = wire.$watch(key, (next: T) => {

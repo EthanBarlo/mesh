@@ -39,13 +39,16 @@ export function prepareSlots<T>(
     };
 }
 
-// Fail fast when `props()` returns a key reserved for slot content. Must run on
-// every render because props can change (via `updateProps`) while the slots
-// stay fixed.
+// Fail fast when a renderer passes slot content through reserved props. Native
+// slot renderers keep slot content separate from props. Check every render
+// because props can change (via `updateProps`) while the slots stay fixed.
 export function assertNoReservedProps<T>(
     props: Record<string, any>,
-    prepared: PreparedSlots<T>
+    prepared: PreparedSlots<T>,
+    nativeSlots = false
 ): void {
+    if (nativeSlots) return;
+
     if ((prepared.children || prepared.hasNamed) && "children" in props) {
         throw new Error(
             "Mesh: `children` is reserved for slot content — rename the prop from props()."
@@ -82,7 +85,7 @@ export function mountComponent<TNode>(
     let currentProps = props;
     let prepared = prepareSlots(slots, renderer.renderSlot);
 
-    assertNoReservedProps(currentProps, prepared);
+    assertNoReservedProps(currentProps, prepared, renderer.nativeSlots);
     const handle = renderer.mount({
         el: getMeshRoot(livewireComponent),
         livewireComponent,
@@ -99,7 +102,7 @@ export function mountComponent<TNode>(
         nextProps: Record<string, any>,
         nextPrepared: PreparedSlots<TNode>
     ) => {
-        assertNoReservedProps(nextProps, nextPrepared);
+        assertNoReservedProps(nextProps, nextPrepared, renderer.nativeSlots);
         handle.update({ props: nextProps, slots: nextPrepared });
         currentProps = nextProps;
         prepared = nextPrepared;

@@ -1,0 +1,49 @@
+name: JavaScript
+
+on:
+  push:
+    paths:
+      - 'resources/js/**'
+      - 'tests/js/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig.json'
+      - 'vitest.config.ts'
+      - '.github/workflows/javascript.yml'
+  pull_request:
+    paths:
+      - 'resources/js/**'
+      - 'tests/js/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig.json'
+      - 'vitest.config.ts'
+      - '.github/workflows/javascript.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test and typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Typecheck
+        run: npm run typecheck

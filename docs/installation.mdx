@@ -5,7 +5,7 @@ description: Set up Mesh in a host Laravel app.
 
 # Installation
 
-Mesh is a React + Livewire 4 islands bridge. The frontend ships inside the Composer package and is consumed through a Vite **alias** (`@mesh`), not npm.
+Mesh bridges Livewire 4 with React, Vue, or Svelte islands. The frontend ships inside the Composer package and is consumed through a Vite **alias** (`@mesh`), not npm.
 
 ## Requirements
 
@@ -23,6 +23,9 @@ composer require ethanbarlo/mesh
 
 Mesh auto-discovers components from `resources/js/mesh`, so they do **not** need individual Vite input
 entries. Your `input` array only lists your real app entrypoints.
+
+This example uses React. For Vue or Svelte, install the corresponding framework and Vite plugin,
+then register `@mesh/vue` or `@mesh/svelte` as shown in [renderers](advanced/renderers.mdx).
 
 ```ts
 // vite.config.ts
@@ -51,8 +54,9 @@ export default defineConfig({
 ## Step 3 — Configure `app.ts`
 
 Register your renderers — that's all. Mesh auto-discovers every component under the fixed
-`resources/js/mesh` directory: only `index.{tsx,jsx}` entries are picked up (co-located helper files
-are ignored), and each becomes its own lazy, code-split chunk fetched on first render.
+`resources/js/mesh` directory: `index.{tsx,jsx,vue,svelte}` entries are picked up (co-located helper files
+are ignored), and each becomes its own lazy, code-split chunk fetched on first render. Register a
+matching renderer for each extension you use.
 
 ```ts
 // resources/js/app.ts
@@ -60,13 +64,19 @@ import { Livewire, Alpine } from '../../vendor/livewire/livewire/dist/livewire.e
 import { initMesh } from '@mesh'
 import reactRenderer from '@mesh/react'
 
-@livewireScriptConfig
 initMesh(Livewire, {
   renderers: [reactRenderer],
   debug: true,
 })
 
 Livewire.start()
+```
+
+Put `@livewireScriptConfig` in the Blade layout that loads this bundle, not in `app.ts`:
+
+```blade
+@vite(['resources/css/app.css', 'resources/js/app.ts'])
+@livewireScriptConfig
 ```
 
 ## Step 4 — Publish config (optional)
@@ -85,8 +95,10 @@ return [
 ];
 ```
 
-The component directory is fixed at `resources/js/mesh` and is not configurable. The only published
-option is the default renderer used by `make:mesh`.
+The component directory for auto-discovery is fixed at `resources/js/mesh`. Frontend entries shipped by
+Composer packages can be added through the `sources` option of `initMesh` — see
+[building components](/docs/guides/building-components#components-from-composer-packages). The only
+published PHP option is the default renderer used by `make:mesh`.
 
 ## Step 5 — Create your first component
 
@@ -95,7 +107,7 @@ php artisan make:mesh Counter
 ```
 
 This creates `app/Mesh/Counter.php` and `resources/js/mesh/Counter/index.tsx` (whose default export
-is the component).
+is the component). Pass `--renderer=vue` for `index.vue` or `--renderer=svelte` for `index.svelte`.
 
 ## Step 6 — Render in Blade
 

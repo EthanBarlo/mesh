@@ -106,7 +106,7 @@ Components are auto-discovered (no registration). The PHP class and the frontend
 | `App\Mesh\Counter` | `resources/js/mesh/Counter/index.tsx` | `Counter` |
 | `App\Mesh\Forms\Input` | `resources/js/mesh/Forms/Input/index.tsx` | `Forms/Input` |
 
-- `resources/js/mesh` is **hardcoded** — not configurable. Components elsewhere are silently ignored.
+- Auto-discovery only scans the host app's `resources/js/mesh` — components elsewhere are silently ignored. Frontend entries shipped by Composer packages use the `sources` option of `initMesh` (host-authored `import.meta.glob`, optional id `prefix`; entries must live under a `resources/js/mesh/` directory inside the package). Their PHP classes also need Livewire registration — see `references/setup-and-troubleshooting.md`.
 - Both sides are StudlyCase. A case mismatch (`counter/` vs `Counter.php`) **works on macOS but breaks on Linux/CI** because macOS filesystems are case-insensitive. When a component fails to mount, compare the namespace path and folder path character-for-character first.
 
 ## Pitfall #2: props are snapshots — don't mirror them into state
@@ -152,7 +152,7 @@ Blade slot content is forwarded into React as `children` (default slot) and `slo
 ```
 
 - Slot content renders **statically** from server HTML. Nested interactive Livewire or Alpine inside a slot is **not supported** (v1) — it renders dead. Pass interactive pieces as their own Mesh components or as props instead.
-- `children` and `slots` are **reserved**: returning `children` from `props()` throws when any slot is present; returning `slots` throws when named slots are present.
+- For React and other renderers that pass slots through props, `children` and `slots` are **reserved**: returning `children` from `props()` throws when any slot is present; returning `slots` throws when named slots are present. Vue uses native slots, so these remain ordinary Vue props.
 
 See `references/slots.md` for details.
 
@@ -165,7 +165,7 @@ Before debugging anything else, verify:
 - [ ] `@livewireScriptConfig` is in the Blade layout (not in app.ts) — without it Livewire never starts
 - [ ] Vite config has the `@mesh` alias pointing at `/vendor/ethanbarlo/mesh/resources/js`
 - [ ] You're not expecting a prop to be reactive (use entangle) or expecting deferred entangle to hit the server per keystroke (pass `true`)
-- [ ] `props()` doesn't return `children` or `slots`
+- [ ] For React and Svelte, `props()` doesn't return `children` or `slots` when those names are used for Blade slots
 - [ ] Pass `debug: true` to `initMesh()` to get discovery/mount logs in the browser console
 
 ## Real-world examples

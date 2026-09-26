@@ -26,6 +26,7 @@ export const renderSlotHtml = (html: string): VueSlot => () =>
 // `<slot />` / `<slot name="…" />`.
 const vueRenderer: MeshRenderer<VueSlot> = {
     type: "vue",
+    nativeSlots: true,
 
     renderSlot: (html) => renderSlotHtml(html),
 

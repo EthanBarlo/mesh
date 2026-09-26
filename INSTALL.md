@@ -1,6 +1,6 @@
 # Installing Mesh
 
-> React + Livewire 4 islands. This guide gets a host Laravel app rendering a Mesh component.
+> This guide sets up a React island inside Livewire 4. Mesh also ships Vue and Svelte renderers; see the [renderer guide](docs/advanced/renderers.mdx) for their host-app setup.
 
 ## 1. Require the package
 
@@ -84,8 +84,8 @@ This scaffolds:
 - `app/Mesh/Counter.php` — the PHP component class
 - `resources/js/mesh/Counter/index.tsx` — your React component (its **default export** is the component)
 
-The component directory is fixed at `resources/js/mesh`. A component is a folder whose
-`index.{tsx,jsx}` default-exports it. Nested components live in nested folders, e.g.
+The component directory is fixed at `resources/js/mesh`. In this React example, the component is a
+folder whose `index.{tsx,jsx}` default-exports it. Vue entries use `index.vue`, and Svelte entries use `index.svelte`. Nested components live in nested folders, e.g.
 `resources/js/mesh/Forms/Input/index.tsx`.
 
 ## 5. Set up your layout and render

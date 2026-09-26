@@ -1,10 +1,10 @@
 # Mesh
 
-> A React + Livewire 4 islands bridge. Render interactive framework components inside Livewire, with props flowing across the boundary.
+> A React, Vue, and Svelte bridge for Livewire 4. Render interactive framework components inside Livewire, with props flowing across the boundary.
 
 ## What it does
 
-Mesh lets you drop a React (or Vue/Svelte) component into a Livewire view and treat it as an island. Livewire owns the server state; Mesh hands props across the bridge and mounts the component.
+Mesh lets you drop a React, Vue, or Svelte component into a Livewire view and treat it as an island. Livewire owns the server state; Mesh hands props across the bridge and mounts the component.
 
 ## Install
 
