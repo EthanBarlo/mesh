@@ -179,6 +179,16 @@ describe("assertNoReservedProps", () => {
             assertNoReservedProps({ children: 1, slots: 1 }, prep({ hasNamed: true }))
         ).toThrow("`children` is reserved");
     });
+
+    it("allows `children` and `slots` props when slots use a native API", () => {
+        expect(() =>
+            assertNoReservedProps(
+                { children: 1, slots: 2 },
+                prep({ children: mark("d", "default"), hasNamed: true }),
+                true
+            )
+        ).not.toThrow();
+    });
 });
 
 describe("mountComponent", () => {

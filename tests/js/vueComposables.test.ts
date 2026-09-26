@@ -99,6 +99,22 @@ describe("useEntangle", () => {
         expect(wire.$wire.$set).not.toHaveBeenCalled();
     });
 
+    it.each([
+        ["object", { count: 5 }],
+        ["array", [1, 2, 3]],
+    ])("keeps a server-pushed %s without a live write back", async (_kind, next) => {
+        const wire = fakeWire({ value: null });
+        const { result } = withSetup(wire.$wire, () =>
+            useEntangle<typeof next>("value", true)
+        );
+
+        wire.serverPush("value", next);
+        await nextTick();
+
+        expect(result.value).toBe(next);
+        expect(wire.$wire.$set).not.toHaveBeenCalled();
+    });
+
     it("sends exactly one deferred $set on a user write", async () => {
         const wire = fakeWire({ count: 1 });
         const { result } = withSetup(wire.$wire, () =>

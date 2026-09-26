@@ -36,6 +36,7 @@ Mesh infers from the file extension) plus those two operations:
 ```ts
 type MeshRenderer<TNode> = {
   type: string
+  nativeSlots?: boolean              // true when slots stay separate from component props
   // HTML string -> framework node. Must be pure — called per slot on mount
   // and again on every slot update.
   renderSlot: (html: string, name: string) => TNode
@@ -65,8 +66,8 @@ type PreparedSlots<TNode> = {
 `MeshSlots` is a flat `Record<string, string>` of slot name → HTML (the unnamed slot is keyed
 `"default"`). Everything that is identical across frameworks is owned by the Mesh core, not the
 renderer: resolving `.mesh-root`, splitting slots into default vs named and running each through your
-`renderSlot`, guarding the reserved `children`/`slots` prop names (before mount and before every
-update), dirty-checking props, and keeping slot node references **stable across props-only updates** so
+`renderSlot`, guarding the reserved `children`/`slots` prop names for renderers that pass slots as props
+(before mount and before every update), dirty-checking props, and keeping slot node references **stable across props-only updates** so
 your framework's reconciler can skip unchanged slot subtrees. Mesh calls `update` whenever props or slot
 content change, and `cleanup` when the component is removed.
 
@@ -140,7 +141,37 @@ The Vue renderer ships at `@mesh/vue`, alongside Vue equivalents of the React ho
 `useLivewireComponent` (provide/inject — each island is its own Vue app). The shipped
 implementation matches the sketch in "Adding a custom renderer" below, with one deliberate
 difference from React: named slots are passed as **native Vue slots**
-(`<slot name="header" />`), not as a `slots` prop.
+(`<slot name="header" />`), not as a `slots` prop. Ordinary Vue `children` and `slots` props
+can therefore coexist with Blade slots.
+
+Install Vue and its Vite plugin in the host app:
+
+```bash
+npm install vue
+npm install --save-dev @vitejs/plugin-vue
+```
+
+Add the Vue plugin to the host app's `vite.config.ts`, alongside the Laravel plugin and the
+`@mesh` alias shown in [installation](../installation.mdx):
+
+```ts
+import { defineConfig } from 'vite'
+import laravel from 'laravel-vite-plugin'
+import vue from '@vitejs/plugin-vue'
+
+export default defineConfig({
+  plugins: [
+    laravel({ input: ['resources/css/app.css', 'resources/js/app.ts'] }),
+    vue(),
+  ],
+  resolve: {
+    alias: { '@mesh': '/vendor/ethanbarlo/mesh/resources/js' },
+  },
+})
+```
+
+Keep any other Vite plugins and entrypoints your app already uses. The Vue plugin compiles
+`index.vue` components discovered by Mesh.
 
 ```ts
 import { Livewire, Alpine } from '../../vendor/livewire/livewire/dist/livewire.esm'
