@@ -1,6 +1,8 @@
 export type CleanupCallback = () => void;
 
-export type ComponentLoader = () => Promise<{ default: any }>;
+// Vite's plain import.meta.glob returns Promise<unknown>; loadComponent checks
+// for a default export when the chunk is actually loaded.
+export type ComponentLoader = () => Promise<unknown>;
 
 export type RegistryEntry = {
     renderer: string;
@@ -12,6 +14,16 @@ export type ComponentRegistry = {
 };
 
 export type GlobResult = Record<string, ComponentLoader>;
+
+// An extra discovery input for components that live outside the host app's
+// resources/js/mesh directory — e.g. inside a Composer package. import.meta.glob
+// only accepts literal patterns, so the host app owns the glob and hands Mesh
+// the result. Entries must still sit under a `resources/js/mesh/` directory
+// somewhere in their path (that marker is where id derivation starts). The
+// wrapped form namespaces every id from the source under `prefix`.
+export type MeshSource =
+    | GlobResult
+    | { modules: GlobResult; prefix?: string };
 
 export type MeshSlots = Record<string, string>;
 
@@ -129,6 +141,9 @@ export type Wire = {
 
 export type Config = {
     renderers: MeshRenderer<any>[];
+    // Additional component sources beyond the host app's resources/js/mesh
+    // (see MeshSource). Ids must not collide with auto-discovered ones.
+    sources?: MeshSource[];
     debug?: boolean;
 };
 
