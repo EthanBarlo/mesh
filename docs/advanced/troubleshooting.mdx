@@ -38,8 +38,14 @@ Svelte). An unknown extension throws. Make sure the renderer the extension maps 
 Mesh needs Livewire 4 running. Ensure `app.ts` ends with:
 
 ```ts
-@livewireScriptConfig
 Livewire.start()
+```
+
+Put `@livewireScriptConfig` in the Blade layout that loads this bundle:
+
+```blade
+@vite(['resources/css/app.css', 'resources/js/app.ts'])
+@livewireScriptConfig
 ```
 
 ## Case-sensitivity bugs
@@ -57,6 +63,6 @@ Props are computed server-side in `props()`. They only change when the Livewire 
 ## Still stuck?
 
 - Double-check the PHP class name and the `resources/js/mesh/...` folder name produce the same id.
-- Confirm the entry is `index.{tsx,jsx}` under `resources/js/mesh` so Mesh discovers it.
+- Confirm the entry is `index.{tsx,jsx,vue,svelte}` under `resources/js/mesh` so Mesh discovers it.
 - Verify the `@mesh` alias resolves in `vite.config.ts`.
 - Check the browser console for dynamic-import errors when the chunk loads.

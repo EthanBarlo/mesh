@@ -136,7 +136,7 @@ Blade slot content is forwarded into React as `children` (default slot) and `slo
 ```
 
 - Slot content renders **statically** from server HTML. Nested interactive Livewire or Alpine inside a slot is **not supported** (v1) — it renders dead. Pass interactive pieces as their own Mesh components or as props instead.
-- `children` and `slots` are **reserved**: returning `children` from `props()` throws when any slot is present; returning `slots` throws when named slots are present.
+- For React and other renderers that pass slots through props, `children` and `slots` are **reserved**: returning `children` from `props()` throws when any slot is present; returning `slots` throws when named slots are present. Vue uses native slots, so these remain ordinary Vue props.
 
 See `references/slots.md` for details.
 
@@ -149,7 +149,7 @@ Before debugging anything else, verify:
 - [ ] `@livewireScriptConfig` is in the Blade layout (not in app.ts) — without it Livewire never starts
 - [ ] Vite config has the `@mesh` alias pointing at `/vendor/ethanbarlo/mesh/resources/js`
 - [ ] You're not expecting a prop to be reactive (use entangle) or expecting deferred entangle to hit the server per keystroke (pass `true`)
-- [ ] `props()` doesn't return `children` or `slots`
+- [ ] For React, `props()` doesn't return `children` or `slots` when those names are used for Blade slots
 - [ ] Pass `debug: true` to `initMesh()` to get discovery/mount logs in the browser console
 
 ## Real-world examples

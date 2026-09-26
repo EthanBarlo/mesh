@@ -204,6 +204,8 @@ Implement the `MeshRenderer` interface and pass it in the `renderers` array. Mes
 a renderer via its file extension, so a custom renderer needs Mesh to recognise the corresponding
 extension. You write only `renderSlot` (string → node) and `mount` (returning `update`/`cleanup`) —
 the core handles all the slot and props bookkeeping.
+Set `nativeSlots: true` if your renderer delivers Blade slots through a native slot API instead of
+the `children` and `slots` props.
 
 The `mount`/`update` split maps directly onto frameworks that mount once and then mutate state rather
 than re-rendering. A Vue 3 renderer, for example, creates the app once and assigns into a `reactive()`

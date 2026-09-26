@@ -13,6 +13,7 @@ npm install -D @vitejs/plugin-react
 ```
 
 The frontend runtime ships inside the Composer package — host apps consume it through a Vite alias, not npm. React is an optional peer dependency, installed in the host app only when using the React renderer.
+For Vue, install `vue` and `@vitejs/plugin-vue`, add `vue()` to the Vite plugins, and register the renderer from `@mesh/vue` in `app.ts`.
 
 ### 2. Vite alias + React plugin
 
@@ -78,9 +79,10 @@ Because the host app bundles Livewire itself, the layout **must** emit `@livewir
 php artisan make:mesh Counter              # app/Mesh/Counter.php + resources/js/mesh/Counter/index.tsx
 php artisan make:mesh Forms/Input          # nested: app/Mesh/Forms/Input.php + resources/js/mesh/Forms/Input/index.tsx
 php artisan make:mesh Counter --renderer=react   # explicit renderer (default: config('mesh.make.renderer', 'react'))
+php artisan make:mesh Counter --renderer=vue     # Vue single-file component
 ```
 
-Only a `react` stub ships today; an unsupported `--renderer` value errors before writing anything. Render with the kebab-cased id as a tag:
+React and Vue stubs ship with Mesh; an unsupported `--renderer` value errors before writing anything. Render with the kebab-cased id as a tag:
 
 ```blade
 <mesh:counter />
@@ -136,7 +138,7 @@ Renderer is inferred from the entry file extension — components never declare 
 | `index.svelte` | `svelte` |
 | anything else | **throws** (`Mesh: cannot infer renderer ... unknown extension`) — no silent default |
 
-The inferred renderer must appear in the `renderers` array. React ships built in (`@mesh/react`); Vue and Svelte renderers are pluggable — implement the `MeshRenderer` interface (`type`, `renderSlot`, `mount` returning `{ update, cleanup }`) and add it to the array. A duplicate component id in the registry also throws at init.
+The inferred renderer must appear in the `renderers` array. React (`@mesh/react`) and Vue (`@mesh/vue`) ship built in; for another framework, implement the `MeshRenderer` interface (`type`, `renderSlot`, `mount` returning `{ update, cleanup }`) and add it to the array. A duplicate component id in the registry also throws at init.
 
 ## Troubleshooting matrix
 
