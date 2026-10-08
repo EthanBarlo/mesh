@@ -68,7 +68,7 @@ const EventBridge: React.FC<EventBridgeProps> = ({ received }) => {
                     </p>
                     <p className="mt-0.5 text-xs leading-relaxed text-ink-3">
                         Caught in PHP by{" "}
-                        <code className="core-code">#[On('page.ping')]</code>{" "}
+                        <code className="core-code whitespace-nowrap">#[On('page.ping')]</code>{" "}
                         and returned through{" "}
                         <code className="core-code">props()</code>. React only
                         renders the prop.

@@ -97,7 +97,14 @@ final class DemoSheet
      */
     public static function inlineCode(?string $text): HtmlString
     {
-        return new HtmlString(preg_replace('/`([^`]+)`/', '<code>$1</code>', e((string) $text)));
+        // Short spans never wrap, so attribute syntax like #[On] can't split after the #.
+        return new HtmlString(preg_replace_callback(
+            '/`([^`]+)`/',
+            fn (array $match): string => mb_strlen(html_entity_decode($match[1])) <= 24
+                ? '<code class="whitespace-nowrap">'.$match[1].'</code>'
+                : '<code>'.$match[1].'</code>',
+            e((string) $text),
+        ));
     }
 
     /**
