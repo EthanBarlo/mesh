@@ -68,7 +68,8 @@ const handleReset = async () => {
         </div>
 
         <!-- Board -->
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <!-- `isolate` keeps the z-index formkit leaves on a dragged card under the sticky masthead. -->
+        <div class="isolate grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Column
                 v-for="column in columns ?? []"
                 :key="column.id"

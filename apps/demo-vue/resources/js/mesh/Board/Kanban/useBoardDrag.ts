@@ -1,4 +1,5 @@
 import { readonly, ref, type Ref } from "vue";
+import { dragstartClasses } from "@formkit/drag-and-drop";
 import type { VueParentConfig } from "@formkit/drag-and-drop/vue";
 import type { Card, Column as ColumnType } from "./types";
 
@@ -88,11 +89,15 @@ export function useBoardDrag({ board, setColumns, onMove }: UseBoardDragOptions)
         synthDraggingClass: "ticket--lifted",
         dropZoneClass: "ticket--slot",
         synthDropZoneClass: "ticket--slot",
-        onDragstart: (data) => {
-            const card = data.draggedNode.data.value as Card;
+        // Runs at the start of both mouse (native) and touch (synthetic)
+        // drags; formkit's onDragstart only fires for native ones, so touch
+        // moves would never record an origin and never reach the server.
+        dragstartClasses: (node, nodes, config, isSynth) => {
+            const card = node.data.value as Card;
             const location = locate(card.id);
             origin = location ? { cardId: card.id, ...location } : null;
             overColumn.value = location?.columnId ?? null;
+            dragstartClasses(node, nodes, config, isSynth);
         },
         onTransfer: (data) => {
             const card = data.draggedNodes[0]?.data.value as Card | undefined;
