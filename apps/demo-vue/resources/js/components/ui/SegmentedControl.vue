@@ -4,7 +4,7 @@ import { cn } from "./cn";
 
 defineOptions({ inheritAttrs: false });
 
-defineProps<{
+const props = defineProps<{
     options: { value: T; label: string }[];
 }>();
 
@@ -15,31 +15,49 @@ const attrsRest = computed(() => {
     const { class: _, ...rest } = attrs;
     return rest;
 });
+
+const active = computed(() =>
+    props.options.findIndex((option) => option.value === model.value),
+);
 </script>
 
-<!-- Pill-shaped exclusive choice group with a solid white active segment. -->
+<!--
+    An exclusive choice drawn like the docs' renderer switch: an ink frame of
+    equal mono cells, with a solid ink block that slides to the active one.
+-->
 <template>
     <div
         v-bind="attrsRest"
         :class="
             cn(
-                'inline-flex items-center gap-1 p-1 rounded-lg bg-white/[0.02] border border-white/10',
+                'relative isolate inline-grid auto-cols-fr grid-flow-col border border-ink bg-paper',
                 attrs.class as string,
             )
         "
         role="group"
     >
-        <button
-            v-for="option in options"
-            :key="option.value"
-            type="button"
-            :aria-pressed="option.value === model"
+        <span
+            aria-hidden="true"
             :class="
                 cn(
-                    'px-4 py-1.5 rounded-md text-sm font-medium transition-colors duration-150 active:scale-95 focus:outline-none focus:ring-2 focus:ring-white/20 focus:ring-offset-2 focus:ring-offset-zinc-950',
-                    option.value === model
-                        ? 'bg-white text-zinc-950'
-                        : 'text-zinc-400 hover:text-white hover:bg-white/5',
+                    'absolute inset-y-0 left-0 -z-10 bg-ink transition-transform duration-320 ease-(--ease-spring) motion-reduce:transition-none',
+                    active < 0 && 'opacity-0',
+                )
+            "
+            :style="{
+                width: `${100 / Math.max(options.length, 1)}%`,
+                transform: `translateX(${Math.max(active, 0) * 100}%)`,
+            }"
+        />
+        <button
+            v-for="(option, index) in options"
+            :key="option.value"
+            type="button"
+            :aria-pressed="index === active"
+            :class="
+                cn(
+                    'min-h-10 whitespace-nowrap px-3 font-mono text-[11px] uppercase tracking-[0.06em] transition-colors duration-240 focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-accent motion-reduce:transition-none sm:min-h-8',
+                    index === active ? 'text-paper' : 'text-ink-2 hover:text-ink',
                 )
             "
             @click="model = option.value"

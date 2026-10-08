@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { useWire } from "@mesh/vue";
-import { Button, Eyebrow, Panel, Stat, Textarea } from "@/components/ui";
+import { Button, Panel, Textarea, cn } from "@/components/ui";
 import Die from "@/components/demo/Wire/Die.vue";
 
 interface ServerActionsProps {
@@ -53,12 +53,26 @@ const handleRoll = async () => {
         rolling.value = false;
     }
 };
+
+// The return array's keys, exactly as PHP sends them.
+const returned = computed<[string, string | number | undefined][]>(() => {
+    const a = analysis.value;
+    return [
+        ["words", a?.words],
+        ["characters", a?.characters],
+        ["longestWord", a ? (a.longestWord ? `"${a.longestWord}"` : '""') : undefined],
+        ["analyzedAt", a?.analyzedAt],
+    ];
+});
 </script>
 
 <template>
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Panel class="flex flex-col">
-            <Eyebrow>await wire.$call("analyze", text)</Eyebrow>
+            <p class="k k--caps text-ink-3">Analyze text</p>
+            <p class="mt-0.5 font-mono text-xs text-ink">
+                await wire.$call("analyze", text)
+            </p>
 
             <Textarea
                 v-model="text"
@@ -77,33 +91,68 @@ const handleRoll = async () => {
                 {{ analyzing ? "Analyzing on server…" : "Analyze on server" }}
             </Button>
 
-            <div v-if="analysis" class="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <Stat label="Words" :value="analysis.words" />
-                <Stat label="Characters" :value="analysis.characters" />
-                <Stat label="Longest word" :value="analysis.longestWord || '—'" />
-                <Stat label="Server time" :value="analysis.analyzedAt" />
+            <div class="mt-5">
+                <p class="k k--caps text-ink-3">Returned by analyze()</p>
+                <dl
+                    :class="
+                        cn(
+                            'core-readout mt-1 transition-opacity duration-150 motion-reduce:transition-none',
+                            analyzing && 'opacity-50',
+                        )
+                    "
+                    aria-live="polite"
+                >
+                    <div v-for="[key, value] in returned" :key="key">
+                        <dt>{{ key }}</dt>
+                        <dd>
+                            <span v-if="value === undefined" class="text-ink-3">—</span>
+                            <template v-else>{{ value }}</template>
+                        </dd>
+                    </div>
+                </dl>
             </div>
-            <p v-else class="mt-4 text-sm text-zinc-500">
-                The result object below is the PHP method's return value — no route, no controller, no fetch.
-            </p>
         </Panel>
 
         <Panel class="flex flex-col">
-            <Eyebrow>await wire.$call("rollDice")</Eyebrow>
+            <p class="k k--caps text-ink-3">Roll dice</p>
+            <p class="mt-0.5 font-mono text-xs text-ink">
+                await wire.$call("rollDice")
+            </p>
 
-            <div class="flex-1 flex flex-col items-center justify-center py-6">
-                <template v-if="roll">
-                    <div :class="`flex items-center gap-3 transition-opacity ${rolling ? 'opacity-40' : 'opacity-100'}`">
-                        <Die v-for="(value, i) in roll.dice" :key="i" :value="value" />
+            <div class="flex flex-1 flex-col items-center justify-center py-8">
+                <div class="inline-flex flex-col gap-3">
+                    <div
+                        :class="
+                            cn(
+                                'flex items-center gap-3 transition-opacity duration-150 motion-reduce:transition-none',
+                                rolling && 'opacity-40',
+                            )
+                        "
+                    >
+                        <template v-if="roll">
+                            <Die v-for="(value, i) in roll.dice" :key="i" :value="value" />
+                        </template>
+                        <template v-else>
+                            <span
+                                v-for="i in 3"
+                                :key="i"
+                                class="size-14 border border-dashed border-line-3"
+                                aria-hidden="true"
+                            />
+                        </template>
                     </div>
-                    <p class="mt-4 text-sm text-zinc-400">
-                        Server total:
-                        <span class="text-xl font-semibold text-white tabular-nums align-middle">{{ roll.total }}</span>
-                    </p>
-                </template>
-                <p v-else class="text-sm text-zinc-500 text-center max-w-xs">
-                    PHP's <code class="font-mono text-zinc-400">random_int()</code> rolls the dice — the array comes back as a
-                    resolved Promise.
+                    <!-- Dimension line under the three dice: their total. -->
+                    <div class="core-dim" aria-live="polite">
+                        <span>
+                            total
+                            <span class="font-medium text-ink">{{ roll ? roll.total : "—" }}</span>
+                        </span>
+                    </div>
+                </div>
+                <p class="mt-5 max-w-xs text-center text-xs leading-relaxed text-ink-3">
+                    PHP's <code class="core-code">random_int()</code>
+                    rolls the dice. The array comes back as the resolved
+                    Promise.
                 </p>
             </div>
 

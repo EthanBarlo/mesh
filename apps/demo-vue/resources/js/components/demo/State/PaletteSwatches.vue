@@ -18,43 +18,45 @@ defineProps<{
 }>();
 </script>
 
-<!-- Header dot + title + swatch grid for a server-computed palette prop. -->
+<!--
+    Header chip + title + swatch schedule for a server-computed palette prop.
+    The swatch colours are data from props(), so they stay real hex values.
+-->
 <template>
     <div>
-        <div class="flex items-center gap-2">
+        <p class="k k--caps text-ink-3">Server props</p>
+        <div class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
             <span
-                class="w-3 h-3 rounded-full"
+                class="size-3 shrink-0 border border-line-3"
                 :style="{ backgroundColor: palette.accent }"
                 aria-hidden="true"
             />
-            <h3 class="text-sm font-semibold text-white">
+            <h3 class="text-sm font-semibold text-ink">
                 {{ palette.label }} palette
             </h3>
-            <code class="font-mono text-xs text-zinc-500">
+            <code class="font-mono text-xs text-ink-3">
                 theme = "{{ theme }}"
             </code>
         </div>
-        <p class="mt-1 text-xs text-zinc-500">
-            Computed in <code class="font-mono">props()</code> on the server,
-            delivered as a prop on every re-render.
+        <p class="mt-1 text-xs leading-relaxed text-ink-3">
+            Computed in <code class="core-code">props()</code> on the
+            server and delivered as a prop on every render.
         </p>
-        <div class="mt-4 flex gap-3">
-            <div
-                v-for="swatch in palette.swatches"
-                :key="swatch.name"
-                class="text-center"
-            >
+        <ul class="mt-4 flex flex-wrap gap-3">
+            <li v-for="swatch in palette.swatches" :key="swatch.name" class="w-14">
                 <div
-                    class="w-14 h-14 rounded-xl border border-white/10"
+                    class="size-14 border border-line-3"
                     :style="{ backgroundColor: swatch.hex }"
                     role="img"
                     :aria-label="`${palette.label} ${swatch.name}: ${swatch.hex}`"
                 />
-                <span
-                    class="mt-1.5 block font-mono text-[10px] text-zinc-500"
-                    >{{ swatch.hex }}</span
-                >
-            </div>
-        </div>
+                <span class="mt-1.5 block font-mono text-[11px] leading-tight text-ink-2 tabular-nums">
+                    {{ swatch.name }}
+                </span>
+                <span class="block font-mono text-[10px] leading-tight text-ink-3">
+                    {{ swatch.hex }}
+                </span>
+            </li>
+        </ul>
     </div>
 </template>

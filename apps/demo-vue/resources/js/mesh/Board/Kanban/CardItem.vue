@@ -1,9 +1,4 @@
-<script lang="ts">
-const TAG_STYLE = "bg-white/5 text-zinc-300 border-white/10";
-</script>
-
 <script setup lang="ts">
-import { cn } from "@/components/ui";
 import type { Card } from "./types";
 
 defineProps<{
@@ -12,27 +7,23 @@ defineProps<{
 </script>
 
 <template>
-    <!-- data-card-id marks this as a draggable node (the empty-state
+    <!-- The card (a paper tag), styled by the shared `.ticket` classes in
+         ecosystem.css, which the Blade-composed Kanban uses too. The <li> is
+         the ticket itself: formkit adds its drag classes to the node it
+         drags, so `ticket--lifted` and `ticket--slot` must land on this
+         element (see useBoardDrag). Its class list stays static so Vue never
+         overwrites them mid-drag.
+         data-card-id marks this as a draggable node (the empty-state
          placeholder in Column.vue is skipped by the draggable filter). -->
     <li
         :data-card-id="card.id"
-        class="rounded-lg cursor-grab active:cursor-grabbing touch-none select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+        class="lane__grab ticket touch-none"
         :aria-label="`${card.title} (${card.tag})`"
     >
-        <div
-            class="p-3.5 rounded-lg bg-white/[0.02] border border-white/10 hover:border-white/20 space-y-2.5 transition-colors duration-150"
-        >
-            <p class="text-sm font-medium text-white leading-snug">{{ card.title }}</p>
-            <span
-                :class="
-                    cn(
-                        'inline-flex px-2 py-0.5 rounded-md border text-[11px] font-medium uppercase tracking-wide',
-                        TAG_STYLE,
-                    )
-                "
-            >
-                {{ card.tag }}
-            </span>
+        <p class="ticket__title">{{ card.title }}</p>
+        <div class="ticket__foot">
+            <span class="ticket__tag">{{ card.tag }}</span>
+            <span class="ticket__grip" aria-hidden="true" />
         </div>
     </li>
 </template>

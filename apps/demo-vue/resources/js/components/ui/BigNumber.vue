@@ -17,7 +17,7 @@ const attrsRest = computed(() => {
         v-bind="attrsRest"
         :class="
             cn(
-                'font-semibold tracking-tight tabular-nums text-white',
+                'font-sans font-semibold tracking-[-0.045em] tabular-nums text-ink',
                 attrs.class as string,
             )
         "

@@ -1,24 +1,21 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-framework="{{ config('demo.framework') }}">
     <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-        <title>{{ $title ?? 'Mesh Demo' }}</title>
-
-        <!-- Fonts -->
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700,800&display=swap" rel="stylesheet" />
-
-        @livewireStyles
-        @vite(['resources/css/app.css', 'resources/js/app.ts'])
-
-        <style>
-            [x-cloak] { display: none !important; }
-        </style>
+        <x-demo.head :title="$title ?? null" />
     </head>
-    <body class="font-sans antialiased bg-zinc-950 min-h-screen">
-        {{ $slot }}
+    <body class="shell shell--home">
+        <a class="skip" href="#main">Skip to content</a>
+
+        <x-nav.masthead />
+
+        {{-- No sidebar on wide screens: the home page carries its own index. Phones still get the drawer. --}}
+        <x-nav.sidebar drawer-only />
+
+        <main id="main" class="shell__main sheet">
+            {{ $slot }}
+        </main>
+
+        <x-demo.footer />
 
         @livewireScriptConfig
     </body>

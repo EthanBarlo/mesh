@@ -1,8 +1,189 @@
 @import 'tailwindcss';
+@import './drafting.css';
+@import './shell.css';
+@import './ui.css';
+@import './home.css';
+@import './core.css';
+@import './ecosystem.css';
 
 @source '../views';
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 
+/* Dark mode follows the `.dark` class on <html> (set before paint by the layout). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ==========================================================================
+   Mesh demo — drawing set, after the docs (apps/docs/DESIGN.md)
+   Warm drafting paper, graphite ink, one accent. The accent belongs to the
+   renderer: React is blue, Vue is green, Svelte is orange. <html> carries
+   data-framework, so this file is identical in all three demo apps.
+   ========================================================================== */
+
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-sans: 'Inter Tight', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+
+    /* Drawn, not rounded. */
+    --radius-xs: 0px;
+    --radius-sm: 0px;
+    --radius-md: 0px;
+    --radius-lg: 0px;
+    --radius-xl: 0px;
+    --radius-2xl: 0px;
+    --radius-3xl: 0px;
+    --radius-4xl: 0px;
+
+    --color-paper: var(--paper);
+    --color-paper-2: var(--paper-2);
+    --color-paper-3: var(--paper-3);
+    --color-ink: var(--ink);
+    --color-ink-2: var(--ink-2);
+    --color-ink-3: var(--ink-3);
+    --color-line: var(--line);
+    --color-line-2: var(--line-2);
+    --color-line-3: var(--line-3);
+    --color-accent: var(--accent);
+    --color-accent-ink: var(--accent-ink);
+    --color-accent-wash: var(--accent-wash);
+    --color-blueline: var(--blueline);
+    --color-danger: var(--danger);
+    --color-danger-wash: var(--danger-wash);
+}
+
+:root {
+    --paper: #ece9e2;
+    --paper-2: #e4e0d7;
+    --paper-3: #d9d4c8;
+    --ink: #1d1c1a;
+    --ink-2: #45423d;
+    --ink-3: #66615a;
+    --line: rgba(29, 28, 26, 0.13);
+    --line-2: rgba(29, 28, 26, 0.24);
+    --line-3: rgba(29, 28, 26, 0.5);
+    --grid: rgba(29, 28, 26, 0.055);
+    --dot: rgba(29, 28, 26, 0.16);
+
+    /* The one accent. Defaults to the docs' safety orange; overridden per framework below. */
+    --accent: #dd4f12;
+    --accent-ink: #a63a0a;
+    --accent-wash: rgba(221, 79, 18, 0.09);
+
+    /* Secondary annotation hue ("non-photo blue"): construction lines and string literals only. */
+    --blueline: #35607f;
+
+    /* Errors only (validation, failed uploads). Never decoration. */
+    --danger: #b42318;
+    --danger-wash: rgba(180, 35, 24, 0.08);
+
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.645, 0.045, 0.355, 1);
+    --ease-spring: cubic-bezier(0.34, 1.36, 0.64, 1);
+    --t-fast: 150ms;
+    --t-med: 240ms;
+
+    color-scheme: light;
+}
+
+@supports (transition-timing-function: linear(0, 1)) {
+    :root {
+        --ease-spring: linear(0, 0.006, 0.025 2.8%, 0.101 6.1%, 0.539 18.9%, 0.721 25.3%, 0.849 31.5%, 0.937 38.1%, 0.968 41.8%, 0.991 45.7%, 1.006 50.1%, 1.015 55%, 1.017 63.9%, 1.001 85.2%, 1);
+    }
+}
+
+.dark {
+    --paper: #161513;
+    --paper-2: #1d1c19;
+    --paper-3: #282621;
+    --ink: #ece8df;
+    --ink-2: #c6c1b6;
+    --ink-3: #979186;
+    --line: rgba(236, 232, 223, 0.1);
+    --line-2: rgba(236, 232, 223, 0.2);
+    --line-3: rgba(236, 232, 223, 0.42);
+    --grid: rgba(236, 232, 223, 0.04);
+    --dot: rgba(236, 232, 223, 0.12);
+    --accent: #f0682c;
+    --accent-ink: #ff9363;
+    --accent-wash: rgba(240, 104, 44, 0.11);
+    --blueline: #8fb8d6;
+    --danger: #ff8a7a;
+    --danger-wash: rgba(255, 138, 122, 0.1);
+
+    color-scheme: dark;
+}
+
+/* ---------- Framework accents ---------- */
+
+/* React — blue. Its secondary hue moves to sepia so it never competes with the accent. */
+[data-framework='react'] {
+    --accent: #2f62d8;
+    --accent-ink: #1d48a8;
+    --accent-wash: rgba(47, 98, 216, 0.09);
+    --blueline: #7a5a2e;
+}
+.dark[data-framework='react'] {
+    --accent: #5b8ef5;
+    --accent-ink: #96b6ff;
+    --accent-wash: rgba(91, 142, 245, 0.12);
+    --blueline: #cfae7d;
+}
+
+/* Vue — green. */
+[data-framework='vue'] {
+    --accent: #1f8f5c;
+    --accent-ink: #126b41;
+    --accent-wash: rgba(31, 143, 92, 0.09);
+}
+.dark[data-framework='vue'] {
+    --accent: #3fbf85;
+    --accent-ink: #7fdcae;
+    --accent-wash: rgba(63, 191, 133, 0.11);
+}
+
+/* Svelte — orange (the docs' own accent). */
+[data-framework='svelte'] {
+    --accent: #dd4f12;
+    --accent-ink: #a63a0a;
+    --accent-wash: rgba(221, 79, 18, 0.09);
+}
+.dark[data-framework='svelte'] {
+    --accent: #f0682c;
+    --accent-ink: #ff9363;
+    --accent-wash: rgba(240, 104, 44, 0.11);
+}
+
+/* ---------- Page ---------- */
+
+html {
+    scrollbar-gutter: stable;
+}
+
+body {
+    background-color: var(--paper);
+    background-image: radial-gradient(circle, var(--dot) 0.75px, transparent 1.1px);
+    background-size: 24px 24px;
+    color: var(--ink);
+    font-feature-settings: 'ss01', 'cv11';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+::selection {
+    background: var(--accent);
+    color: #fff;
+}
+
+:focus-visible {
+    outline-color: var(--accent-ink);
+}
+
+[x-cloak] {
+    display: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
 }

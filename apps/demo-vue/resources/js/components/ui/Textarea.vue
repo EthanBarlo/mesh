@@ -1,6 +1,6 @@
 <script lang="ts">
 export interface TextareaProps {
-    /** Switches the border and focus ring to the error treatment. */
+    /** Switches the border and focus outline to the error treatment. */
     invalid?: boolean;
 }
 </script>
@@ -31,10 +31,10 @@ const attrsRest = computed(() => {
         :aria-invalid="invalid || undefined"
         :class="
             cn(
-                'w-full rounded-lg bg-white/[0.02] border px-4 py-3 text-sm text-white placeholder-zinc-600 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-zinc-950',
+                'block w-full resize-y border bg-paper px-3.5 py-3 text-base leading-relaxed text-ink outline-none transition-[border-color,box-shadow] duration-150 ease-(--ease-out) placeholder:text-ink-3 disabled:opacity-50 motion-reduce:transition-none sm:text-sm',
                 invalid
-                    ? 'border-rose-400/40 focus:border-rose-400/60 focus:ring-rose-400/30'
-                    : 'border-white/10 focus:border-white/20 focus:ring-white/20',
+                    ? 'border-danger focus:border-danger focus:ring-1 focus:ring-danger'
+                    : 'border-line-2 hover:border-line-3 focus:border-accent focus:ring-1 focus:ring-accent',
                 attrs.class as string,
             )
         "

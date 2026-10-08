@@ -2,17 +2,23 @@
 import { cn } from "./cn";
 
 /**
- * A flat mono card. The `glow` and `glowClassName` props are accepted for
- * backwards compatibility but are visual no-ops — no halo is rendered.
+ * The featured card: a paper surface with a hairline border and registration
+ * marks. `glow` and `glowClassName` are accepted for backwards compatibility
+ * but are visual no-ops.
  */
-defineProps<{
-    /** @deprecated No-op — the mono design renders no halo. Kept so call sites compile. */
-    glow?: string;
-    /** @deprecated No-op — the mono design renders no halo. Kept so call sites compile. */
-    glowClassName?: string;
-    /** Classes for the inner card surface (padding, layout, …). */
-    contentClassName?: string;
-}>();
+withDefaults(
+    defineProps<{
+        /** @deprecated No-op — the drafting design renders no halo. Kept so call sites compile. */
+        glow?: string;
+        /** @deprecated No-op — the drafting design renders no halo. Kept so call sites compile. */
+        glowClassName?: string;
+        /** Classes for the inner card surface (padding, layout, …). */
+        contentClassName?: string;
+        /** Registration marks on two corners. On by default. */
+        ticks?: boolean;
+    }>(),
+    { ticks: true },
+);
 </script>
 
 <template>
@@ -20,7 +26,8 @@ defineProps<{
         <div
             :class="
                 cn(
-                    'relative rounded-xl bg-white/[0.02] border border-white/5',
+                    'relative border border-line-2 bg-paper',
+                    ticks && 'ui-ticks',
                     contentClassName,
                 )
             "

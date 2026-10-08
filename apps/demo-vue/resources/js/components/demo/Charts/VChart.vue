@@ -23,10 +23,12 @@ onMounted(() => {
 });
 
 // Options are rebuilt by replacement (computed in the parent), so watching
-// the prop reference is enough; setOption merges and ECharts animates the diff.
+// the prop reference is enough. Merge mode (notMerge: false) keeps the same
+// series and axes, so ECharts morphs to the new data, or recolours in place
+// when the theme flips, instead of redrawing from scratch.
 watch(
     () => props.option,
-    (option) => chart?.setOption(option, { lazyUpdate: true }),
+    (option) => chart?.setOption(option, { notMerge: false, lazyUpdate: true }),
 );
 
 onUnmounted(() => {

@@ -6,28 +6,33 @@ import { GlowCard } from "@/components/ui";
 // as native named Vue slots. Both are server-rendered HTML that Mesh
 // keeps in sync with Livewire re-renders.
 defineProps<{
-    // `variant` still selects behaviour upstream; styling is mono regardless.
+    // `variant` still selects behaviour upstream; styling is the same regardless.
     variant?: string;
 }>();
 </script>
 
+<!-- Each region is labelled with the slot it arrived on, like a callout on a drawing. -->
 <template>
-    <GlowCard content-class-name="overflow-hidden p-0">
-        <header v-if="$slots.title" class="px-6 pt-5 pb-4 border-b border-white/5">
-            <span class="block text-xs font-medium uppercase tracking-widest text-zinc-500 mb-1.5">
-                slots.title
-            </span>
-            <h3 class="text-lg font-semibold text-white tracking-tight leading-snug">
+    <GlowCard content-class-name="p-0">
+        <header v-if="$slots.title" class="border-b border-line-2 px-5 pt-4 pb-4">
+            <span class="k text-ink-3">#title</span>
+            <h3 class="mt-1 text-lg leading-snug font-semibold tracking-tight text-ink">
                 <slot name="title" />
             </h3>
         </header>
 
-        <div class="px-6 py-5 text-sm text-zinc-300 leading-relaxed">
-            <slot />
+        <div class="px-5 py-5">
+            <span class="k text-ink-3">#default</span>
+            <div class="mt-1.5 text-sm leading-relaxed text-ink-2">
+                <slot />
+            </div>
         </div>
 
-        <footer v-if="$slots.footer" class="px-6 py-3 border-t border-white/5 text-xs text-zinc-500">
-            <slot name="footer" />
+        <footer v-if="$slots.footer" class="border-t border-line-2 bg-paper-2 px-5 py-3">
+            <span class="k text-ink-3">#footer</span>
+            <div class="mt-0.5 text-xs leading-relaxed text-ink-2">
+                <slot name="footer" />
+            </div>
         </footer>
     </GlowCard>
 </template>

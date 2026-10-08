@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useEntangle, useWire } from "@mesh/vue";
-import { Badge, Button, cn } from "@/components/ui";
+import { Button } from "@/components/ui";
 import Column from "./Column.vue";
 import { useBoardDrag } from "./useBoardDrag";
 import type { Column as ColumnType } from "./types";
@@ -52,35 +52,17 @@ const handleReset = async () => {
     <div class="space-y-4">
         <!-- Toolbar -->
         <div class="flex flex-wrap items-center justify-between gap-3">
-            <Badge
-                color="slate"
-                class="gap-2 px-3 py-1.5 bg-white/5 border-white/10 font-normal text-zinc-400"
-            >
-                <span
-                    :class="
-                        cn(
-                            'h-1.5 w-1.5 rounded-full',
-                            syncCount > 0 ? 'bg-emerald-400' : 'bg-zinc-500',
-                        )
-                    "
-                    aria-hidden="true"
-                />
+            <p class="sync k k--caps" :data-on="syncCount > 0 ? '' : undefined" aria-live="polite">
+                <span class="sync__dot" aria-hidden="true" />
                 <span v-if="syncCount > 0">
-                    Synced
-                    <span class="font-semibold text-zinc-200 tabular-nums">{{ syncCount }}</span>
+                    Synced <span class="sync__v">{{ syncCount }}</span>
                     {{ syncCount === 1 ? "move" : "moves" }} · last
-                    <span class="font-mono text-zinc-300">{{ lastSyncAt }}</span>
+                    <span class="sync__v">{{ lastSyncAt }}</span>
                 </span>
-                <span v-else>No moves synced yet — drag a card</span>
-            </Badge>
+                <span v-else>No moves synced yet. Drag a card.</span>
+            </p>
 
-            <Button
-                variant="secondary"
-                size="xs"
-                :disabled="resetting"
-                class="px-4 py-2"
-                @click="handleReset"
-            >
+            <Button variant="secondary" size="sm" :disabled="resetting" @click="handleReset">
                 {{ resetting ? "Resetting…" : "Reset board" }}
             </Button>
         </div>
@@ -95,9 +77,9 @@ const handleReset = async () => {
             />
         </div>
 
-        <p class="text-xs text-zinc-500">
-            Drag with mouse or touch — cards reorder within a column and move across columns; every
-            confirmed drop persists to your session.
+        <p class="font-mono text-[11px] tracking-[0.04em] leading-loose text-ink-3">
+            Drag with mouse or touch. Cards reorder within a column and move across columns; every
+            confirmed drop is saved to your session.
         </p>
     </div>
 </template>

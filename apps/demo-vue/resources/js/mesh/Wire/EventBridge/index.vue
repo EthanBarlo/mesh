@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useWire } from "@mesh/vue";
-import { Button, Eyebrow, Input, Panel } from "@/components/ui";
+import { Button, Input, Panel } from "@/components/ui";
 
 interface EventBridgeProps {
     /** Count of page.ping events handled by the PHP class, fed back via props(). */
@@ -25,18 +25,18 @@ const handlePing = () => {
 
 <template>
     <Panel>
-        <div class="flex items-center justify-between gap-3">
-            <Eyebrow>Vue island · EventBridge</Eyebrow>
-            <span v-if="sent > 0" class="text-xs font-medium text-rose-400 tabular-nums">
-                {{ sent }} dispatched
-            </span>
+        <!-- Outbound: Vue -> Livewire event bus -->
+        <div class="flex items-baseline justify-between gap-3">
+            <p class="k k--caps text-ink-3">
+                Sends <span class="normal-case text-ink">mesh.ping</span>
+            </p>
+            <span class="k tabular-nums text-ink-3">{{ sent }} dispatched</span>
         </div>
 
-        <!-- Outbound: Vue -> Livewire event bus -->
-        <div class="mt-4 flex flex-col sm:flex-row gap-2">
+        <div class="mt-3 flex flex-col gap-2 sm:flex-row">
             <Input
                 v-model="message"
-                class="flex-1 min-w-0 h-11 py-0"
+                class="min-w-0 flex-1"
                 placeholder="Message to send with the event"
                 aria-label="Message to dispatch with mesh.ping"
                 @keydown.enter="handlePing"
@@ -45,25 +45,29 @@ const handlePing = () => {
                 Dispatch mesh.ping
             </Button>
         </div>
-        <p class="mt-2 text-xs text-zinc-500">
-            <code class="font-mono text-zinc-400">wire.$dispatch("mesh.ping", { message })</code> — the plain Livewire toast on
-            the right catches it.
+        <p class="mt-2 text-xs leading-relaxed text-ink-3">
+            <code class="core-code">wire.$dispatch("mesh.ping", { message })</code>
+            The plain Livewire listener catches it.
         </p>
 
-        <div class="my-4 border-t border-white/10" />
+        <hr class="my-5 border-t border-dashed border-line-2" />
 
         <!-- Inbound: page.ping -> PHP #[On] -> props() -> this render -->
-        <div class="flex items-center gap-4">
-            <div class="w-14 h-14 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
-                <span class="text-2xl font-semibold tabular-nums text-white">{{ received }}</span>
-            </div>
-            <div>
-                <p class="text-sm font-medium text-white">
+        <p class="k k--caps text-ink-3">
+            Receives <span class="normal-case text-ink">page.ping</span>
+        </p>
+        <div class="mt-3 flex items-center gap-4">
+            <span class="core-count" aria-live="polite">{{ received }}</span>
+            <div class="min-w-0">
+                <p class="text-sm font-medium text-ink">
                     {{ received === 1 ? "page.ping received" : "page.pings received" }}
                 </p>
-                <p class="mt-0.5 text-xs text-zinc-500 leading-relaxed">
-                    Caught server-side by <code class="font-mono text-zinc-400">#[On('page.ping')]</code>, returned through
-                    <code class="font-mono text-zinc-400">props()</code> — Vue just renders the prop.
+                <p class="mt-0.5 text-xs leading-relaxed text-ink-3">
+                    Caught in PHP by
+                    <code class="core-code whitespace-nowrap">#[On('page.ping')]</code>
+                    and returned through
+                    <code class="core-code">props()</code>. Vue only
+                    renders the prop.
                 </p>
             </div>
         </div>

@@ -1,6 +1,6 @@
 import { h, type FunctionalComponent, type VNode } from "vue";
 import { createColumnHelper, type ColumnDef, type RowData } from "@tanstack/vue-table";
-import { Badge, Spinner, cn, type BadgeColor } from "@/components/ui";
+import { Badge, Spinner, type BadgeColor } from "@/components/ui";
 
 declare module "@tanstack/vue-table" {
     // Per-column styling hooks consumed by the DataTable renderer for th/td.
@@ -30,30 +30,37 @@ const currency = new Intl.NumberFormat("en-US", {
 
 export const formatAmount = (cents: number): string => currency.format(cents / 100);
 
+// Drafting tones from the UI kit: paid is inked, pending is sepia, the rest are muted.
+// The accent stays free for flagged rows.
 const statusColors: Record<OrderStatus, BadgeColor> = {
-    pending: "amber",
-    paid: "emerald",
-    shipped: "slate",
-    refunded: "slate",
+    pending: "blueline",
+    paid: "ink",
+    shipped: "muted",
+    refunded: "muted",
 };
 
 const StatusBadge: FunctionalComponent<{ status: OrderStatus }> = ({ status }) =>
     h(Badge, { color: statusColors[status], dot: true, class: "capitalize" }, () => status);
 
+/** A drawn pennant: an outline when clear, filled when flagged. */
 const flagIcon = (filled: boolean): VNode =>
     h(
         "svg",
         {
-            class: "w-4 h-4",
-            viewBox: "0 0 24 24",
-            fill: filled ? "currentColor" : "none",
+            class: "w-3.5 h-3.5",
+            viewBox: "0 0 14 14",
+            fill: "none",
             stroke: "currentColor",
-            "stroke-width": "2",
-            "stroke-linecap": "round",
-            "stroke-linejoin": "round",
+            "stroke-width": "1.25",
             "aria-hidden": "true",
         },
-        [h("path", { d: "M4 21V4a1 1 0 011-1h11.5a.5.5 0 01.4.8L14 8l2.9 4.2a.5.5 0 01-.4.8H5" })],
+        [
+            h("path", { d: "M2.5 13.5V1" }),
+            h("path", {
+                d: "M2.5 1.5H11.5L9 5L11.5 8.5H2.5",
+                fill: filled ? "currentColor" : "none",
+            }),
+        ],
     );
 
 const FlagButton: FunctionalComponent<{
@@ -71,14 +78,11 @@ const FlagButton: FunctionalComponent<{
                 ? `Unflag order ${order.id}`
                 : `Flag order ${order.id}`,
             title: order.flagged ? "Unflag (server call)" : "Flag (server call)",
-            class: cn(
-                "inline-flex items-center justify-center w-8 h-8 rounded-lg border transition-colors duration-150 active:scale-95 focus:outline-none focus:ring-2 focus:ring-white/20 focus:ring-offset-2 focus:ring-offset-zinc-950 disabled:cursor-wait",
-                order.flagged
-                    ? "bg-rose-500/10 border-rose-400/30 text-rose-400 hover:bg-rose-500/15"
-                    : "bg-white/5 border-white/10 text-zinc-500 hover:text-white hover:border-white/20",
-            ),
+            class: "flag-btn",
+            // Vue keeps `false` as the string "false"; undefined drops the attribute.
+            "data-flagged": order.flagged || undefined,
         },
-        pending ? [h(Spinner)] : [flagIcon(order.flagged)],
+        pending ? [h(Spinner, { class: "w-3.5 h-3.5" })] : [flagIcon(order.flagged)],
     );
 
 const columnHelper = createColumnHelper<Order>();
@@ -92,13 +96,11 @@ export function buildColumns(options: {
     return [
         columnHelper.accessor("id", {
             header: "Order",
-            cell: (info) =>
-                h("span", { class: "font-mono text-zinc-400" }, `#${info.getValue()}`),
+            cell: (info) => h("span", { class: "bom__mono text-ink-3" }, `#${info.getValue()}`),
         }),
         columnHelper.accessor("customer", {
             header: "Customer",
-            cell: (info) =>
-                h("span", { class: "font-medium text-white" }, info.getValue()),
+            cell: (info) => h("span", { class: "bom__strong" }, info.getValue()),
         }),
         columnHelper.accessor("status", {
             header: "Status",
@@ -108,20 +110,16 @@ export function buildColumns(options: {
             header: "Amount",
             meta: { headerClass: "text-right", cellClass: "text-right" },
             cell: (info) =>
-                h(
-                    "span",
-                    { class: "font-mono tabular-nums text-zinc-300" },
-                    formatAmount(info.getValue()),
-                ),
+                h("span", { class: "bom__mono text-ink" }, formatAmount(info.getValue())),
         }),
         columnHelper.accessor("date", {
             header: "Date",
-            cell: (info) => h("span", { class: "text-zinc-400" }, info.getValue()),
+            cell: (info) => h("span", { class: "bom__mono" }, info.getValue()),
         }),
         columnHelper.display({
             id: "actions",
             header: () => h("span", { class: "sr-only" }, "Actions"),
-            meta: { headerClass: "text-right", cellClass: "text-right" },
+            meta: { headerClass: "text-right", cellClass: "text-right py-1.5" },
             cell: ({ row }) =>
                 h(FlagButton, {
                     order: row.original,

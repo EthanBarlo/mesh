@@ -18,17 +18,17 @@ export interface DieProps {
 defineProps<DieProps>();
 </script>
 
-<!-- A single die face rendered as pips on a 3x3 grid. -->
+<!-- A single die face: a square drawn in ink with pips on a 3x3 grid. -->
 <template>
     <div
-        class="w-14 h-14 rounded-xl bg-white/5 border border-white/10 grid grid-cols-3 grid-rows-3 p-2.5"
+        class="grid size-14 grid-cols-3 grid-rows-3 border border-ink bg-paper p-2.5"
         role="img"
         :aria-label="`Die showing ${value}`"
     >
         <span v-for="i in 9" :key="i" class="flex items-center justify-center">
             <span
                 v-if="(PIPS[value] ?? []).includes(i - 1)"
-                class="w-2 h-2 rounded-full bg-white"
+                class="size-2 rounded-full bg-ink"
             />
         </span>
     </div>

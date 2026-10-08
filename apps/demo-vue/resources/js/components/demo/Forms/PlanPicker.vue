@@ -18,22 +18,23 @@ defineProps<{
 const model = defineModel<string>({ required: true });
 </script>
 
-<!-- Radio-card grid for picking a plan — sr-only radios behind styled labels. -->
+<!-- Option boxes for picking a plan — sr-only radios behind drawn labels. -->
 <template>
     <fieldset :class="cn($props.class)">
-        <legend class="block text-sm font-medium text-zinc-300 mb-1.5">
+        <legend class="mb-1.5 block font-mono text-[0.6875rem] leading-normal tracking-[0.1em] text-ink-2 uppercase">
             Plan
         </legend>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <label
                 v-for="p in plans"
                 :key="p.id"
+                :data-selected="model === p.id"
                 :class="
                     cn(
-                        'relative cursor-pointer rounded-lg border p-4 transition-colors duration-150 focus-within:ring-2 focus-within:ring-white/20 focus-within:ring-offset-2 focus-within:ring-offset-zinc-950',
+                        'plan-opt relative block cursor-pointer border p-4 transition-colors duration-150 motion-reduce:transition-none',
                         model === p.id
-                            ? 'border-white/20 bg-white/[0.05]'
-                            : 'border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.05]',
+                            ? 'border-ink bg-paper-2'
+                            : 'border-line-2 bg-paper hover:border-line-3',
                     )
                 "
             >
@@ -44,36 +45,24 @@ const model = defineModel<string>({ required: true });
                     :value="p.id"
                     class="sr-only"
                 />
-                <span class="flex items-baseline justify-between">
-                    <span
-                        :class="
-                            cn(
-                                'text-sm font-semibold',
-                                model === p.id ? 'text-white' : 'text-zinc-300',
-                            )
-                        "
-                    >
+                <span class="flex items-center gap-2.5">
+                    <span class="plan-opt__box" aria-hidden="true" />
+                    <span class="text-sm font-semibold text-ink">
                         {{ p.label }}
                     </span>
                     <span
                         :class="
                             cn(
-                                'text-xs font-medium tabular-nums',
-                                model === p.id ? 'text-white' : 'text-zinc-500',
+                                'ml-auto font-mono text-xs tabular-nums',
+                                model === p.id ? 'text-ink' : 'text-ink-3',
                             )
                         "
                     >
                         {{ p.price }}
                     </span>
                 </span>
-                <span class="mt-1 block text-xs text-zinc-500 leading-snug">
+                <span class="mt-1.5 block pl-6 text-xs leading-snug text-ink-3">
                     {{ p.blurb }}
-                </span>
-                <span
-                    v-if="model === p.id"
-                    class="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-white text-[10px] text-zinc-950"
-                >
-                    ✓
                 </span>
             </label>
         </div>

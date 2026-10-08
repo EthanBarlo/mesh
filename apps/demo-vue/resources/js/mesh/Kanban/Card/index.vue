@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import { useWire } from "@mesh/vue";
-import { cn } from "@/components/ui";
 import CardFace, { type KanbanCard } from "@/components/demo/Kanban/CardFace.vue";
 import {
     announceDragEnd,
@@ -98,12 +97,7 @@ const handleDrop = (event: DragEvent) => {
         draggable="true"
         :data-card-id="card.id"
         :data-column-id="columnId"
-        :class="
-            cn(
-                'relative mx-3 mt-2.5 cursor-grab active:cursor-grabbing select-none',
-                isSource && 'opacity-40',
-            )
-        "
+        class="lane__item lane__grab"
         :aria-label="`${card.title} (${card.tag})`"
         @dragstart="handleDragStart"
         @dragend="handleDragEnd"
@@ -111,14 +105,8 @@ const handleDrop = (event: DragEvent) => {
         @dragleave="handleDragLeave"
         @drop="handleDrop"
     >
-        <span
-            v-if="indicator === 'above'"
-            class="absolute inset-x-1 -top-[7px] h-0.5 rounded-full bg-rose-400 pointer-events-none"
-        />
-        <CardFace :card="card" />
-        <span
-            v-if="indicator === 'below'"
-            class="absolute inset-x-1 -bottom-[7px] h-0.5 rounded-full bg-rose-400 pointer-events-none"
-        />
+        <span v-if="indicator === 'above'" class="drop-mark drop-mark--above" aria-hidden="true" />
+        <CardFace :card="card" :class="{ 'ticket--source': isSource }" />
+        <span v-if="indicator === 'below'" class="drop-mark drop-mark--below" aria-hidden="true" />
     </div>
 </template>

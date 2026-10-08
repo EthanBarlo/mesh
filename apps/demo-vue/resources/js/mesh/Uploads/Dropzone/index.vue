@@ -156,17 +156,19 @@ const handleTryAgain = async () => {
             @drop="handleDrop"
         >
             <template #hint>
-                Images only, up to {{ formatBytes(maxKilobytes * 1024) }} —
-                enforced server-side
+                Images only · up to
+                <span class="tabular-nums">{{ formatBytes(maxKilobytes * 1024) }}</span>
+                · checked on the server
             </template>
         </DropzoneSurface>
 
         <Panel v-if="status === 'uploading'">
-            <div class="mb-2 flex items-center justify-between text-sm">
-                <span class="font-medium text-white">
-                    Uploading to temporary storage…
+            <div class="mb-3 flex items-center justify-between gap-3">
+                <span class="core-status core-status--ink">
+                    <span class="core-dot" data-state="live" aria-hidden="true" />
+                    Uploading to temporary storage
                 </span>
-                <span class="tabular-nums text-zinc-400">
+                <span class="font-mono text-sm tabular-nums text-ink">
                     {{ progress }}%
                 </span>
             </div>
@@ -174,28 +176,8 @@ const handleTryAgain = async () => {
         </Panel>
 
         <Alert v-if="status === 'error'" tone="error" title="Upload rejected">
-            <template #icon>
-                <svg
-                    class="h-5 w-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke-width="1.5"
-                    stroke="currentColor"
-                    aria-hidden="true"
-                >
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M12 9v3.75m0 3.75h.008v.008H12v-.008zM21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                </svg>
-            </template>
             <template #action>
-                <Button
-                    variant="secondary"
-                    class="h-auto px-4 py-2"
-                    @click="handleTryAgain"
-                >
+                <Button variant="secondary" size="sm" @click="handleTryAgain">
                     Try again
                 </Button>
             </template>

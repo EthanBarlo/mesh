@@ -1,12 +1,13 @@
 <div class="space-y-12">
     <x-demo.page-header
         title="The $wire Bridge"
-        description="useWire() hands Vue the full $wire object — server methods become Promises, Livewire's event bus becomes callbacks. No routes, no controllers, no fetch, no JSON plumbing."
+        description="`useWire()` hands Vue the full `$wire` object. Server methods become Promises and Livewire's event bus becomes callbacks. No routes, no controllers, no fetch, no JSON plumbing."
     />
 
     <x-demo.section
         title="Call the server like a function"
-        description="wire.$call('method', …args) invokes a public PHP method and resolves with whatever it returns. The textarea is analyzed by PHP; the dice are rolled by PHP. Vue just awaits."
+        caption="Two PHP methods awaited from Vue"
+        description="`wire.$call('method', …args)` runs a public PHP method and resolves with whatever it returns. PHP analyzes the text and rolls the dice; Vue awaits the result."
         :files="['app/Mesh/Wire/ServerActions.php', 'resources/js/mesh/Wire/ServerActions/index.vue']"
     >
         <mesh:wire.server-actions />
@@ -14,35 +15,36 @@
 
     <x-demo.section
         title="Islands talk to Livewire"
-        description="Vue dispatches mesh.ping onto Livewire's event bus and a completely plain Livewire component toasts it. In the other direction, a Blade button dispatches page.ping and the island's PHP class catches it with #[On], feeding the count back through props()."
+        caption="Events crossing the bridge in both directions"
+        description="The island dispatches `mesh.ping` onto Livewire's event bus, and a plain Livewire component shows it. In the other direction, a Blade button dispatches `page.ping`; the island's PHP class catches it with `#[On]` and passes the count back through `props()`."
         :files="['app/Mesh/Wire/EventBridge.php', 'resources/js/mesh/Wire/EventBridge/index.vue', 'app/Livewire/EventToast.php', 'resources/views/livewire/event-toast.blade.php', 'resources/views/livewire/pages/wire.blade.php']"
     >
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
-            {{-- Vue → Livewire: the island dispatches, the plain component listens. --}}
-            <div class="space-y-4">
-                <p class="text-xs font-medium uppercase tracking-widest text-zinc-500">
-                    Vue island <span class="text-rose-400">&rarr;</span> plain Livewire
+        <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
+            {{-- Vue side: the island sends mesh.ping and hears page.ping through its PHP class. --}}
+            <div class="space-y-3">
+                <p class="flex flex-wrap items-baseline justify-between gap-x-3">
+                    <span class="k k--caps text-ink-2">Vue island</span>
+                    <span class="k text-ink-3">EventBridge</span>
                 </p>
                 <mesh:wire.event-bridge />
             </div>
 
-            {{-- Livewire → Vue: a Blade button dispatches, the island's PHP class listens. --}}
-            <div class="space-y-4">
-                <p class="text-xs font-medium uppercase tracking-widest text-zinc-500">
-                    Blade button <span class="text-zinc-400">&larr;&rarr;</span> the listening island
+            {{-- Livewire side: a Blade button sends page.ping; a plain component hears mesh.ping. --}}
+            <div class="space-y-3">
+                <p class="flex flex-wrap items-baseline justify-between gap-x-3">
+                    <span class="k k--caps text-ink-2">Plain Livewire</span>
+                    <span class="k text-ink-3">WirePage · EventToast</span>
                 </p>
 
-                <div class="p-5 rounded-xl bg-white/[0.02] border border-white/5">
-                    <span class="text-xs font-medium uppercase tracking-widest text-zinc-500">Plain Blade · this page</span>
-                    <p class="mt-2 text-sm text-zinc-400 leading-relaxed">
-                        This button is ordinary Blade + Livewire — <code class="font-mono text-zinc-300 text-xs">wire:click="pingIslands"</code>
-                        dispatches <code class="font-mono text-zinc-300 text-xs">page.ping</code>, which the Vue island's PHP class catches.
+                <div class="border border-line-2 bg-paper p-5">
+                    <p class="k k--caps text-ink-3">
+                        Sends <span class="normal-case text-ink">page.ping</span>
                     </p>
-                    <button
-                        type="button"
-                        wire:click="pingIslands"
-                        class="mt-4 px-5 h-11 rounded-lg bg-white text-zinc-950 text-sm font-medium hover:bg-zinc-200 active:scale-95 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-white/40 focus:ring-offset-2 focus:ring-offset-zinc-950"
-                    >
+                    <p class="mt-2 text-sm leading-relaxed text-ink-2">
+                        An ordinary Blade button. <code class="core-code">wire:click="pingIslands"</code>
+                        dispatches <code class="core-code">page.ping</code>, and the island's PHP class catches it.
+                    </p>
+                    <button type="button" wire:click="pingIslands" class="btn btn--line mt-4">
                         Dispatch page.ping
                     </button>
                 </div>
@@ -54,7 +56,8 @@
 
     <x-demo.section
         title="Watch server-driven changes"
-        description="The server owns the value; Vue reacts. An interval schedules wire.$call('tick') every two seconds — PHP random-walks the price — and wire.$watch('price', cb) streams each change into local Vue state for the sparkline."
+        caption="A server-owned price streamed into a sparkline"
+        description="The server owns the value and Vue reacts. An interval calls `wire.$call('tick')` every two seconds, PHP random-walks the price, and `wire.$watch('price', cb)` streams each change into local Vue state for the sparkline."
         :files="['app/Mesh/Wire/PriceWatcher.php', 'resources/js/mesh/Wire/PriceWatcher/index.vue']"
     >
         <mesh:wire.price-watcher />

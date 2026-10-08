@@ -1,0 +1,816 @@
+/* Ecosystem + advanced pages: table, charts, board, kanban, architecture. Scope rules under the page or component they belong to.
+   Identical across the three demo apps: read tokens only, never raw colours.
+
+   Everything here sits in the components layer, so a Tailwind utility at the
+   call site can still override it. Island markup only carries these class
+   names plus layout utilities, so the Vue and Svelte ports reuse it as-is. */
+
+@layer components {
+    /* ==========================================================================
+       Bill of materials: the orders table (Table) and the discovery manifest
+       (Architecture). Mono caps headers over an ink rule, hairline rows,
+       tabular numbers, a neutral hover wash.
+       ========================================================================== */
+    .bom {
+        /* Containing block for sr-only text in cells, so it can't widen the page. */
+        position: relative;
+        overflow-x: auto;
+        overscroll-behavior-x: contain;
+        border: 1px solid var(--line-2);
+        background: var(--paper);
+    }
+    .bom table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.875rem;
+        font-variant-numeric: tabular-nums;
+    }
+    .bom th {
+        padding: 12px 14px 8px;
+        border-bottom: 1px solid var(--ink);
+        color: var(--ink-3);
+        font-family: var(--font-mono);
+        font-size: 0.6875rem;
+        font-weight: 400;
+        letter-spacing: 0.1em;
+        line-height: 1.4;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+    .bom td {
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--line);
+        color: var(--ink-2);
+        white-space: nowrap;
+    }
+    .bom tbody tr:last-child td {
+        border-bottom: 0;
+    }
+    .bom tbody tr {
+        transition: background-color var(--t-fast) ease;
+    }
+    @media (hover: hover) and (pointer: fine) {
+        .bom tbody tr:hover {
+            background: var(--paper-2);
+        }
+    }
+    /* A flagged order is the table's one accent: a wash and a 2px rule. */
+    .bom tbody tr.bom__flagged {
+        background: var(--accent-wash);
+    }
+    .bom tbody tr.bom__flagged td:first-child {
+        box-shadow: inset 2px 0 0 var(--accent);
+    }
+    .bom__mono {
+        font-family: var(--font-mono);
+        font-size: 0.8125rem;
+    }
+    .bom__strong {
+        color: var(--ink);
+        font-weight: 500;
+    }
+    .bom__empty {
+        padding: 40px 14px;
+        color: var(--ink-3);
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        text-align: center;
+    }
+
+    /* Sortable header: the label plus a small drawn caret pair. */
+    .bom__sort {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin: -4px -6px;
+        padding: 4px 6px;
+        color: inherit;
+        cursor: pointer;
+        font: inherit;
+        letter-spacing: inherit;
+        text-transform: inherit;
+        transition: color var(--t-fast) ease;
+    }
+    .bom__sort[data-sorted] {
+        color: var(--ink);
+    }
+    .bom__sort:focus-visible {
+        outline: 1px solid var(--accent-ink);
+        outline-offset: 0;
+    }
+    .bom__caret {
+        flex: none;
+        width: 7px;
+        height: 11px;
+        overflow: visible;
+    }
+    .bom__caret path {
+        fill: none;
+        stroke: var(--line-3);
+        stroke-width: 1;
+        stroke-linejoin: miter;
+        vector-effect: non-scaling-stroke;
+        transition: stroke var(--t-fast) ease;
+    }
+    .bom__sort[data-sorted] .bom__caret path {
+        stroke: var(--line-2);
+    }
+    .bom__sort[data-sorted='asc'] .bom__caret-up,
+    .bom__sort[data-sorted='desc'] .bom__caret-down {
+        stroke: var(--ink);
+    }
+    @media (hover: hover) and (pointer: fine) {
+        .bom__sort:hover {
+            color: var(--ink);
+        }
+        .bom__sort:not([data-sorted]):hover .bom__caret path {
+            stroke: var(--ink-3);
+        }
+    }
+
+    /* Row action: a square stamp. The ::before widens the hit area to 42px. */
+    .flag-btn {
+        position: relative;
+        display: inline-grid;
+        place-items: center;
+        width: 32px;
+        height: 32px;
+        border: 1px solid var(--line-2);
+        background: var(--paper);
+        color: var(--ink-3);
+        cursor: pointer;
+        vertical-align: middle;
+        transition:
+            color var(--t-fast) ease,
+            border-color var(--t-fast) ease,
+            transform var(--t-fast) var(--ease-out);
+    }
+    .flag-btn::before {
+        content: '';
+        position: absolute;
+        inset: -5px;
+    }
+    .flag-btn:active {
+        transform: scale(0.97);
+    }
+    .flag-btn:disabled {
+        cursor: wait;
+    }
+    .flag-btn:focus-visible {
+        outline: 2px solid var(--accent-ink);
+        outline-offset: 2px;
+    }
+    .flag-btn[data-flagged] {
+        border-color: var(--accent);
+        color: var(--accent-ink);
+    }
+    @media (hover: hover) and (pointer: fine) {
+        .flag-btn:hover {
+            border-color: var(--ink);
+            color: var(--ink);
+        }
+        .flag-btn[data-flagged]:hover {
+            border-color: var(--accent-ink);
+            color: var(--accent-ink);
+        }
+    }
+
+    /* ==========================================================================
+       Plot sheet (Charts): a paper frame for the canvas, so the figure grid
+       doesn't show through the chart, with a readout strip underneath.
+       ========================================================================== */
+    .plot {
+        border: 1px solid var(--line-2);
+        background: var(--paper);
+    }
+    .plot__head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px 16px;
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--line-2);
+    }
+    .plot__title {
+        color: var(--ink);
+        font-size: 0.9375rem;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+    }
+    .plot__canvas {
+        height: 340px;
+        padding: 14px 12px 6px 6px;
+    }
+
+    /* Readout: hairline cells, mono caps labels, tabular values. */
+    .readout {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+        gap: 1px;
+        border-top: 1px solid var(--line-2);
+        background: var(--line);
+    }
+    .readout__cell {
+        min-width: 0;
+        padding: 10px 16px 12px;
+        background: var(--paper);
+    }
+    .readout__k {
+        display: block;
+        color: var(--ink-3);
+    }
+    .readout__v {
+        display: block;
+        margin-top: 2px;
+        color: var(--ink);
+        font-size: 1.125rem;
+        font-variant-numeric: tabular-nums;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .readout__v--mono {
+        font-family: var(--font-mono);
+        font-size: 0.9375rem;
+        font-weight: 500;
+        letter-spacing: 0;
+    }
+
+    /* ==========================================================================
+       Board + Kanban: columns as drawing frames, cards as paper tags. The two
+       pages share these classes so they read as a pair.
+       ========================================================================== */
+    .lane {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        border: 1px solid var(--line-2);
+        background: var(--paper);
+    }
+    .lane__head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 44px;
+        padding: 0 12px;
+        border-bottom: 1px solid var(--ink);
+    }
+    .lane__title {
+        margin: 0;
+        color: var(--ink);
+        font-family: var(--font-mono);
+        font-size: 0.6875rem;
+        font-weight: 500;
+        letter-spacing: 0.1em;
+        line-height: 1.5;
+        text-transform: uppercase;
+    }
+    /* Progress mark per column: open, half, solid. Drawn, not coloured. */
+    .lane__mark {
+        position: relative;
+        flex: none;
+        width: 9px;
+        height: 9px;
+        border: 1px solid var(--ink);
+    }
+    .lane__mark::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: var(--ink);
+        transform: scaleX(0);
+        transform-origin: left center;
+    }
+    .lane__mark[data-lane='in-progress']::after {
+        transform: scaleX(0.5);
+    }
+    .lane__mark[data-lane='done']::after {
+        transform: none;
+    }
+    .lane__count {
+        display: inline-grid;
+        place-items: center;
+        min-width: 26px;
+        height: 20px;
+        margin-left: auto;
+        padding: 0 5px;
+        border: 1px solid var(--line-3);
+        color: var(--ink-2);
+        font-family: var(--font-mono);
+        font-size: 10.5px;
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
+    }
+    .lane__list {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        gap: 10px;
+        min-height: 9rem;
+        margin: 0;
+        padding: 10px;
+        list-style: none;
+        transition: background-color var(--t-fast) ease;
+    }
+    .lane__list[data-over] {
+        background: var(--paper-2);
+    }
+    .lane__empty {
+        display: grid;
+        place-items: center;
+        min-height: 6rem;
+        border: 1px dashed var(--line-3);
+        color: var(--ink-3);
+    }
+
+    /* A draggable card's wrapper (both boards). */
+    .lane__grab {
+        position: relative;
+        cursor: grab;
+        user-select: none;
+        -webkit-user-select: none;
+    }
+    .lane__grab:active {
+        cursor: grabbing;
+    }
+    .lane__grab:focus-visible {
+        outline: 2px solid var(--accent-ink);
+        outline-offset: 2px;
+    }
+
+    /* Blade-composed Kanban: each card island sits between the column
+       island's header and its order-1 drop tail. */
+    .lane__item {
+        margin: 10px 10px 0;
+    }
+    .lane__tail {
+        order: 1;
+        display: grid;
+        flex: 1;
+        place-items: center;
+        min-height: 3.5rem;
+        margin: 10px;
+        border: 1px dashed transparent;
+        color: var(--ink-3);
+        transition:
+            border-color var(--t-fast) ease,
+            background-color var(--t-fast) ease,
+            color var(--t-fast) ease;
+    }
+    .lane__tail[data-armed] {
+        border-color: var(--line-3);
+    }
+    .lane__tail[data-over] {
+        border-style: solid;
+        border-color: var(--accent);
+        background: var(--accent-wash);
+        color: var(--accent-ink);
+    }
+
+    /* The paper tag. */
+    .ticket {
+        position: relative;
+        display: grid;
+        gap: 10px;
+        padding: 11px 12px 10px;
+        border: 1px solid var(--line-2);
+        background: var(--paper);
+        color: var(--ink);
+        transition:
+            border-color var(--t-fast) ease,
+            background-color var(--t-fast) ease;
+    }
+    .ticket__title {
+        margin: 0;
+        font-size: 0.875rem;
+        font-weight: 500;
+        letter-spacing: -0.005em;
+        line-height: 1.35;
+    }
+    .ticket__foot {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+    }
+    .ticket__tag {
+        display: inline-flex;
+        align-items: center;
+        height: 18px;
+        padding: 0 6px;
+        border: 1px solid var(--line-2);
+        color: var(--ink-2);
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: 0.08em;
+        line-height: 1;
+        text-transform: uppercase;
+    }
+    /* Six-dot grip, the drag affordance. */
+    .ticket__grip {
+        flex: none;
+        width: 8px;
+        height: 12px;
+        background-image: radial-gradient(circle, var(--ink-3) 0.9px, transparent 1.25px);
+        background-size: 4px 4px;
+        opacity: 0.7;
+        transition: opacity var(--t-fast) ease;
+    }
+    @media (hover: hover) and (pointer: fine) {
+        .ticket:hover {
+            border-color: var(--ink-3);
+        }
+        .ticket:hover .ticket__grip {
+            opacity: 1;
+        }
+    }
+
+    /* dnd-kit DragOverlay: a slight lift, drawn as an offset outline (no blur). */
+    .ticket--lifted,
+    .ticket--lifted:hover {
+        border-color: var(--ink);
+        box-shadow:
+            5px 5px 0 -1px var(--paper),
+            5px 5px 0 0 var(--ink-3);
+        cursor: grabbing;
+        transform: translate(-2px, -2px) rotate(-1deg);
+    }
+    .ticket--lifted .ticket__grip {
+        opacity: 1;
+    }
+
+    /* dnd-kit sortable placeholder: where the card will land, in the accent. */
+    .ticket--slot,
+    .ticket--slot:hover {
+        border-style: dashed;
+        border-color: var(--accent);
+        background: var(--accent-wash);
+    }
+    .ticket--slot > * {
+        visibility: hidden;
+    }
+
+    /* Native-DnD source card (Kanban): stays put until the server moves it. */
+    .ticket--source,
+    .ticket--source:hover {
+        border-style: dashed;
+        border-color: var(--line-3);
+    }
+    .ticket--source > * {
+        opacity: 0.4;
+    }
+
+    /* Native-DnD insertion line: a dimension line with end ticks, in the accent. */
+    .drop-mark {
+        position: absolute;
+        left: -4px;
+        right: -4px;
+        height: 2px;
+        background: var(--accent);
+        pointer-events: none;
+    }
+    .drop-mark::before,
+    .drop-mark::after {
+        content: '';
+        position: absolute;
+        top: -3px;
+        width: 2px;
+        height: 8px;
+        background: var(--accent);
+    }
+    .drop-mark::before {
+        left: 0;
+    }
+    .drop-mark::after {
+        right: 0;
+    }
+    .drop-mark--above {
+        top: -6px;
+    }
+    .drop-mark--below {
+        bottom: -6px;
+    }
+
+    /* Sync readout shared by both boards' toolbars. */
+    .sync {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 40px;
+        color: var(--ink-3);
+    }
+    .sync__dot {
+        flex: none;
+        width: 7px;
+        height: 7px;
+        border: 1px solid var(--ink-3);
+        border-radius: 999px;
+    }
+    .sync[data-on] .sync__dot {
+        border-color: var(--ink);
+        background: var(--ink);
+    }
+    .sync__v {
+        color: var(--ink);
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* ==========================================================================
+       Activity log (Kanban): a mono, timestamped event log.
+       ========================================================================== */
+    .actlog {
+        border: 1px solid var(--line-2);
+        background: var(--paper);
+    }
+    .actlog__head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 6px 16px;
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--ink);
+        color: var(--ink-3);
+    }
+    .actlog__live {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--ink-2);
+    }
+    .actlog__live::before {
+        content: '';
+        flex: none;
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background: var(--ink);
+        box-shadow: 0 0 0 3px var(--line);
+    }
+    .actlog__list {
+        margin: 0;
+        padding: 6px 0;
+        list-style: none;
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        line-height: 1.55;
+    }
+    .actlog__row {
+        display: grid;
+        grid-template-columns: auto auto minmax(0, 1fr);
+        gap: 0 14px;
+        padding: 5px 14px;
+        color: var(--ink-2);
+    }
+    .actlog__seq {
+        color: var(--ink-3);
+        opacity: 0.7;
+    }
+    .actlog__time {
+        color: var(--ink-3);
+        font-variant-numeric: tabular-nums;
+    }
+    /* The newest event carries the accent, and slides in. */
+    .actlog__row:first-child .actlog__time {
+        color: var(--accent-ink);
+    }
+    .actlog__row:first-child {
+        animation: actlog-in var(--t-med) var(--ease-out) both;
+    }
+    .actlog__empty {
+        padding: 5px 14px;
+        color: var(--ink-3);
+    }
+    @keyframes actlog-in {
+        from {
+            opacity: 0;
+            transform: translateY(-4px);
+        }
+    }
+    @media (max-width: 479px) {
+        .actlog__seq {
+            display: none;
+        }
+        .actlog__row {
+            grid-template-columns: auto minmax(0, 1fr);
+        }
+    }
+
+    /* ==========================================================================
+       Architecture: chunk toggles, the terminal transcript, the id figure.
+       ========================================================================== */
+    .chunk {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        padding: 16px;
+        border: 1px solid var(--line-2);
+        background: var(--paper);
+        transition: border-color var(--t-fast) ease;
+    }
+    .chunk[data-on] {
+        border-color: var(--ink);
+    }
+    .chunk__head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 8px;
+    }
+    .chunk__name {
+        color: var(--ink);
+        font-size: 0.9375rem;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+    }
+    .chunk__state {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--ink-3);
+        white-space: nowrap;
+    }
+    .chunk__state::before {
+        content: '';
+        width: 7px;
+        height: 7px;
+        border: 1px solid currentColor;
+    }
+    .chunk[data-on] .chunk__state {
+        color: var(--ink);
+    }
+    .chunk[data-on] .chunk__state::before {
+        background: currentColor;
+    }
+    .chunk__note {
+        margin-top: 6px;
+        color: var(--ink-2);
+        font-size: 0.8125rem;
+        line-height: 1.55;
+    }
+    .chunk__tag {
+        display: inline-block;
+        margin-top: 10px;
+        padding: 2px 6px;
+        border: 1px solid var(--line);
+        background: var(--paper-2);
+        color: var(--ink-2);
+        font-family: var(--font-mono);
+        font-size: 0.6875rem;
+        overflow-wrap: anywhere;
+    }
+    .chunk-empty {
+        padding: 28px 16px;
+        border: 1px dashed var(--line-3);
+        background: var(--paper);
+        color: var(--ink-3);
+        text-align: center;
+    }
+
+    /* Terminal transcript: a recessed panel, like the code viewer. */
+    .term {
+        margin: 0;
+        border: 1px solid var(--line-2);
+        background: var(--paper-2);
+    }
+    .term__head {
+        padding: 8px 14px;
+        border-bottom: 1px solid var(--line-2);
+        background: var(--paper);
+        color: var(--ink-3);
+    }
+    .term__body {
+        margin: 0;
+        padding: 12px 14px;
+        overflow-x: auto;
+        color: var(--ink);
+        font-family: var(--font-mono);
+        font-size: 0.8125rem;
+        line-height: 1.7;
+    }
+    .term__prompt {
+        color: var(--ink-3);
+        user-select: none;
+    }
+    .term__ok {
+        color: var(--accent-ink);
+    }
+    .term__path {
+        color: var(--ink-2);
+    }
+
+    /* Inline code in page copy: a stamped part number. */
+    .partno {
+        padding: 1px 5px;
+        border: 1px solid var(--line-2);
+        background: var(--paper-2);
+        color: var(--ink);
+        font-family: var(--font-mono);
+        font-size: 0.84em;
+    }
+
+    /* Id derivation figure: a wide drawing, and a narrow one under 560px. */
+    .derive {
+        container-type: inline-size;
+    }
+    .derive__wide {
+        display: block;
+    }
+    .derive__narrow {
+        display: none;
+    }
+    @container (max-width: 559px) {
+        .derive__wide {
+            display: none;
+        }
+        .derive__narrow {
+            display: block;
+        }
+    }
+    .derive svg {
+        display: block;
+        width: 100%;
+        height: auto;
+        margin-inline: auto;
+        overflow: visible;
+        font-family: var(--font-mono);
+    }
+    .derive__wide svg {
+        max-width: 680px;
+    }
+    .derive__narrow svg {
+        max-width: 400px;
+    }
+    .derive__str {
+        fill: var(--ink);
+        font-size: 12px;
+    }
+    .derive__str--dim {
+        fill: var(--ink-3);
+    }
+    .derive__bg {
+        fill: var(--paper);
+    }
+    .derive__box {
+        fill: var(--paper);
+        stroke: var(--accent);
+        stroke-width: 1;
+        vector-effect: non-scaling-stroke;
+    }
+    .derive__id {
+        fill: var(--ink);
+        font-size: 13px;
+        font-weight: 500;
+    }
+    .derive__arrow {
+        fill: var(--ink);
+    }
+    .derive__arrow--fine {
+        fill: var(--line-3);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .bom tbody tr,
+        .bom__sort,
+        .bom__caret path,
+        .flag-btn,
+        .lane__list,
+        .lane__tail,
+        .ticket,
+        .ticket__grip,
+        .chunk {
+            transition: none;
+        }
+        .flag-btn:active {
+            transform: none;
+        }
+        .actlog__row:first-child {
+            animation: none;
+        }
+    }
+}
+
+/* Unlayered on purpose: drafting.css is unlayered too, so only an unlayered
+   rule can resize .btn--sm. Matches the kit's <Button size="sm"> (40px tap
+   target), so the Blade Kanban toolbar lines up with the React Board's. */
+.btn--sm.btn--tap {
+    min-height: 40px;
+    padding: 0 16px;
+    font-size: 0.875rem;
+}
+
+/* Unlayered for the same reason: a mounted chunk's "Unmount" button steps
+   back to a faint line until hovered. */
+.chunk[data-on] .btn--line {
+    border-color: var(--line-3);
+    color: var(--ink-2);
+}
+@media (hover: hover) and (pointer: fine) {
+    .chunk[data-on] .btn--line:hover {
+        border-color: var(--ink);
+        color: var(--paper);
+    }
+}
