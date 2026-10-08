@@ -143,3 +143,21 @@ All of these are in `resources/boost/skills/mesh-development/references/`.
       (`mesh::wire.event-bridge`)
     - whether `svelte.config.js` with `vitePreprocess` is strictly required
     - the host-app TypeScript config in `docs/installation.mdx`
+
+## Demo apps (found during the demo redraw)
+
+Found on branch `feat/demo-revamp`. Nothing here was changed there.
+
+27. **Board touch drags are never saved.** Reported, from formkit's source.
+    - In the Vue and Svelte demos, formkit 0.5.3 only calls `onDragstart`
+      for native (mouse) drags, so a touch drag never records its start
+      position and `moveCard` is skipped.
+    - The card moves on screen, but a refresh reverts it.
+    - Fix: record the start position on touch drags too.
+    - Code: `apps/demo-{vue,svelte}/resources/js/mesh/Board/Kanban/useBoardDrag.ts`.
+28. **The demos have no `phpunit.xml`.** Verified. `php artisan test` can't
+    run in any of the three apps, though `tests/` and Pest are present.
+29. **The React State and Forms demos show the mount echo** from item 1.
+    - "Round-trips" starts at 01.
+    - The slug field shows "required" before anyone types.
+    - Vue and Svelte start clean.
