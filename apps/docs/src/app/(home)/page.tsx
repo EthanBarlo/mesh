@@ -1,133 +1,260 @@
 import Link from 'next/link';
-import { HeroDiagram } from '@/components/hero-diagram';
+import { TitleBlock } from '@/components/drafting/title-block';
+import { Anatomy } from '@/components/home/anatomy';
+import { Channels } from '@/components/home/channels';
+import { CopyButton } from '@/components/home/copy-button';
+import { Details } from '@/components/home/details';
+import { Fit } from '@/components/home/fit';
+import { HomeFooter } from '@/components/home/footer';
+import { Frame, HomeMotion } from '@/components/home/frame';
+import { HeroFigure } from '@/components/home/hero-figure';
+import { ArrowRightIcon, ExtIcon } from '@/components/home/icons';
+import { Install } from '@/components/home/install';
+import { RenderFlow } from '@/components/home/render-flow';
+import { Sheet, SheetHead } from '@/components/home/sheet-head';
+import { drawingNo, pad2, sheetCount } from '@/components/home/sheets';
+import { demoUrl, docsRoute, githubUrl, packageVersion } from '@/lib/shared';
 
-const demoUrl = 'https://mesh-demo-react.ebarlow.dev';
+const install = 'composer require ethanbarlo/mesh';
+
+function drawnOn(): { iso: string; label: string } {
+  const now = new Date();
+  const label = `${now.getUTCFullYear()}-${pad2(now.getUTCMonth() + 1)}`;
+  return { iso: label, label };
+}
+
+function TitleSheet() {
+  const date = drawnOn();
+  return (
+    <Sheet id="top" className="sheet--hero">
+      <div className="sheet-head sheet-head--hero" data-inview="">
+        <p className="sheet-head__no">
+          Sheet 01 / {pad2(sheetCount)}
+        </p>
+        <p className="sheet-head__meta">General arrangement · Scale 1:1</p>
+        <span className="sheet-head__rule" aria-hidden="true" />
+      </div>
+
+      <div className="hero">
+        <div className="hero__text">
+          <h1 className="hero__name" id="top-title">
+            Mesh
+          </h1>
+          <p className="hero__role">One Mesh tag. The whole JavaScript ecosystem.</p>
+          <p className="hero__kicker k k--caps">React, Vue and Svelte islands for Livewire 4</p>
+          <p className="hero__lead">
+            Livewire owns the state. Mesh carries it across the boundary, mounts your component, and
+            keeps both sides in step.
+          </p>
+          <p className="hero__lead">
+            Reach for a framework only where it&rsquo;s the easier path: a chart, a data grid, a
+            drag-and-drop board. One Blade tag drops it in.
+          </p>
+
+          <div className="hero__actions">
+            <Link className="btn btn--solid" href={docsRoute}>
+              Get started
+              <ArrowRightIcon className="btn__icon btn__icon--right" />
+            </Link>
+            <a className="btn btn--line" href={demoUrl} target="_blank" rel="noreferrer">
+              Live demo
+              <ExtIcon className="btn__icon btn__icon--ext" />
+            </a>
+          </div>
+
+          <div className="hero__install">
+            <p className="hero__install-k k k--caps">Install</p>
+            <div className="chip">
+              <span className="chip__k" aria-hidden="true">
+                $
+              </span>
+              <code className="chip__cmd">
+                <span className="nw">composer require</span> <b className="nw">ethanbarlo/mesh</b>
+              </code>
+              <CopyButton text={install} label="Copy the install command" />
+            </div>
+          </div>
+
+          <p className="hero__why">
+            Reaching for a framework only sometimes? That&rsquo;s the point.{' '}
+            <Link className="link" href="/docs/why">
+              Read why
+            </Link>
+          </p>
+        </div>
+
+        <HeroFigure />
+      </div>
+
+      <div className="hero__base">
+        <div className="notes">
+          <h2 className="notes__k">General notes</h2>
+          <ol className="notes__list">
+            <li>
+              <span>Requires Livewire 4, PHP 8.3+ and Laravel 11 or 12.</span>
+            </li>
+            <li>
+              <span>The frontend ships inside the Composer package and is wired in with a Vite alias. There is
+              no npm package to install.</span>
+            </li>
+            <li>
+              <span>Components are discovered from <code>resources/js/mesh</code>. Each one is its own lazy chunk, so
+              heavy libraries load only on pages that render that island.</span>
+            </li>
+            <li>
+              <span>You ship only the renderers you register in <code>app.ts</code>.</span>
+            </li>
+            <li>
+              <span>MIT licence.</span>
+            </li>
+          </ol>
+        </div>
+
+        <TitleBlock
+          label="Title block"
+          title="Mesh"
+          rows={[
+            [
+              { label: 'Package', value: 'ethanbarlo/mesh', span: 'half' },
+              { label: 'Renderers', value: 'React · Vue · Svelte', span: 'half' },
+            ],
+            [
+              { label: 'Requires', value: 'Livewire 4', span: 'third' },
+              { label: 'Runtime', value: 'Vite alias @mesh', span: 'third' },
+              {
+                label: 'Source',
+                value: (
+                  <a href={githubUrl} target="_blank" rel="noreferrer">
+                    GitHub
+                  </a>
+                ),
+                span: 'third',
+              },
+            ],
+            [
+              { label: 'Dwg no.', value: drawingNo },
+              { label: 'Sheet', value: `01 of ${pad2(sheetCount)}` },
+              { label: 'Rev', value: packageVersion },
+              { label: 'Date', value: <time dateTime={date.iso}>{date.label}</time> },
+              { label: 'Scale', value: '1:1' },
+              { label: 'Licence', value: 'MIT' },
+            ],
+          ]}
+        />
+      </div>
+    </Sheet>
+  );
+}
+
+function AnatomySheet() {
+  return (
+    <Sheet id="anatomy">
+      <SheetHead id="anatomy" meta="make:mesh · 1 id · 2 halves" />
+      <p className="sheet-intro">
+        A Mesh component is one component in two halves: a Livewire class that owns the state, and a React, Vue
+        or Svelte component that renders it. One Blade tag mounts both.
+      </p>
+      <ol className="snotes">
+        <li>
+          <span><code>php artisan make:mesh Counter</code> scaffolds both halves with matching names.</span>
+        </li>
+        <li>
+          <span>The renderer comes from the entry&rsquo;s extension: <code>.tsx</code>, <code>.vue</code> or{' '}
+          <code>.svelte</code>.</span>
+        </li>
+        <li>
+          <span>Ids are case-sensitive. A mismatch that works on macOS breaks on Linux.</span>
+        </li>
+      </ol>
+      <Anatomy />
+    </Sheet>
+  );
+}
+
+function RenderSheet() {
+  return (
+    <Sheet id="render">
+      <SheetHead id="render" meta="5 steps · Livewire 4 hooks" />
+      <p className="sheet-intro">
+        What happens between the Blade tag and a live island, and how the two sides stay in step afterwards.
+      </p>
+      <RenderFlow />
+    </Sheet>
+  );
+}
+
+function ChannelsSheet() {
+  return (
+    <Sheet id="channels">
+      <SheetHead id="channels" meta="7 channels · 3 renderers" />
+      <p className="sheet-intro">
+        Data crosses the boundary through a handful of channels. The names are the same in every framework; only
+        the shape of the value changes. <code>wire</code> is <code>useWire()</code>, from the same package as the
+        other hooks.
+      </p>
+      <Channels />
+    </Sheet>
+  );
+}
+
+function EcosystemSheet() {
+  return (
+    <Sheet id="ecosystem">
+      <SheetHead id="ecosystem" meta="6 details · live demo" />
+      <p className="sheet-intro">
+        An island can use any library on npm. These run on the live demo, which is built with React; the{' '}
+        <a className="link" href={`${githubUrl}/tree/main/apps/demo-vue`} target="_blank" rel="noreferrer">
+          Vue
+        </a>{' '}
+        and{' '}
+        <a className="link" href={`${githubUrl}/tree/main/apps/demo-svelte`} target="_blank" rel="noreferrer">
+          Svelte
+        </a>{' '}
+        demos mirror them in the repository.
+      </p>
+      <Details />
+    </Sheet>
+  );
+}
+
+function FitSheet() {
+  return (
+    <Sheet id="fit">
+      <SheetHead id="fit" meta="4 options · 6 requirements" />
+      <p className="sheet-intro">
+        Mesh is for the parts of a Livewire app that want a JavaScript framework. It is not a way to turn Livewire
+        into a single-page app.
+      </p>
+      <Fit />
+    </Sheet>
+  );
+}
+
+function InstallSheet() {
+  return (
+    <Sheet id="install" className="sheet--last">
+      <SheetHead id="install" meta="Composer · Vite · 4 steps" />
+      <p className="sheet-intro">Four steps in a Laravel 11 or 12 app with Livewire 4 and PHP 8.3+.</p>
+      <Install />
+    </Sheet>
+  );
+}
 
 export default function HomePage() {
   return (
-    <main className="flex-1 px-6 py-16">
-      <div className="w-full max-w-5xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
-        <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-fd-border bg-fd-card text-xs font-medium uppercase tracking-widest text-fd-muted-foreground mb-6">
-            <span className="h-1.5 w-1.5 rounded-full bg-rose-400" />
-            For Livewire 4
-          </div>
-          <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight mb-4">
-            One Mesh tag.{' '}
-            <span className="text-fd-muted-foreground">
-              The whole JavaScript ecosystem.
-            </span>
-          </h1>
-          <p className="text-lg text-fd-muted-foreground leading-relaxed mb-8">
-            Mesh renders React, Vue, and Svelte components as islands inside
-            Livewire views — props, two-way state, server actions, bundling,
-            and lifecycle handled for you, so you can just focus on building.
-          </p>
-          <div className="flex flex-wrap items-center gap-3">
-            <Link
-              href="/docs"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-fd-foreground text-fd-background font-medium hover:opacity-90 transition-opacity"
-            >
-              Get started
-            </Link>
-            <a
-              href={demoUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-fd-border text-fd-muted-foreground font-medium hover:text-fd-foreground hover:bg-fd-accent transition-colors"
-            >
-              See the live demo
-            </a>
-          </div>
-          <p className="mt-6 text-sm text-fd-muted-foreground">
-            Reaching for a framework only sometimes?{' '}
-            <Link
-              href="/docs/why"
-              className="font-medium underline underline-offset-4 hover:text-fd-foreground"
-            >
-              That&apos;s the point — read why.
-            </Link>
-          </p>
-        </div>
-
-        <HeroDiagram />
-      </div>
-
-      <div className="w-full max-w-5xl mx-auto mt-20">
-        <div className="grid md:grid-cols-3 gap-3">
-          <div className="rounded-xl border border-fd-border bg-fd-card overflow-hidden">
-            <div className="px-4 py-2 border-b border-fd-border text-xs font-mono text-fd-muted-foreground">
-              app/Mesh/Counter.php
-            </div>
-            <pre className="p-4 text-sm font-mono leading-relaxed overflow-x-auto">
-              <code>
-                <span className="text-fd-muted-foreground">
-                  class Counter extends{' '}
-                </span>
-                <span>Mesh\Component</span>
-                {'\n'}
-                <span className="text-fd-muted-foreground">{'{'}</span>
-                {'\n    '}
-                <span className="text-fd-muted-foreground">
-                  public function{' '}
-                </span>
-                <span>props()</span>
-                <span className="text-fd-muted-foreground">: array</span>
-                {'\n    '}
-                <span className="text-fd-muted-foreground">{'{'}</span>
-                {'\n        '}
-                <span className="text-fd-muted-foreground">return </span>
-                <span>[&apos;start&apos; =&gt; $this-&gt;count]</span>
-                <span className="text-fd-muted-foreground">;</span>
-                {'\n    '}
-                <span className="text-fd-muted-foreground">{'}'}</span>
-                {'\n'}
-                <span className="text-fd-muted-foreground">{'}'}</span>
-              </code>
-            </pre>
-          </div>
-          <div className="rounded-xl border border-fd-border bg-fd-card overflow-hidden">
-            <div className="px-4 py-2 border-b border-fd-border text-xs font-mono text-fd-muted-foreground">
-              resources/js/mesh/Counter/index.tsx
-            </div>
-            <pre className="p-4 text-sm font-mono leading-relaxed overflow-x-auto">
-              <code>
-                <span className="text-fd-muted-foreground">
-                  export default function{' '}
-                </span>
-                <span>Counter</span>
-                <span className="text-fd-muted-foreground">
-                  ({'{'} start {'}'}) {'{'}
-                </span>
-                {'\n    '}
-                <span className="text-fd-muted-foreground">
-                  const [count, setCount] ={' '}
-                </span>
-                <span>useEntangle(&apos;count&apos;)</span>
-                <span className="text-fd-muted-foreground">;</span>
-                {'\n    '}
-                <span className="text-fd-muted-foreground">…</span>
-                {'\n'}
-                <span className="text-fd-muted-foreground">{'}'}</span>
-              </code>
-            </pre>
-          </div>
-          <div className="rounded-xl border border-fd-border bg-fd-card overflow-hidden">
-            <div className="px-4 py-2 border-b border-fd-border text-xs font-mono text-fd-muted-foreground">
-              anywhere.blade.php
-            </div>
-            <pre className="p-4 text-sm font-mono leading-relaxed overflow-x-auto">
-              <code>
-                <span className="text-rose-500 dark:text-rose-400">
-                  &lt;mesh:counter
-                </span>{' '}
-                <span>wire:model=&quot;count&quot;</span>{' '}
-                <span className="text-rose-500 dark:text-rose-400">/&gt;</span>
-              </code>
-            </pre>
-          </div>
-        </div>
-      </div>
-    </main>
+    <div className="home">
+      <Frame />
+      <HomeMotion />
+      <main id="main">
+        <TitleSheet />
+        <AnatomySheet />
+        <RenderSheet />
+        <ChannelsSheet />
+        <EcosystemSheet />
+        <FitSheet />
+        <InstallSheet />
+      </main>
+      <HomeFooter />
+    </div>
   );
 }

@@ -1,0 +1,525 @@
+/* ==========================================================================
+   Hero · Fig. 1 — wiring schematic
+   Livewire board → Mesh connector → island socket. Tokens only; every class
+   carries the hl-schematic- prefix.
+   ========================================================================== */
+
+.hl-schematic {
+  container: hl-schematic / inline-size;
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  margin: 0;
+}
+
+.hl-schematic-stage {
+  position: relative;
+}
+.hl-schematic-stage--narrow {
+  display: none;
+}
+@container hl-schematic (max-width: 459px) {
+  .hl-schematic-stage--wide {
+    display: none;
+  }
+  .hl-schematic-stage--narrow {
+    display: block;
+    max-width: 380px;
+    margin-inline: auto;
+  }
+}
+
+.hl-schematic-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  font-family: var(--font-mono);
+  shape-rendering: geometricPrecision;
+}
+
+/* ---------- Line vocabulary ---------- */
+.hl-schematic-ln {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1;
+  stroke-linejoin: miter;
+  transition:
+    stroke var(--t-med) ease,
+    stroke-width var(--t-med) ease,
+    opacity var(--t-med) ease;
+}
+.hl-schematic-fine {
+  stroke: var(--line-3);
+}
+.hl-schematic-faint {
+  stroke: var(--line-2);
+}
+.hl-schematic-soft {
+  stroke: var(--ink-3);
+}
+.hl-schematic-wall {
+  stroke-width: 1.5;
+}
+.hl-schematic-grid {
+  stroke: var(--grid);
+}
+.hl-schematic-center {
+  stroke: var(--line-3);
+  stroke-dasharray: 14 3 2 3;
+}
+.hl-schematic-blue {
+  stroke: var(--blueline);
+  stroke-dasharray: 4 3;
+}
+.hl-schematic-blue-head {
+  fill: var(--blueline);
+}
+.hl-schematic-body {
+  fill: var(--paper);
+}
+.hl-schematic-chip-body {
+  fill: var(--paper-2);
+}
+.hl-schematic-fill-ink {
+  fill: var(--ink);
+}
+.hl-schematic-fill-acc {
+  fill: var(--accent);
+}
+
+/* ---------- Annotation voice ---------- */
+.hl-schematic-k {
+  fill: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  transition:
+    fill var(--t-med) ease,
+    opacity var(--t-med) ease;
+}
+.hl-schematic-xs {
+  font-size: 7.5px;
+  letter-spacing: 0.1em;
+}
+.hl-schematic-sm {
+  font-size: 8.5px;
+}
+.hl-schematic-lg {
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+}
+.hl-schematic-ref {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+.hl-schematic-caps {
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.hl-schematic-ink {
+  fill: var(--ink);
+}
+.hl-schematic-ink2 {
+  fill: var(--ink-2);
+}
+.hl-schematic-dim {
+  fill: var(--ink-3);
+}
+.hl-schematic-acc {
+  fill: var(--accent-ink);
+}
+.hl-schematic-blue-k {
+  fill: var(--blueline);
+}
+.hl-schematic-strong {
+  font-weight: 500;
+}
+.hl-schematic-mid {
+  text-anchor: middle;
+}
+.hl-schematic-end {
+  text-anchor: end;
+}
+.hl-schematic-t {
+  font-family: var(--font-sans);
+}
+.hl-schematic-title {
+  fill: var(--ink);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.hl-schematic-svg--narrow .hl-schematic-k {
+  font-size: 10px;
+}
+.hl-schematic-svg--narrow .hl-schematic-xs {
+  font-size: 8px;
+}
+.hl-schematic-svg--narrow .hl-schematic-sm {
+  font-size: 9px;
+}
+.hl-schematic-svg--narrow .hl-schematic-lg,
+.hl-schematic-svg--narrow .hl-schematic-ref {
+  font-size: 10.5px;
+}
+.hl-schematic-svg--narrow .hl-schematic-title {
+  font-size: 14px;
+}
+
+/* ---------- Parts ---------- */
+.hl-schematic-term,
+.hl-schematic-rec,
+.hl-schematic-contact,
+.hl-schematic-pivot,
+.hl-schematic-balloon {
+  fill: var(--paper);
+  stroke: var(--ink);
+  stroke-width: 1;
+  transition:
+    fill var(--t-med) ease,
+    stroke var(--t-med) ease,
+    opacity var(--t-med) ease;
+}
+.hl-schematic-rec {
+  stroke: var(--ink-2);
+}
+.hl-schematic-balloon {
+  stroke: var(--ink-3);
+}
+.hl-schematic-balloon-k {
+  fill: var(--ink);
+}
+.hl-schematic-arrow-ln {
+  stroke: var(--ink-2);
+}
+.hl-schematic-arrow-head {
+  fill: var(--ink-2);
+  transition: fill var(--t-med) ease;
+}
+.hl-schematic-glyph {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1;
+}
+.hl-schematic-glyph-dot {
+  fill: var(--ink);
+  stroke: none;
+}
+.hl-schematic-jrow-bg,
+.hl-schematic-lrow-bg {
+  fill: transparent;
+  transition: fill var(--t-med) ease;
+}
+.hl-schematic-pin-dot {
+  fill: var(--ink);
+  transition: fill var(--t-med) ease;
+}
+.hl-schematic-pin-dot.hl-schematic-is-on {
+  fill: var(--accent);
+}
+.hl-schematic-reg-val {
+  font-variant-numeric: tabular-nums;
+  animation: hl-schematic-tick 900ms ease-out both;
+}
+@keyframes hl-schematic-tick {
+  from {
+    fill: var(--accent-ink);
+  }
+}
+.hl-schematic-lrow {
+  cursor: default;
+}
+.hl-schematic-lrow-bg {
+  pointer-events: all;
+}
+
+/* SW1 */
+.hl-schematic-throw-label {
+  fill: var(--ink-3);
+}
+.hl-schematic-throw.hl-schematic-is-hover .hl-schematic-throw-label {
+  fill: var(--ink-2);
+}
+.hl-schematic-throw.hl-schematic-is-sel .hl-schematic-throw-label {
+  fill: var(--ink);
+  font-weight: 500;
+}
+.hl-schematic-throw.hl-schematic-is-sel .hl-schematic-contact {
+  fill: var(--ink);
+}
+.hl-schematic-blade {
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  transition: transform 460ms var(--ease-spring);
+}
+
+/* ---------- Active pin: one channel lit, the rest recede ---------- */
+.hl-schematic-is-dim {
+  opacity: 0.26;
+}
+.hl-schematic-term.hl-schematic-is-dim,
+.hl-schematic-rec.hl-schematic-is-dim {
+  opacity: 1;
+  stroke: var(--line-2);
+}
+.hl-schematic-trace.hl-schematic-is-on,
+.hl-schematic-leg.hl-schematic-is-on {
+  stroke: var(--accent);
+  stroke-width: 1.5;
+}
+.hl-schematic-pin-name.hl-schematic-is-on,
+.hl-schematic-jrow.hl-schematic-is-on .hl-schematic-sig,
+.hl-schematic-lrow.hl-schematic-is-on .hl-schematic-sig,
+.hl-schematic-lrow.hl-schematic-is-on .hl-schematic-fn,
+.hl-schematic-lrow.hl-schematic-is-on .hl-schematic-balloon-k {
+  fill: var(--accent-ink);
+}
+.hl-schematic-jrow.hl-schematic-is-on .hl-schematic-jrow-bg,
+.hl-schematic-lrow.hl-schematic-is-on .hl-schematic-lrow-bg {
+  fill: var(--accent-wash);
+}
+.hl-schematic-term.hl-schematic-is-on,
+.hl-schematic-rec.hl-schematic-is-on,
+.hl-schematic-lrow.hl-schematic-is-on .hl-schematic-balloon,
+.hl-schematic-reg.hl-schematic-is-on .hl-schematic-ln {
+  stroke: var(--accent);
+}
+.hl-schematic-is-on .hl-schematic-arrow-ln {
+  stroke: var(--accent);
+}
+.hl-schematic-is-on .hl-schematic-arrow-head {
+  fill: var(--accent);
+}
+.hl-schematic-readout {
+  animation: hl-schematic-fade 200ms ease both;
+}
+
+/* ---------- Draw-in (stroke-dashoffset on pathLength=1) ---------- */
+.hl-schematic-d {
+  animation: hl-schematic-draw 900ms var(--ease-out) var(--dl, 0ms) backwards;
+}
+@keyframes hl-schematic-draw {
+  from {
+    stroke-dasharray: 1 1;
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dasharray: 1 1;
+    stroke-dashoffset: 0;
+  }
+}
+.hl-schematic-fade {
+  animation: hl-schematic-fade 520ms ease var(--dl, 0ms) backwards;
+}
+@keyframes hl-schematic-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+/* The island seats into X1 (on mount and on every swap). */
+.hl-schematic-seat {
+  animation: hl-schematic-seat 440ms var(--ease-out) var(--seat, 0ms) backwards;
+}
+@keyframes hl-schematic-seat {
+  from {
+    opacity: 0;
+    transform: translateY(-9px);
+  }
+}
+
+/* A chunk travels the lazy path the first time a renderer is used. */
+.hl-schematic-packet {
+  fill: var(--blueline);
+  opacity: 0;
+  animation: hl-schematic-fetch 500ms var(--ease-in-out) both;
+}
+.hl-schematic-packet--first {
+  animation-delay: 620ms;
+}
+@keyframes hl-schematic-fetch {
+  0% {
+    opacity: 0;
+    transform: translateY(0);
+  }
+  15%,
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(var(--dy));
+  }
+}
+
+/* ---------- Signals ---------- */
+.hl-schematic-pulse {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-dasharray: 14px 4000px;
+  stroke-dashoffset: 14px;
+  pointer-events: none;
+}
+/* Ambient loop (7.2s): PROPS →, then ENTANGLE →, then ENTANGLE ←. */
+.hl-schematic-amb {
+  animation: hl-schematic-amb-a 7.2s linear infinite backwards;
+  transition: opacity var(--t-fast) ease;
+}
+.hl-schematic-amb-props {
+  animation-delay: 1.8s;
+}
+.hl-schematic-amb-ent-r {
+  animation-delay: 3.6s;
+}
+/* Travels at the end of its cycle, so each iteration ends as it lands in U1
+   (that event ticks the $count register). */
+.hl-schematic-amb-ent-l {
+  animation-name: hl-schematic-amb-z;
+  animation-delay: 0.2s;
+}
+.hl-schematic-is-paused .hl-schematic-amb {
+  animation-play-state: paused;
+  opacity: 0;
+}
+@keyframes hl-schematic-amb-a {
+  0% {
+    stroke-dashoffset: 14px;
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+  22.2%,
+  100% {
+    stroke-dashoffset: calc(var(--d) * -1);
+  }
+}
+@keyframes hl-schematic-amb-z {
+  0%,
+  77.8% {
+    stroke-dashoffset: 14px;
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+  100% {
+    stroke-dashoffset: calc(var(--d) * -1);
+  }
+}
+/* J1 labels glow while a pulse is inside the connector (same 7.2s cycle). */
+.hl-schematic-blink {
+  opacity: 0;
+  animation: hl-schematic-blink-props 7.2s linear 1.8s infinite backwards;
+}
+.hl-schematic-blink-ent {
+  animation-name: hl-schematic-blink-ent;
+}
+.hl-schematic-has-active .hl-schematic-blink {
+  animation-play-state: paused;
+  visibility: hidden;
+}
+@keyframes hl-schematic-blink-props {
+  0%,
+  6.5%,
+  16%,
+  100% {
+    opacity: 0;
+  }
+  9.5%,
+  12.5% {
+    opacity: 1;
+  }
+}
+@keyframes hl-schematic-blink-ent {
+  0%,
+  31.5%,
+  41%,
+  62.5%,
+  72%,
+  100% {
+    opacity: 0;
+  }
+  34.5%,
+  37.5%,
+  65.5%,
+  68.5% {
+    opacity: 1;
+  }
+}
+/* Active pin: its own signal, in its own direction. */
+.hl-schematic-run {
+  animation: hl-schematic-run 2.2s linear infinite backwards;
+}
+.hl-schematic-run-late {
+  animation-delay: 1.1s;
+}
+@keyframes hl-schematic-run {
+  0% {
+    stroke-dashoffset: 14px;
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+  50%,
+  100% {
+    stroke-dashoffset: calc(var(--d) * -1);
+  }
+}
+
+/* ---------- Controls (real buttons over the drawing) ---------- */
+.hl-schematic-hits {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.hl-schematic-hit {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  pointer-events: auto;
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.hl-schematic-hit:focus {
+  outline: none;
+}
+.hl-schematic-hit:focus-visible {
+  outline: 1.5px dashed var(--accent-ink);
+  outline-offset: 1px;
+}
+
+.hl-schematic-vh {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.hl-schematic > .fig-cap {
+  margin-top: 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hl-schematic-d,
+  .hl-schematic-fade,
+  .hl-schematic-seat,
+  .hl-schematic-readout,
+  .hl-schematic-reg-val {
+    animation: none;
+  }
+  .hl-schematic-pulse,
+  .hl-schematic-packet,
+  .hl-schematic-blink {
+    display: none;
+  }
+  .hl-schematic-blade {
+    transition: none;
+  }
+}
