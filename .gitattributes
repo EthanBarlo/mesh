@@ -11,3 +11,4 @@
 /tests              export-ignore
 /demo               export-ignore
 /tsconfig.json      export-ignore
+/.claude            export-ignore
