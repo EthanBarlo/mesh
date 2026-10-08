@@ -134,10 +134,7 @@ All of these are in `resources/boost/skills/mesh-development/references/`.
     (`[data-theme-toggle]`, `svg.bg-fd-accent`). Recheck it after Fumadocs
     upgrades.
 25. **The Alpine callout in Fig. 1 is tiny on phones** (about 7px).
-26. **`/hero-preview` is publicly reachable.** It's the earlier hero
-    exploration page. Remove the route, or noindex it, before deploying if it
-    isn't wanted.
-27. **Claims documented from source but not run live.** Confirm these in a
+26. **Claims documented from source but not run live.** Confirm these in a
     real app:
     - the symptom of a missing `@livewireScriptConfig` (double start, then
       failing requests)
