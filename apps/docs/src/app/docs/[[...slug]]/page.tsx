@@ -1,9 +1,7 @@
 import { getPageImage, getPageMarkdownUrl, source } from '@/lib/source';
 import {
   DocsBody,
-  DocsDescription,
   DocsPage,
-  DocsTitle,
   MarkdownCopyButton,
   ViewOptionsPopover,
 } from 'fumadocs-ui/layouts/docs/page';
@@ -11,7 +9,13 @@ import { notFound } from 'next/navigation';
 import { getMDXComponents } from '@/components/mdx';
 import type { Metadata } from 'next';
 import { createRelativeLink } from 'fumadocs-ui/mdx';
-import { gitConfig } from '@/lib/shared';
+import { docsContentDir, gitConfig, packageVersion } from '@/lib/shared';
+import { getSheetInfo, pad2 } from '@/lib/sheet';
+import { TitleBlock } from '@/components/drafting/title-block';
+
+function formatDate(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
 
 export default async function Page(props: PageProps<'/docs/[[...slug]]'>) {
   const params = await props.params;
@@ -20,17 +24,41 @@ export default async function Page(props: PageProps<'/docs/[[...slug]]'>) {
 
   const MDX = page.data.body;
   const markdownUrl = getPageMarkdownUrl(page).url;
+  const sheet = getSheetInfo(page.url);
+  const sourcePath = `${docsContentDir}/${page.path}`;
+  const githubUrl = `https://github.com/${gitConfig.user}/${gitConfig.repo}/blob/${gitConfig.branch}/${sourcePath}`;
+  const lastModified = page.data.lastModified
+    ? new Date(page.data.lastModified)
+    : null;
 
   return (
-    <DocsPage toc={page.data.toc} full={page.data.full}>
-      <DocsTitle>{page.data.title}</DocsTitle>
-      <DocsDescription className="mb-0">{page.data.description}</DocsDescription>
-      <div className="flex flex-row gap-2 items-center border-b pb-6">
+    <DocsPage
+      toc={page.data.toc}
+      full={page.data.full}
+      // The sheet header already says where you are.
+      breadcrumb={{ enabled: false }}
+    >
+      <header className="sheet-head mb-2">
+        <p className="sheet-head__no k k--caps">
+          Sheet {pad2(sheet.number)} / {pad2(sheet.total)}
+          {sheet.section ? ` · ${sheet.section}` : null}
+        </p>
+        <h1 className="sheet-head__title">{page.data.title}</h1>
+        <p className="sheet-head__meta k k--caps">
+          {sheet.drawingNo}
+          <br />
+          Rev {packageVersion}
+        </p>
+        <span className="sheet-head__rule" aria-hidden="true" />
+      </header>
+      {page.data.description ? (
+        <p className="max-w-[44rem] text-lg leading-relaxed text-ink-2 text-pretty">
+          {page.data.description}
+        </p>
+      ) : null}
+      <div className="flex flex-row flex-wrap gap-2 items-center pb-2">
         <MarkdownCopyButton markdownUrl={markdownUrl} />
-        <ViewOptionsPopover
-          markdownUrl={markdownUrl}
-          githubUrl={`https://github.com/${gitConfig.user}/${gitConfig.repo}/blob/${gitConfig.branch}/content/docs/${page.path}`}
-        />
+        <ViewOptionsPopover markdownUrl={markdownUrl} githubUrl={githubUrl} />
       </div>
       <DocsBody>
         <MDX
@@ -40,6 +68,44 @@ export default async function Page(props: PageProps<'/docs/[[...slug]]'>) {
           })}
         />
       </DocsBody>
+      <TitleBlock
+        className="mt-12"
+        label="Title block"
+        title={page.data.title}
+        rows={[
+          [
+            { label: 'Section', value: sheet.section ?? 'Mesh', span: 'half' },
+            { label: 'Package', value: 'ethanbarlo/mesh', span: 'half' },
+          ],
+          [
+            { label: 'Dwg no.', value: sheet.drawingNo },
+            {
+              label: 'Sheet',
+              value: `${pad2(sheet.number)} of ${pad2(sheet.total)}`,
+            },
+            { label: 'Rev', value: packageVersion },
+            {
+              label: 'Updated',
+              value: lastModified ? (
+                <time dateTime={lastModified.toISOString()}>
+                  {formatDate(lastModified)}
+                </time>
+              ) : (
+                '—'
+              ),
+            },
+            { label: 'Format', value: 'MDX' },
+            {
+              label: 'Source',
+              value: (
+                <a href={githubUrl} target="_blank" rel="noreferrer noopener">
+                  Edit ↗
+                </a>
+              ),
+            },
+          ],
+        ]}
+      />
     </DocsPage>
   );
 }

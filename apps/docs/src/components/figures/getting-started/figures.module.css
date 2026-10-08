@@ -1,0 +1,527 @@
+/* ==========================================================================
+   Getting started figures
+   Drawn with the house vocabulary (see apps/docs/DESIGN.md): paper boxes,
+   graphite lines, mono annotations, one accent. Tokens only, so both
+   themes work. Line classes (.ln, .ln--fine, …) come from drafting.css.
+   ========================================================================== */
+
+/* ---------- Responsive drawings: wide + narrow layouts ---------- */
+.fluid {
+  container-type: inline-size;
+}
+.wide {
+  display: block;
+}
+.narrow {
+  display: none;
+}
+@container (max-width: 519px) {
+  .wide {
+    display: none;
+  }
+  .narrow {
+    display: block;
+  }
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-inline: auto;
+  overflow: visible;
+  font-family: var(--font-mono);
+}
+.svgWide {
+  max-width: 680px;
+}
+.svgNarrow {
+  max-width: 400px;
+}
+
+/* ---------- Text ---------- */
+.k {
+  fill: var(--ink-3);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+}
+.kInk {
+  fill: var(--ink-2);
+}
+.kAccent {
+  fill: var(--accent-ink);
+}
+.title {
+  fill: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.titleMono {
+  fill: var(--ink);
+  font-size: 12px;
+  font-weight: 500;
+}
+.sub {
+  fill: var(--ink-2);
+  font-size: 10.5px;
+}
+.code {
+  fill: var(--ink);
+  font-size: 11px;
+}
+.str {
+  fill: var(--ink);
+  font-size: 12px;
+}
+.strDim {
+  fill: var(--ink-3);
+}
+.tagText {
+  fill: var(--ink);
+  font-size: 13px;
+  font-weight: 500;
+}
+.idText {
+  fill: var(--ink);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* ---------- Shapes ---------- */
+.bg {
+  fill: var(--paper);
+}
+.box {
+  fill: var(--paper);
+  stroke: var(--ink);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.boxAccent {
+  stroke: var(--accent);
+}
+.arrow {
+  fill: var(--ink);
+}
+.arrowFine {
+  fill: var(--line-3);
+}
+.arrowAccent {
+  fill: var(--accent);
+}
+.dot {
+  fill: var(--ink);
+}
+.cornerMark {
+  fill: var(--accent);
+}
+
+/* ==========================================================================
+   Fig · Render lifecycle (interactive stepper)
+   ========================================================================== */
+
+.lifecycle {
+  /* Bleed to the edges of the <Figure> stage (its padding is this clamp). */
+  container-type: inline-size;
+  margin: calc(-1 * clamp(16px, 3vw, 28px));
+}
+.stage {
+  padding: clamp(14px, 2.6vw, 28px) clamp(10px, 2vw, 22px);
+}
+
+/* Nodes */
+.node {
+  transition: opacity var(--t-med) ease;
+}
+.nodeBox {
+  fill: var(--paper);
+  stroke: var(--ink);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  transition: stroke var(--t-med) ease;
+}
+.halo {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  vector-effect: non-scaling-stroke;
+  opacity: 0;
+  transition: opacity var(--t-fast) ease;
+}
+.grip {
+  fill: var(--accent);
+  opacity: 0;
+  transition: opacity var(--t-fast) ease;
+}
+.denyMark {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+  opacity: 0;
+  transition: opacity var(--t-med) ease;
+}
+.node.on .nodeBox {
+  stroke: var(--accent);
+}
+.node.on .halo,
+.node.on .grip {
+  opacity: 1;
+}
+.node.on .k {
+  fill: var(--accent-ink);
+}
+.dim {
+  opacity: 0.36;
+}
+.deny .denyMark {
+  opacity: 1;
+}
+
+/* Edges */
+.edge {
+  fill: none;
+  stroke: var(--line-3);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  transition:
+    stroke var(--t-med) ease,
+    opacity var(--t-med) ease;
+}
+.edge.on {
+  stroke: var(--accent);
+}
+.edge.dim,
+.arrowhead.dim,
+.elabel.dim {
+  opacity: 0.32;
+}
+.arrowhead {
+  fill: var(--line-3);
+  transition:
+    fill var(--t-med) ease,
+    opacity var(--t-med) ease;
+}
+.arrowhead.on {
+  fill: var(--accent);
+}
+.elabel {
+  transition: opacity var(--t-med) ease;
+}
+.elabel text {
+  fill: var(--ink-3);
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  transition: fill var(--t-med) ease;
+}
+.elabel.on text {
+  fill: var(--accent-ink);
+}
+
+/* Lanes */
+.laneK {
+  fill: var(--ink-3);
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+}
+
+/* The wrapper element (DOM lane) */
+.wrapper {
+  transition: opacity var(--t-med) ease;
+}
+.wrapperBox {
+  fill: var(--paper);
+  stroke: var(--ink);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  transition: stroke var(--t-med) ease;
+}
+.wrapper.on .wrapperBox {
+  stroke: var(--accent);
+}
+.wrapper.on .wrapperLabel text {
+  fill: var(--accent-ink);
+}
+.wrapper.removed .wrapperBox,
+.wrapper.removed .partBox {
+  stroke-dasharray: 5 4;
+}
+.wrapper.removed {
+  opacity: 0.5;
+}
+.row rect {
+  fill: var(--accent-wash);
+  opacity: 0;
+  transition: opacity var(--t-med) ease;
+}
+.row text {
+  fill: var(--ink-2);
+  font-size: 10.5px;
+  transition: fill var(--t-med) ease;
+}
+.row.on rect {
+  opacity: 1;
+}
+.row.on text {
+  fill: var(--accent-ink);
+}
+.partBox {
+  fill: var(--paper);
+  stroke: var(--ink-2);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  transition: stroke var(--t-med) ease;
+}
+.partDashed {
+  stroke-dasharray: 4 3;
+}
+.part.on .partBox {
+  stroke: var(--accent);
+}
+.part.on .partLabel {
+  fill: var(--accent-ink);
+}
+.partLabel {
+  fill: var(--ink);
+  font-size: 10.5px;
+  transition: fill var(--t-med) ease;
+}
+
+/* The mini island inside .mesh-root */
+.island {
+  opacity: 0;
+  transition: opacity 320ms var(--ease-out);
+}
+.island.shown {
+  opacity: 1;
+}
+.islandBox {
+  fill: var(--paper-2);
+  stroke: var(--ink);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.islandValue {
+  fill: var(--paper);
+  stroke: var(--ink);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.island.updated .islandValue {
+  animation: value-flash 1100ms var(--ease-out) both;
+}
+@keyframes value-flash {
+  0%,
+  35% {
+    stroke: var(--accent);
+    fill: var(--accent-wash);
+  }
+}
+.islandText {
+  fill: var(--ink);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* Packets */
+.packet {
+  pointer-events: none;
+}
+.packetDot {
+  fill: var(--accent);
+  stroke: var(--paper);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+.packetDoc {
+  fill: var(--paper);
+  stroke: var(--accent);
+  stroke-width: 1.25;
+  vector-effect: non-scaling-stroke;
+}
+.packetDeny {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.75;
+  vector-effect: non-scaling-stroke;
+}
+
+/* ---------- Side: step panel + stepper ---------- */
+.side {
+  display: grid;
+  gap: 14px;
+  padding: 16px clamp(14px, 3vw, 24px) 18px;
+  border-top: 1px solid var(--line-2);
+  background: var(--paper);
+}
+.panelK {
+  color: var(--accent-ink);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+.panelTitle {
+  margin-top: 2px;
+  color: var(--ink);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.panelBody {
+  max-width: 46rem;
+  min-height: 6.4em;
+  margin-top: 4px;
+  color: var(--ink-2);
+  font-size: 0.875rem;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+.panelBody code {
+  padding: 0 4px;
+  border: 1px solid var(--line-2);
+  background: var(--paper-2);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.84em;
+  white-space: nowrap;
+}
+.enter > * {
+  animation: panel-in 260ms var(--ease-out) both;
+}
+.enter > :nth-child(2) {
+  animation-delay: 30ms;
+}
+.enter > :nth-child(3) {
+  animation-delay: 60ms;
+}
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.list {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.list li {
+  display: flex;
+  align-items: center;
+}
+.list li + li::before {
+  content: '';
+  width: 8px;
+  height: 1px;
+  background: var(--ink);
+}
+.step,
+.iconBtn {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  transition:
+    background-color var(--t-fast) ease,
+    color var(--t-fast) ease,
+    transform var(--t-fast) var(--ease-out);
+}
+.step:active,
+.iconBtn:active {
+  transform: scale(0.94);
+}
+.step.done {
+  color: var(--accent-ink);
+}
+.step[aria-current='step'] {
+  background: var(--ink);
+  color: var(--paper);
+  box-shadow: 3px 3px 0 var(--accent);
+}
+.iconBtn[aria-disabled='true'] {
+  border-color: var(--line-2);
+  color: var(--line-3);
+  cursor: default;
+}
+.iconBtn[aria-disabled='true']:active {
+  transform: none;
+}
+.replay {
+  margin-left: auto;
+}
+.replay svg {
+  transition: transform 400ms var(--ease-out);
+}
+.replay:active svg {
+  transform: rotate(-90deg);
+}
+.step:focus-visible,
+.iconBtn:focus-visible {
+  outline: 2px solid var(--accent-ink);
+  outline-offset: 2px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .step:not([aria-current='step']):hover {
+    background: var(--paper-2);
+  }
+  .iconBtn:not([aria-disabled='true']):hover {
+    background: var(--ink);
+    color: var(--paper);
+  }
+}
+
+/* Narrow figure: the numbered list gives way to prev / next. */
+@container (max-width: 459px) {
+  .list {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .node,
+  .nodeBox,
+  .halo,
+  .grip,
+  .denyMark,
+  .edge,
+  .arrowhead,
+  .elabel,
+  .elabel text,
+  .wrapper,
+  .wrapperBox,
+  .row rect,
+  .row text,
+  .partBox,
+  .partLabel,
+  .island,
+  .step,
+  .iconBtn,
+  .replay svg {
+    transition: none;
+  }
+  .enter > *,
+  .island.updated .islandValue {
+    animation: none;
+  }
+}

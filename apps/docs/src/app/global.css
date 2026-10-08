@@ -2,6 +2,119 @@
 @import 'fumadocs-ui/css/neutral.css';
 @import 'fumadocs-ui/css/preset.css';
 
+/* ==========================================================================
+   Mesh — drawing set MESH-001
+   Warm drafting paper, graphite ink, one safety-orange accent.
+   Dark mode is the same sheet under a lamp: graphite paper, chalk ink.
+   ========================================================================== */
+
+@theme {
+  --font-sans: var(--font-inter-tight), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+
+  /* Drawn, not rounded: every Fumadocs radius collapses to a square corner. */
+  --radius-xs: 0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+  --radius-3xl: 0px;
+  --radius-4xl: 0px;
+
+  --color-paper: var(--paper);
+  --color-paper-2: var(--paper-2);
+  --color-paper-3: var(--paper-3);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+  --color-line-3: var(--line-3);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-wash: var(--accent-wash);
+  --color-blueline: var(--blueline);
+}
+
+:root {
+  --paper: #ece9e2;
+  --paper-2: #e4e0d7;
+  --paper-3: #d9d4c8;
+  --ink: #1d1c1a;
+  --ink-2: #45423d;
+  --ink-3: #66615a;
+  --line: rgba(29, 28, 26, 0.13);
+  --line-2: rgba(29, 28, 26, 0.24);
+  --line-3: rgba(29, 28, 26, 0.5);
+  --grid: rgba(29, 28, 26, 0.055);
+  --dot: rgba(29, 28, 26, 0.16);
+  --accent: #dd4f12;
+  --accent-ink: #a63a0a;
+  --accent-wash: rgba(221, 79, 18, 0.09);
+  /* Non-photo blue: construction lines and string literals only. */
+  --blueline: #35607f;
+
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.645, 0.045, 0.355, 1);
+  --ease-spring: cubic-bezier(0.34, 1.36, 0.64, 1);
+  --t-fast: 150ms;
+  --t-med: 240ms;
+
+  --fd-layout-width: 1440px;
+
+  --color-fd-background: var(--paper);
+  --color-fd-foreground: var(--ink);
+  --color-fd-muted: var(--paper-2);
+  --color-fd-muted-foreground: var(--ink-3);
+  --color-fd-popover: var(--paper);
+  --color-fd-popover-foreground: var(--ink);
+  --color-fd-card: var(--paper-2);
+  --color-fd-card-foreground: var(--ink);
+  --color-fd-border: var(--line-2);
+  --color-fd-primary: var(--accent-ink);
+  --color-fd-primary-foreground: var(--paper);
+  --color-fd-secondary: var(--paper-2);
+  --color-fd-secondary-foreground: var(--ink);
+  --color-fd-accent: var(--line);
+  --color-fd-accent-foreground: var(--ink);
+  --color-fd-ring: var(--accent);
+  --color-fd-overlay: rgba(29, 28, 26, 0.18);
+}
+
+@supports (transition-timing-function: linear(0, 1)) {
+  :root {
+    --ease-spring: linear(0, 0.006, 0.025 2.8%, 0.101 6.1%, 0.539 18.9%, 0.721 25.3%, 0.849 31.5%, 0.937 38.1%, 0.968 41.8%, 0.991 45.7%, 1.006 50.1%, 1.015 55%, 1.017 63.9%, 1.001 85.2%, 1);
+  }
+}
+
+.dark {
+  --paper: #161513;
+  --paper-2: #1d1c19;
+  --paper-3: #282621;
+  --ink: #ece8df;
+  --ink-2: #c6c1b6;
+  --ink-3: #979186;
+  --line: rgba(236, 232, 223, 0.1);
+  --line-2: rgba(236, 232, 223, 0.2);
+  --line-3: rgba(236, 232, 223, 0.42);
+  --grid: rgba(236, 232, 223, 0.04);
+  --dot: rgba(236, 232, 223, 0.12);
+  --accent: #f0682c;
+  --accent-ink: #ff9363;
+  --accent-wash: rgba(240, 104, 44, 0.11);
+  --blueline: #8fb8d6;
+
+  --color-fd-overlay: rgba(0, 0, 0, 0.45);
+}
+
+/* The neutral preset tints the dark sidebar; keep it on the sheet instead. */
+.dark #nd-sidebar {
+  --color-fd-muted: var(--paper-2);
+  --color-fd-secondary: var(--paper-2);
+  --color-fd-muted-foreground: var(--ink-3);
+}
+
 html {
   scrollbar-gutter: stable;
 }
@@ -9,4 +122,29 @@ html {
 html > body[data-scroll-locked] {
   margin-right: 0px !important;
   --removed-body-scroll-bar-size: 0px !important;
+}
+
+body {
+  background-color: var(--paper);
+  background-image: radial-gradient(circle, var(--dot) 0.75px, transparent 1.1px);
+  background-size: 24px 24px;
+  font-feature-settings: 'ss01', 'cv11';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--accent);
+  color: #fff;
+}
+
+:focus-visible {
+  outline-color: var(--accent-ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }

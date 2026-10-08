@@ -1,0 +1,355 @@
+/* ==========================================================================
+   Reference + Advanced figures
+   House vocabulary (apps/docs/DESIGN.md): paper boxes, graphite lines, mono
+   annotations, one accent. Tokens only, so both themes work. Line classes
+   (.ln, .ln--fine, …) come from drafting.css.
+   ========================================================================== */
+
+/* ---------- Shared SVG text + shapes ---------- */
+.svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-inline: auto;
+  overflow: visible;
+  font-family: var(--font-mono);
+}
+
+.k {
+  fill: var(--ink-3);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+}
+.kInk {
+  fill: var(--ink-2);
+}
+.kAccent {
+  fill: var(--accent-ink);
+}
+.code {
+  fill: var(--ink);
+  font-size: 11px;
+}
+.codeDim {
+  fill: var(--ink-3);
+}
+.num {
+  fill: var(--ink);
+  font-size: 9px;
+}
+
+.bg {
+  fill: var(--paper);
+}
+.box {
+  fill: var(--paper);
+  stroke: var(--ink);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.boxAccent {
+  stroke: var(--accent);
+}
+.ghost {
+  fill: none;
+  stroke: var(--line-3);
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+  vector-effect: non-scaling-stroke;
+}
+.solidMark {
+  fill: var(--paper);
+  stroke: var(--ink);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.accentMark {
+  fill: var(--accent);
+  stroke: var(--accent);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.balloon {
+  fill: var(--paper);
+  stroke: var(--ink);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.construct {
+  fill: none;
+  stroke: var(--blueline);
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+  vector-effect: non-scaling-stroke;
+  opacity: 0.75;
+}
+.dim {
+  fill: none;
+  stroke: var(--blueline);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.dimText {
+  fill: var(--blueline);
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+}
+.arrow {
+  fill: var(--ink);
+}
+
+/* ==========================================================================
+   Fig · Island DOM vs layout boxes
+   ========================================================================== */
+
+.islandDom {
+  container-type: inline-size;
+}
+.islandGrid {
+  display: grid;
+  gap: 20px;
+  align-items: start;
+}
+.islandGrid > * {
+  min-width: 0;
+}
+.islandTree {
+  max-width: 360px;
+}
+.islandLayout {
+  max-width: 330px;
+}
+@container (min-width: 600px) {
+  .islandGrid {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    gap: 28px;
+  }
+}
+
+/* ==========================================================================
+   Fig · Renderer contract (interactive)
+   ========================================================================== */
+
+.contract {
+  container-type: inline-size;
+}
+.contractWide {
+  display: block;
+}
+.contractNarrow {
+  display: none;
+}
+@container (max-width: 559px) {
+  .contractWide {
+    display: none;
+  }
+  .contractNarrow {
+    display: block;
+  }
+}
+.contractSvg {
+  max-width: 700px;
+}
+
+/* Nodes and wires fade back when another phase is selected. */
+.part {
+  transition: opacity var(--t-med) ease;
+}
+.part.off {
+  opacity: 0.3;
+}
+.nodeBox {
+  fill: var(--paper);
+  stroke: var(--ink);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  transition: stroke var(--t-med) ease;
+}
+.renderer .nodeBox {
+  stroke-width: 1.5;
+}
+.part.on .nodeBox {
+  stroke: var(--accent);
+}
+.part.on .nodeSub {
+  fill: var(--accent-ink);
+}
+.nodeMain {
+  fill: var(--ink);
+  font-size: 11px;
+}
+.nodeSub {
+  fill: var(--ink-3);
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+  transition: fill var(--t-med) ease;
+}
+.wire {
+  fill: none;
+  stroke: var(--ink-2);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  transition: stroke var(--t-med) ease;
+}
+.part.on .wire {
+  stroke: var(--accent);
+}
+.wireHead {
+  fill: var(--ink-2);
+  transition: fill var(--t-med) ease;
+}
+.part.on .wireHead {
+  fill: var(--accent);
+}
+.wireLabel {
+  fill: var(--ink-3);
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  transition: fill var(--t-med) ease;
+}
+.part.on .wireLabel {
+  fill: var(--accent-ink);
+}
+.laneK {
+  fill: var(--ink-3);
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+}
+.laneTitle {
+  fill: var(--ink);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+
+/* Controls */
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+.seg {
+  display: inline-grid;
+  grid-auto-flow: column;
+  border: 1px solid var(--ink);
+}
+.segBtn {
+  min-height: 30px;
+  padding: 0 10px;
+  color: var(--ink-2);
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    color var(--t-fast) ease,
+    background-color var(--t-fast) ease;
+}
+.segBtn + .segBtn {
+  border-left: 1px solid var(--line-2);
+}
+.segBtn:hover {
+  color: var(--ink);
+  background: var(--paper-2);
+}
+.segBtn[aria-pressed='true'] {
+  color: var(--paper);
+  background: var(--ink);
+}
+.segBtn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -4px;
+}
+.segNo {
+  margin-right: 6px;
+  color: inherit;
+  opacity: 0.6;
+}
+.panel {
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line-2);
+  min-height: 4.5em;
+}
+.panelK {
+  margin-bottom: 4px;
+  color: var(--ink-3);
+}
+.panelBody {
+  max-width: 60ch;
+  color: var(--ink-2);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+/* Narrow layout: the same contract as two lists. */
+.lists {
+  display: grid;
+  gap: 16px;
+}
+.listK {
+  margin-bottom: 6px;
+  color: var(--ink-3);
+}
+.list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.item {
+  padding: 7px 10px 8px;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+  transition:
+    opacity var(--t-med) ease,
+    border-color var(--t-med) ease;
+}
+.listRenderer .item {
+  border-width: 1.5px;
+}
+.listRenderer .itemProp {
+  border-width: 1px;
+}
+.item.on {
+  border-color: var(--accent);
+}
+.item.off {
+  opacity: 0.35;
+}
+.itemMain {
+  display: block;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.itemSub {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+}
+.item.on .itemSub {
+  color: var(--accent-ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .part,
+  .nodeBox,
+  .nodeSub,
+  .wire,
+  .wireHead,
+  .wireLabel,
+  .segBtn,
+  .item {
+    transition: none;
+  }
+}
