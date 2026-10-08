@@ -69,6 +69,8 @@
             submitting = false;
         }
     };
+
+    const errorFields = $derived(Object.keys(errors.value ?? {}).length);
 </script>
 
 <div class="max-w-xl">
@@ -93,14 +95,12 @@
             label="Slug"
             htmlFor="project-slug"
             error={errors.value.slug}
-            hint="Auto-derived from the name until you edit it. Lowercase letters, numbers and dashes only."
+            hint="Derived from the name until you edit it. Lowercase letters, numbers and dashes only."
         >
             {#snippet corner()}
-                <span
-                    class="inline-flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-zinc-500"
-                >
-                    <span class="inline-flex rounded-full h-1.5 w-1.5 bg-rose-400"></span>
-                    live — validates per keystroke
+                <span class="core-status">
+                    <span class="core-dot" data-state="live" aria-hidden="true"></span>
+                    Live · per keystroke
                 </span>
             {/snippet}
             <Input
@@ -125,44 +125,51 @@
         <div>
             <PlanPicker bind:value={plan.value} {plans} />
             {#if errors.value.plan && errors.value.plan.length > 0}
-                <p class="mt-1.5 text-xs text-rose-400" role="alert">
-                    {errors.value.plan[0]}
+                <p
+                    class="mt-1.5 flex items-start gap-1.5 text-xs leading-snug text-danger"
+                    role="alert"
+                >
+                    <svg
+                        class="mt-[2px] size-2.5 shrink-0"
+                        viewBox="0 0 10 10"
+                        aria-hidden="true"
+                    >
+                        <path d="M5 .8 9.4 9.2H.6Z" fill="currentColor" />
+                    </svg>
+                    <span>{errors.value.plan[0]}</span>
                 </p>
             {/if}
         </div>
 
-        <Button type="submit" variant="primary" loading={submitting} class="w-full py-3">
+        <Button type="submit" variant="primary" loading={submitting} class="w-full">
             {submitting ? "Creating…" : "Create project"}
         </Button>
     </form>
 
     <!-- The payload returned by save() resolves the $call promise. -->
     {#if created}
-        <Alert tone="success" class="mt-6 rounded-xl p-4">
-            {#snippet icon()}
-                <span
-                    class="flex h-5 w-5 items-center justify-center rounded-full bg-white/5 text-xs text-emerald-400"
-                >
-                    ✓
-                </span>
-            {/snippet}
-            {#snippet title()}
-                <span class="text-sm font-semibold">
-                    Project created — payload returned by save()
-                </span>
-            {/snippet}
-            <JsonDump value={created} class="mt-1.5" />
+        <Alert tone="success" class="mt-6" title="Project created">
+            <p class="font-mono text-xs text-ink-3">Payload returned by save()</p>
+            <JsonDump value={created} class="mt-2" />
         </Alert>
     {/if}
 
     <!-- Raw error bag — exactly the object useErrorBag() hands back. -->
-    <details class="mt-6 group">
+    <details class="group mt-6">
         <summary
-            class="cursor-pointer select-none text-xs font-medium text-zinc-500 hover:text-white transition-colors duration-150"
+            class="inline-flex min-h-10 cursor-pointer list-none items-center gap-2 select-none text-ink-3 transition-colors duration-150 hover:text-ink [&::-webkit-details-marker]:hidden"
         >
-            <span class="group-open:hidden">▸</span>
-            <span class="hidden group-open:inline">▾</span>
-            Error bag, raw — exactly what useErrorBag() returns
+            <span
+                class="font-mono text-xs transition-transform duration-150 group-open:rotate-90 motion-reduce:transition-none"
+                aria-hidden="true"
+            >
+                ▸
+            </span>
+            <span class="k k--caps">Raw error bag</span>
+            <span class="font-mono text-xs">useErrorBag()</span>
+            <span class="k tabular-nums">
+                · {errorFields} {errorFields === 1 ? "field" : "fields"}
+            </span>
         </summary>
         <JsonDump value={errors.value} class="mt-2" />
     </details>

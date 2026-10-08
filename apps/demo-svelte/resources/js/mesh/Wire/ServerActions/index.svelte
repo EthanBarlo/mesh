@@ -1,6 +1,6 @@
 <script lang="ts">
     import { useWire } from "@mesh/svelte";
-    import { Button, Eyebrow, Panel, Stat, Textarea } from "@/components/ui";
+    import { Button, Panel, Textarea, cn } from "@/components/ui";
     import Die from "@/components/demo/Wire/Die.svelte";
 
     interface ServerActionsProps {
@@ -52,11 +52,29 @@
             rolling = false;
         }
     };
+
+    // The return array's keys, exactly as PHP sends them.
+    const returned = $derived<[string, string | number | undefined][]>([
+        ["words", analysis?.words],
+        ["characters", analysis?.characters],
+        [
+            "longestWord",
+            analysis
+                ? analysis.longestWord
+                    ? `"${analysis.longestWord}"`
+                    : '""'
+                : undefined,
+        ],
+        ["analyzedAt", analysis?.analyzedAt],
+    ]);
 </script>
 
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
     <Panel class="flex flex-col">
-        <Eyebrow>await wire.$call("analyze", text)</Eyebrow>
+        <p class="k k--caps text-ink-3">Analyze text</p>
+        <p class="mt-0.5 font-mono text-xs text-ink">
+            await wire.$call("analyze", text)
+        </p>
 
         <Textarea
             bind:value={text}
@@ -75,40 +93,69 @@
             {analyzing ? "Analyzing on server…" : "Analyze on server"}
         </Button>
 
-        {#if analysis}
-            <div class="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <Stat label="Words" value={analysis.words} />
-                <Stat label="Characters" value={analysis.characters} />
-                <Stat label="Longest word" value={analysis.longestWord || "—"} />
-                <Stat label="Server time" value={analysis.analyzedAt} />
-            </div>
-        {:else}
-            <p class="mt-4 text-sm text-zinc-500">
-                The result object below is the PHP method's return value — no route, no controller, no fetch.
-            </p>
-        {/if}
+        <div class="mt-5">
+            <p class="k k--caps text-ink-3">Returned by analyze()</p>
+            <dl
+                class={cn(
+                    "core-readout mt-1 transition-opacity duration-150 motion-reduce:transition-none",
+                    analyzing && "opacity-50",
+                )}
+                aria-live="polite"
+            >
+                {#each returned as [key, value] (key)}
+                    <div>
+                        <dt>{key}</dt>
+                        <dd>
+                            {#if value === undefined}
+                                <span class="text-ink-3">—</span>
+                            {:else}
+                                {value}
+                            {/if}
+                        </dd>
+                    </div>
+                {/each}
+            </dl>
+        </div>
     </Panel>
 
     <Panel class="flex flex-col">
-        <Eyebrow>await wire.$call("rollDice")</Eyebrow>
+        <p class="k k--caps text-ink-3">Roll dice</p>
+        <p class="mt-0.5 font-mono text-xs text-ink">
+            await wire.$call("rollDice")
+        </p>
 
-        <div class="flex-1 flex flex-col items-center justify-center py-6">
-            {#if roll}
-                <div class={`flex items-center gap-3 transition-opacity ${rolling ? "opacity-40" : "opacity-100"}`}>
-                    {#each roll.dice as value, i (i)}
-                        <Die {value} />
-                    {/each}
+        <div class="flex flex-1 flex-col items-center justify-center py-8">
+            <div class="inline-flex flex-col gap-3">
+                <div
+                    class={cn(
+                        "flex items-center gap-3 transition-opacity duration-150 motion-reduce:transition-none",
+                        rolling && "opacity-40",
+                    )}
+                >
+                    {#if roll}
+                        {#each roll.dice as value, i (i)}
+                            <Die {value} />
+                        {/each}
+                    {:else}
+                        {#each [0, 1, 2] as i (i)}
+                            <span
+                                class="size-14 border border-dashed border-line-3"
+                                aria-hidden="true"
+                            ></span>
+                        {/each}
+                    {/if}
                 </div>
-                <p class="mt-4 text-sm text-zinc-400">
-                    Server total:
-                    <span class="text-xl font-semibold text-white tabular-nums align-middle">{roll.total}</span>
-                </p>
-            {:else}
-                <p class="text-sm text-zinc-500 text-center max-w-xs">
-                    PHP's <code class="font-mono text-zinc-400">random_int()</code> rolls the dice — the array comes back as a
-                    resolved Promise.
-                </p>
-            {/if}
+                <!-- Dimension line under the three dice: their total. -->
+                <div class="core-dim" aria-live="polite">
+                    <span>
+                        total <span class="font-medium text-ink">{roll ? roll.total : "—"}</span>
+                    </span>
+                </div>
+            </div>
+            <p class="mt-5 max-w-xs text-center text-xs leading-relaxed text-ink-3">
+                PHP's <code class="core-code">random_int()</code> rolls the
+                dice. The array comes back as the resolved Promise.
+            </p>
         </div>
 
         <Button

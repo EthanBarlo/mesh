@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { BigNumber, Eyebrow, GlowCard } from "@/components/ui";
+    import { BigNumber, Eyebrow, Panel } from "@/components/ui";
 
     /**
      * A deliberately tiny component. Its only job is to prove it just mounted:
@@ -27,17 +27,18 @@
     });
 </script>
 
-<GlowCard contentClassName="p-6 flex flex-col sm:flex-row sm:items-center gap-5">
-    <div class="flex-1">
+<Panel class="flex flex-col gap-5 sm:flex-row sm:items-center">
+    <div class="min-w-0 flex-1">
         <Eyebrow>Architecture/HelloIsland</Eyebrow>
-        <h3 class="mt-1 text-xl font-semibold tracking-tight text-white">{greeting}</h3>
-        <p class="mt-1 text-sm text-zinc-400 leading-relaxed">{chunkNote}</p>
+        <h3 class="mt-1.5 text-xl font-semibold tracking-tight text-ink">{greeting}</h3>
+        <p class="mt-1 text-sm leading-relaxed text-ink-2">{chunkNote}</p>
     </div>
 
-    <div class="shrink-0 px-5 py-4 rounded-xl bg-white/[0.02] border border-white/5 text-center">
-        <BigNumber class="text-3xl">{elapsed.toFixed(1)}s</BigNumber>
-        <div class="mt-1 text-[11px] font-medium uppercase tracking-widest text-zinc-500">
-            since mount
-        </div>
+    <!-- The ticker is the island's one accent: proof it just mounted. -->
+    <div
+        class="shrink-0 border-t border-line-2 pt-4 sm:border-t-0 sm:border-l sm:pt-0 sm:pl-6 sm:text-right"
+    >
+        <BigNumber class="text-3xl text-accent-ink">{elapsed.toFixed(1)}s</BigNumber>
+        <div class="k k--caps mt-1 text-ink-3">Since mount</div>
     </div>
-</GlowCard>
+</Panel>

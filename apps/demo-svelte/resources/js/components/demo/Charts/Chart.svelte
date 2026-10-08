@@ -30,9 +30,11 @@
     });
 
     // Options are rebuilt by replacement ($derived in the parent), so tracking
-    // the prop reference is enough; setOption merges and ECharts animates the diff.
+    // the prop reference is enough. setOption merges (notMerge stays false), so
+    // ECharts morphs to the new data, or recolours in place on a theme flip,
+    // without re-initialising.
     $effect(() => {
-        chart?.setOption(option, { lazyUpdate: true });
+        chart?.setOption(option, { notMerge: false, lazyUpdate: true });
     });
 </script>
 

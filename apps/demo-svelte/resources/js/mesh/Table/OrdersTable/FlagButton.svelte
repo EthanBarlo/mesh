@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Spinner, cn } from "@/components/ui";
+    import { Spinner } from "@/components/ui";
     import type { Order } from "./columns";
 
     interface Props {
@@ -11,36 +11,32 @@
     let { order, pending, onFlag }: Props = $props();
 </script>
 
+<!-- A square stamp; the shared `.flag-btn` class draws it (ecosystem.css). -->
 <button
     type="button"
     onclick={() => onFlag(order.id)}
     disabled={pending}
-    aria-label={order.flagged
-        ? `Unflag order ${order.id}`
-        : `Flag order ${order.id}`}
+    aria-label={order.flagged ? `Unflag order ${order.id}` : `Flag order ${order.id}`}
     title={order.flagged ? "Unflag (server call)" : "Flag (server call)"}
-    class={cn(
-        "inline-flex items-center justify-center w-8 h-8 rounded-lg border transition-colors duration-150 active:scale-95 focus:outline-none focus:ring-2 focus:ring-white/20 focus:ring-offset-2 focus:ring-offset-zinc-950 disabled:cursor-wait",
-        order.flagged
-            ? "bg-rose-500/10 border-rose-400/30 text-rose-400 hover:bg-rose-500/15"
-            : "bg-white/5 border-white/10 text-zinc-500 hover:text-white hover:border-white/20",
-    )}
+    class="flag-btn"
+    data-flagged={order.flagged || undefined}
 >
     {#if pending}
-        <Spinner />
+        <Spinner class="w-3.5 h-3.5" />
     {:else}
+        <!-- A drawn pennant: an outline when clear, filled when flagged. -->
         <svg
-            class="w-4 h-4"
-            viewBox="0 0 24 24"
-            fill={order.flagged ? "currentColor" : "none"}
+            class="w-3.5 h-3.5"
+            viewBox="0 0 14 14"
+            fill="none"
             stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
+            stroke-width="1.25"
             aria-hidden="true"
         >
+            <path d="M2.5 13.5V1" />
             <path
-                d="M4 21V4a1 1 0 011-1h11.5a.5.5 0 01.4.8L14 8l2.9 4.2a.5.5 0 01-.4.8H5"
+                d="M2.5 1.5H11.5L9 5L11.5 8.5H2.5"
+                fill={order.flagged ? "currentColor" : "none"}
             />
         </svg>
     {/if}

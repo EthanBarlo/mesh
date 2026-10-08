@@ -10,10 +10,11 @@
     let { children, class: className, ...rest }: Props = $props();
 </script>
 
+<!-- A mono keycap: hairline sides, a heavier bottom edge. -->
 <kbd
     {...rest}
     class={cn(
-        "px-1.5 py-0.5 rounded-md bg-white/5 border border-white/10 font-mono text-zinc-300",
+        "inline-flex min-w-[1.75em] items-center justify-center border border-b-2 border-line-3 bg-paper px-1.5 py-px font-mono text-[0.85em] leading-[1.4] text-ink",
         className,
     )}
 >

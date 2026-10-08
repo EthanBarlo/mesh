@@ -1,0 +1,847 @@
+/* Home page (/) only. Scope every rule under .home.
+   Identical across the three demo apps: read tokens only, never raw colours. */
+
+/* ==========================================================================
+   Home — the title sheet of the set
+   A framed sheet: zone rails, the title with general notes, the three-counter
+   figure with dimension lines, four steps on an ink rail, and the drawing
+   register. The counter cards (.ctr) are shared by the two Blade counters and
+   the Mesh counter, so all three read as one drawing.
+   ========================================================================== */
+
+.home {
+  --pad: clamp(16px, 3.4vw, 48px);
+  --wrap: 1200px;
+
+  position: relative;
+  min-width: 0;
+  overflow-x: clip;
+  color: var(--ink);
+}
+
+.home .vh {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.home :focus-visible {
+  outline: 2px solid var(--accent-ink);
+  outline-offset: 3px;
+}
+
+.home :is(.home-intro, .notes__list, .reg__blurb) code {
+  padding: 1px 5px;
+  border: 1px solid var(--line-2);
+  background: var(--paper-2);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.84em;
+}
+
+/* An inline A / B / C reference that matches the card tags. */
+.home .ref {
+  display: inline-grid;
+  place-items: center;
+  min-width: 17px;
+  height: 16px;
+  padding: 0 3px;
+  border: 1px solid var(--ink-2);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-style: normal;
+  letter-spacing: 0;
+  line-height: 1;
+  vertical-align: 1px;
+}
+
+/* ---------- Frame ----------
+   A fixed sheet border, after the docs home: zone letters top and bottom,
+   scale ticks down the sides, centring marks, a trim line. The shell insets
+   the masthead, page and footer by --shell-frame whenever .home__frame
+   exists, so the rails are sized from that same variable. */
+.home .home__frame {
+  --f: var(--shell-frame, 28px);
+
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  pointer-events: none;
+}
+/* Paper in the four corners, so nothing scrolls through them. */
+.home .home__frame::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(var(--paper), var(--paper)) left top / var(--f) var(--f) no-repeat,
+    linear-gradient(var(--paper), var(--paper)) right top / var(--f) var(--f) no-repeat,
+    linear-gradient(var(--paper), var(--paper)) left bottom / var(--f) var(--f) no-repeat,
+    linear-gradient(var(--paper), var(--paper)) right bottom / var(--f) var(--f) no-repeat;
+}
+/* The trim line, just inside the paper edge. */
+.home .home__frame::after {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border: 1px solid var(--line-2);
+}
+.home .home__border {
+  position: absolute;
+  inset: var(--f);
+  border: 1px solid var(--ink);
+}
+.home .home__rail {
+  position: absolute;
+  display: flex;
+  background-color: var(--paper);
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1;
+}
+.home .home__rail--top,
+.home .home__rail--bottom {
+  left: var(--f);
+  right: var(--f);
+  height: var(--f);
+}
+.home .home__rail--top {
+  top: 0;
+}
+.home .home__rail--bottom {
+  bottom: 0;
+}
+.home .home__rail--left,
+.home .home__rail--right {
+  top: var(--f);
+  bottom: var(--f);
+  width: var(--f);
+  background-repeat: no-repeat;
+  background-size: 7px 100%;
+}
+/* Scale ticks every 120px, drawn against the border. */
+.home .home__rail--left {
+  left: 0;
+  background-image: repeating-linear-gradient(to bottom, transparent 0 119px, var(--line-3) 119px 120px);
+  background-position: right top;
+}
+.home .home__rail--right {
+  right: 0;
+  background-image: repeating-linear-gradient(to bottom, transparent 0 119px, var(--line-3) 119px 120px);
+  background-position: left top;
+}
+.home .home__rail > span {
+  position: relative;
+  flex: 1;
+  display: grid;
+  place-items: center;
+}
+/* Zone divisions */
+.home .home__rail > span + span::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  width: 1px;
+  height: 7px;
+  background: var(--line-3);
+}
+.home .home__rail--top > span + span::before {
+  bottom: 0;
+}
+.home .home__rail--bottom > span + span::before {
+  top: 0;
+}
+/* Centring marks */
+.home .home__rail::after {
+  content: '';
+  position: absolute;
+  border: 4px solid transparent;
+}
+.home .home__rail--top::after {
+  bottom: 0;
+  left: 50%;
+  border-bottom: 0;
+  border-top: 6px solid var(--ink);
+  transform: translateX(-50%);
+}
+.home .home__rail--bottom::after {
+  top: 0;
+  left: 50%;
+  border-top: 0;
+  border-bottom: 6px solid var(--ink);
+  transform: translateX(-50%);
+}
+.home .home__rail--left::after {
+  top: 50%;
+  right: 0;
+  border-right: 0;
+  border-left: 6px solid var(--ink);
+  transform: translateY(-50%);
+}
+.home .home__rail--right::after {
+  top: 50%;
+  left: 0;
+  border-left: 0;
+  border-right: 6px solid var(--ink);
+  transform: translateY(-50%);
+}
+
+.home .home-wrap {
+  width: 100%;
+  max-width: var(--wrap);
+  margin-inline: auto;
+  padding-inline: var(--pad);
+}
+
+/* ---------- Sheet heads + sections ---------- */
+.home .sheet-head {
+  margin-bottom: 28px;
+}
+.home .sheet-head__meta {
+  letter-spacing: 0.06em;
+}
+.home .home-sec {
+  padding-block: clamp(56px, 8vw, 112px);
+  border-top: 1px solid var(--line-2);
+}
+.home .home-intro {
+  max-width: 44rem;
+  margin-bottom: 40px;
+  color: var(--ink-2);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+.home .home-sec__next {
+  margin-top: 32px;
+}
+.home .link--mono {
+  min-height: 44px;
+}
+.home .notes__k {
+  color: var(--ink-3);
+}
+
+/* ---------- Title ---------- */
+.home .home-hero {
+  padding-block: clamp(28px, 4vw, 56px) clamp(56px, 8vw, 112px);
+}
+/* No title in the head: the h1 below is the title. */
+.home .home-hero__head .sheet-head__meta {
+  grid-row: 1;
+}
+.home .home-hero__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.7fr);
+  align-items: end;
+  gap: 48px 64px;
+  margin-top: clamp(32px, 5vw, 64px);
+}
+.home .home-hero__kicker {
+  color: var(--ink-3);
+}
+.home .home-hero__title {
+  margin-top: 16px;
+  margin-left: -0.04em;
+  font-size: clamp(2.5rem, 1.4rem + 4.4vw, 5rem);
+  font-weight: 600;
+  letter-spacing: -0.05em;
+  line-height: 0.94;
+  text-wrap: balance;
+}
+.home .home-hero__title span {
+  display: block;
+}
+.home .home-hero__lead {
+  max-width: 36rem;
+  margin-top: 24px;
+  color: var(--ink-2);
+  font-size: 1.125rem;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+.home .home-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  margin-top: 32px;
+}
+.home .home-hero__actions .btn__icon,
+.home .home-hero__actions .link__ext {
+  display: inline-flex;
+}
+.home .home-hero__notes {
+  padding-left: 24px;
+  border-left: 1px solid var(--line-2);
+}
+
+/* ---------- 01 · Counters figure ---------- */
+.home .cfig {
+  margin: 0;
+}
+.home .cfig__stage {
+  padding: clamp(14px, 3vw, 32px);
+}
+.home .cfig__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-areas:
+    'ds dc dc'
+    'a b c';
+  gap: 14px 20px;
+}
+.home .cfig__dim--server {
+  grid-area: ds;
+}
+.home .cfig__dim--client {
+  grid-area: dc;
+}
+.home .cfig__cell--a {
+  grid-area: a;
+}
+.home .cfig__cell--b {
+  grid-area: b;
+}
+.home .cfig__cell--c {
+  grid-area: c;
+}
+.home .cfig__cell {
+  display: grid;
+  min-width: 0;
+}
+.home .cfig__cell > * {
+  min-width: 0;
+}
+
+/* A dimension line: end ticks, a hairline, and the label set into it. */
+.home .cfig__dim {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  margin: 0;
+}
+.home .cfig__dim::before {
+  content: '';
+  position: absolute;
+  top: calc(50% - 5.5px);
+  left: 0;
+  right: 0;
+  height: 11px;
+  border-inline: 1px solid var(--ink-2);
+  background: linear-gradient(var(--ink-2), var(--ink-2)) center / 100% 1px no-repeat;
+  animation: home-dim-x 900ms var(--ease-out) 250ms both;
+}
+.home .cfig__dim-k {
+  position: relative;
+  padding: 2px 10px;
+  background: var(--paper);
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  line-height: 1.4;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+@keyframes home-dim-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes home-dim-y {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+.home .fig-cap {
+  margin-top: 12px;
+  color: var(--ink-3);
+}
+.home .fig-cap__n {
+  color: var(--ink-2);
+}
+
+.home .cfig__why {
+  display: grid;
+  grid-template-columns: minmax(0, 12rem) minmax(0, 42rem);
+  gap: 8px 32px;
+  margin-top: 36px;
+}
+.home .cfig__why .notes__k {
+  margin: 0;
+  padding-top: 2px;
+}
+.home .cfig__why .notes__list {
+  gap: 10px;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+}
+
+/* ---------- Counter card (A, B, C) ---------- */
+.home .ctr {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+}
+.home .ctr__head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line-2);
+}
+.home .ctr__tag {
+  color: var(--ink-2);
+}
+/* The Mesh card is the accented one. */
+.home .ctr--mesh .ctr__tag {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--paper);
+}
+.home .ctr__title {
+  min-width: 0;
+}
+.home .ctr__name {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+.home .ctr__via {
+  display: block;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.home .ctr__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 28px 16px 22px;
+}
+.home .ctr__value {
+  font-size: clamp(3.5rem, 2.6rem + 2.4vw, 4.75rem);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.05em;
+  line-height: 1;
+}
+.home .ctr__k {
+  color: var(--ink-3);
+  text-transform: none;
+  letter-spacing: 0.04em;
+}
+.home .ctr__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 12px 16px;
+  border-top: 1px solid var(--line-2);
+}
+.home .ctr__btn {
+  width: 48px;
+  min-height: 48px;
+  padding: 0;
+  font-size: 1.375rem;
+  font-weight: 400;
+  line-height: 1;
+}
+.home .ctr__reset {
+  min-height: 48px;
+  padding: 0 14px;
+  border-color: transparent;
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+/* Only the Mesh card's + carries the accent corner. */
+.home .ctr:not(.ctr--mesh) .btn--solid::after {
+  content: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .home .ctr__reset:hover {
+    background: var(--paper-2);
+    color: var(--ink);
+  }
+}
+
+/* ---------- 02 · Steps on an ink rail ---------- */
+.home .hsteps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0 28px;
+}
+.home .hstep {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+/* The rail, from this balloon to the next. */
+.home .hstep:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 13px;
+  left: 27px;
+  right: -28px;
+  height: 1px;
+  background: var(--ink);
+}
+.home .hstep__n.balloon {
+  width: 27px;
+  height: 27px;
+  border-color: var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 10.5px;
+  transition:
+    background-color var(--t-fast) ease,
+    color var(--t-fast) ease;
+}
+.home .hstep__title {
+  margin-top: 18px;
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+.home .hstep__body {
+  margin: 6px 0 18px;
+  color: var(--ink-2);
+  font-size: 0.875rem;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+.home .hstep__code {
+  min-width: 0;
+  margin: auto 0 0;
+  border: 1px solid var(--line-3);
+  background: var(--paper-2);
+}
+.home .hstep__file {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line-2);
+  background: var(--paper);
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+/* Every snippet wraps; nothing scrolls sideways. */
+.home .hstep__snippet {
+  display: block;
+  padding: 10px 12px;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.home .hstep__prompt {
+  color: var(--ink-3);
+  user-select: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .home .hstep:hover .hstep__n {
+    background: var(--ink);
+    color: var(--paper);
+  }
+}
+
+/* ---------- 03 · Drawing register ---------- */
+.home .reg {
+  border-block: 1px solid var(--ink);
+}
+.home .reg__head,
+.home .reg__row {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) 140px 84px 24px;
+  align-items: baseline;
+  column-gap: 16px;
+  padding-inline: 12px;
+}
+.home .reg__head {
+  padding-block: 10px;
+  border-bottom: 1px solid var(--ink);
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.home .reg__list > li + li {
+  border-top: 1px solid var(--line-2);
+}
+.home .reg__row {
+  padding-block: 16px;
+  color: inherit;
+  text-decoration: none;
+  transition: background-color var(--t-fast) ease;
+}
+.home .reg__no {
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  transition: color var(--t-fast) ease;
+}
+.home .reg__main {
+  min-width: 0;
+}
+.home .reg__title {
+  display: block;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.home .reg__blurb {
+  display: block;
+  max-width: 40rem;
+  margin-top: 4px;
+  color: var(--ink-2);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+.home .reg__meta {
+  display: none;
+  margin-top: 6px;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.home .reg__group,
+.home .reg__dwg {
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+}
+.home .reg__group {
+  text-transform: uppercase;
+}
+.home .reg__dwg {
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.home .reg__go {
+  display: grid;
+  place-items: center;
+  align-self: center;
+  justify-self: end;
+  color: var(--ink-3);
+  transition:
+    color var(--t-fast) ease,
+    transform var(--t-med) var(--ease-spring);
+}
+/* "You are here" */
+.home .reg__here {
+  width: 8px;
+  height: 8px;
+  background: var(--accent);
+}
+.home .reg__row.is-current .reg__no {
+  color: var(--accent-ink);
+}
+@media (hover: hover) and (pointer: fine) {
+  .home a.reg__row:hover {
+    background: var(--paper-2);
+  }
+  .home a.reg__row:hover .reg__no {
+    color: var(--accent-ink);
+  }
+  .home a.reg__row:hover .reg__go {
+    color: var(--ink);
+    transform: translateX(3px);
+  }
+}
+.home a.reg__row:focus-visible {
+  outline-offset: -2px;
+}
+
+.home .home-tblock {
+  margin-top: clamp(48px, 7vw, 80px);
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1099px) {
+  .home .hsteps {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+  .home .hstep {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    grid-template-areas:
+      'title code'
+      'body code';
+    align-content: start;
+    column-gap: 28px;
+    padding: 0 0 36px 44px;
+  }
+  .home .hstep:last-child {
+    padding-bottom: 0;
+  }
+  .home .hstep__n.balloon {
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+  .home .hstep:not(:last-child)::after {
+    top: 27px;
+    bottom: 0;
+    left: 13px;
+    right: auto;
+    width: 1px;
+    height: auto;
+  }
+  .home .hstep__title {
+    grid-area: title;
+    margin-top: 3px;
+  }
+  .home .hstep__body {
+    grid-area: body;
+    margin-bottom: 0;
+  }
+  .home .hstep__code {
+    grid-area: code;
+    margin: 0;
+    align-self: start;
+  }
+}
+
+@media (max-width: 899px) {
+  .home .home__rail {
+    font-size: 9px;
+  }
+  .home .home-hero__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .home .home-hero__notes {
+    max-width: 40rem;
+    padding: 20px 0 0;
+    border-left: 0;
+    border-top: 1px solid var(--line-2);
+  }
+  .home .cfig__why {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .home .reg__head,
+  .home .reg__row {
+    grid-template-columns: 44px minmax(0, 1fr) 24px;
+    column-gap: 12px;
+    padding-inline: 8px;
+  }
+  .home .reg__col {
+    display: none;
+  }
+  .home .reg__meta {
+    display: block;
+  }
+}
+
+/* The three cards stack; the dimension lines turn vertical down their left side. */
+@media (max-width: 899px) {
+  .home .cfig__grid {
+    grid-template-columns: 26px minmax(0, 1fr);
+    grid-template-areas:
+      'ds a'
+      'dc b'
+      'dc c';
+    gap: 16px 12px;
+  }
+  .home .cfig__dim::before {
+    top: 0;
+    bottom: 0;
+    left: calc(50% - 5.5px);
+    right: auto;
+    width: 11px;
+    height: auto;
+    border-inline: 0;
+    border-block: 1px solid var(--ink-2);
+    background-size: 1px 100%;
+    animation-name: home-dim-y;
+  }
+  .home .cfig__dim-k {
+    padding: 10px 2px;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+  }
+}
+
+/* Phones: a thin frame with no lettering, a 16px gutter, steps stacked. */
+@media (max-width: 599px) {
+  .home {
+    --pad: 16px;
+  }
+  .home .home__rail {
+    color: transparent;
+  }
+  .home .home__frame::after {
+    inset: 3px;
+  }
+  .home .home-hero__head .sheet-head__meta {
+    grid-row: auto;
+  }
+  .home .hstep {
+    display: flex;
+    flex-direction: column;
+  }
+  .home .hstep__title {
+    margin-top: 3px;
+  }
+  .home .hstep__body {
+    margin-bottom: 14px;
+  }
+}
+
+/* ---------- Reduced motion: final states, no travel ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .home .cfig__dim::before {
+    animation: none;
+  }
+  .home .hstep__n.balloon,
+  .home .reg__row,
+  .home .reg__no,
+  .home .reg__go {
+    transition: none;
+  }
+  .home a.reg__row:hover .reg__go {
+    transform: none;
+  }
+}

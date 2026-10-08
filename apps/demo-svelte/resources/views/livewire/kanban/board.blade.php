@@ -1,20 +1,16 @@
 <div class="space-y-4">
     {{-- Toolbar: all plain Blade, re-rendered by this component --}}
     <div class="flex flex-wrap items-center justify-between gap-3">
-        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs text-zinc-400">
-            <span @class(['h-1.5 w-1.5 rounded-full', 'bg-emerald-400' => $syncCount > 0, 'bg-zinc-500' => $syncCount === 0]) aria-hidden="true"></span>
+        <p class="sync k k--caps" @if ($syncCount > 0) data-on @endif aria-live="polite">
+            <span class="sync__dot" aria-hidden="true"></span>
             @if ($syncCount > 0)
-                <span>Synced <span class="font-semibold text-zinc-200 tabular-nums">{{ $syncCount }}</span> {{ $syncCount === 1 ? 'move' : 'moves' }} · last <span class="font-mono text-zinc-300">{{ $lastSyncAt }}</span></span>
+                <span>Synced <span class="sync__v">{{ $syncCount }}</span> {{ $syncCount === 1 ? 'move' : 'moves' }} · last <span class="sync__v">{{ $lastSyncAt }}</span></span>
             @else
-                <span>No moves synced yet — drag a card</span>
+                <span>No moves synced yet. Drag a card.</span>
             @endif
-        </div>
+        </p>
 
-        <button
-            type="button"
-            wire:click="resetBoard"
-            class="px-4 py-2 rounded-lg border border-white/10 text-sm font-medium text-zinc-400 hover:text-white hover:border-white/20 active:scale-95 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-white/20 focus:ring-offset-2 focus:ring-offset-zinc-950"
-        >
+        <button type="button" wire:click="resetBoard" class="btn btn--line btn--sm btn--tap">
             Reset board
         </button>
     </div>
@@ -27,10 +23,7 @@
     --}}
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         @foreach ($columns as $column)
-            <div
-                wire:key="col-{{ $column['id'] }}"
-                class="flex flex-col rounded-xl bg-white/[0.02] border border-white/5 overflow-hidden"
-            >
+            <div wire:key="col-{{ $column['id'] }}" class="lane">
                 <mesh:kanban.column
                     :column-id="$column['id']"
                     :title="$column['title']"

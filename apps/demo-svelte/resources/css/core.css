@@ -1,0 +1,520 @@
+/* Core demo pages: state, wire, forms, slots, uploads. Scope rules under the page or component they belong to.
+   Identical across the three demo apps: read tokens only, never raw colours.
+
+   Like drafting.css these rules are unlayered, so they win over Tailwind utilities on the same element.
+   Don't stack a utility on a core-* class to override it; add a modifier here instead. */
+
+/* ==========================================================================
+   Shared vocabulary (every core page)
+   ========================================================================== */
+
+/* Inline code: a stamped part number, as in the docs prose. */
+.core-code {
+  padding: 0 4px;
+  border: 1px solid var(--line-2);
+  background: var(--paper-2);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.84em;
+  font-weight: 400;
+  overflow-wrap: break-word;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+/* Status: a dot plus a tracked-caps mono label. */
+.core-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.1em;
+  line-height: 1.5;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.core-status--ink {
+  color: var(--ink);
+}
+.core-status--danger {
+  color: var(--danger);
+}
+
+/* Status dot. Filled = settled, hollow = waiting, live = filled with a ping ring. */
+.core-dot {
+  position: relative;
+  flex: none;
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border: 1px solid var(--ink);
+  border-radius: 999px;
+  background: var(--ink);
+}
+.core-dot[data-state='wait'],
+.core-dot[data-state='off'] {
+  border-color: var(--ink-3);
+  background: transparent;
+}
+.core-dot[data-state='error'] {
+  border-color: var(--danger);
+  background: var(--danger);
+}
+.core-dot[data-state='live']::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border: 1px solid var(--ink);
+  border-radius: inherit;
+  opacity: 0;
+  animation: core-ping 1.8s var(--ease-out) infinite;
+}
+@keyframes core-ping {
+  from {
+    transform: scale(0.35);
+    opacity: 0.7;
+  }
+  to {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+/* Readout: a key/value schedule in mono. <dl class="core-readout"><div><dt/><dd/></div>…</dl> */
+.core-readout {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: 20px;
+}
+.core-readout > div {
+  display: contents;
+}
+.core-readout dt,
+.core-readout dd {
+  padding: 7px 0;
+  border-bottom: 1px solid var(--line);
+}
+.core-readout > div:last-child > * {
+  border-bottom: 0;
+}
+.core-readout dt {
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  line-height: 1.6;
+}
+.core-readout dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.core-readout--caps dt {
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+/* Prose values (sentences, not data) read in the sans. */
+.core-readout dd.core-readout__text {
+  color: var(--ink-2);
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+}
+
+/* Dimension line: |—— label ——|. Spans whatever box it sits in. */
+.core-dim {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 11px;
+  border-inline: 1px solid currentColor;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  white-space: nowrap;
+}
+.core-dim::before,
+.core-dim::after {
+  content: '';
+  flex: 1;
+  min-width: 8px;
+  height: 1px;
+  background: currentColor;
+}
+
+/* Count box: a big tabular number in a recessed square. */
+.core-count {
+  display: grid;
+  flex: none;
+  place-items: center;
+  min-width: 56px;
+  height: 56px;
+  padding: 0 10px;
+  border: 1px solid var(--line-2);
+  background: var(--paper-2);
+  color: var(--ink);
+  font-size: 1.5rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+/* List with dimension-line bullets, as in the docs prose. */
+.core-list {
+  display: grid;
+  gap: 6px;
+}
+.core-list > li {
+  position: relative;
+  padding-left: 22px;
+}
+.core-list > li::before {
+  content: '—';
+  position: absolute;
+  left: 0;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+}
+
+/* Plain Blade controls, drawn like the UI kit <Input>: hairline, paper, accent focus line.
+   16px text on phones so iOS doesn't zoom on focus. */
+.core-control {
+  display: block;
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--line-2);
+  border-radius: 0;
+  background-color: var(--paper);
+  color: var(--ink);
+  font-size: 1rem;
+  line-height: 1.5rem;
+  outline: none;
+  transition:
+    border-color var(--t-fast) var(--ease-out),
+    box-shadow var(--t-fast) var(--ease-out);
+}
+@media (min-width: 640px) {
+  .core-control {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+}
+.core-control::placeholder {
+  color: var(--ink-3);
+}
+.core-control:hover {
+  border-color: var(--line-3);
+}
+.core-control:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+select.core-control {
+  padding-right: 36px;
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--ink-2) 50%),
+    linear-gradient(135deg, var(--ink-2) 50%, transparent 50%);
+  background-position:
+    calc(100% - 19px) 50%,
+    calc(100% - 14px) 50%;
+  background-repeat: no-repeat;
+  background-size:
+    5px 5px,
+    5px 5px;
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   Wire leader: a vertical connector with an arrowhead, from a control down to
+   what it feeds (client state → server, Blade control → island).
+   data-line="dash" (default) | "solid" | "accent". A packet drops down it.
+   ========================================================================== */
+
+.core-wire {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  margin-left: 13px;
+  padding: 4px 0 4px 16px;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  line-height: 1.5;
+}
+.core-wire::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 6px;
+  left: 0;
+  border-left: 1px dashed var(--ink-3);
+}
+/* Arrowhead into whatever sits below. */
+.core-wire::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: -3.5px;
+  width: 8px;
+  height: 7px;
+  background: var(--ink-3);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+.core-wire[data-line='solid']::before {
+  border-left: 1px solid var(--ink-2);
+}
+.core-wire[data-line='solid']::after {
+  background: var(--ink-2);
+}
+.core-wire[data-line='accent']::before {
+  border-left: 1px solid var(--accent);
+}
+.core-wire[data-line='accent']::after {
+  background: var(--accent);
+}
+.core-wire__packet {
+  position: absolute;
+  top: 0;
+  left: -2.5px;
+  width: 6px;
+  height: 6px;
+  background: var(--ink);
+  opacity: 0;
+  animation: core-packet 520ms var(--ease-out);
+}
+.core-wire[data-line='accent'] .core-wire__packet {
+  background: var(--accent);
+}
+@keyframes core-packet {
+  from {
+    top: 0;
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  to {
+    top: calc(100% - 10px);
+    opacity: 0;
+  }
+}
+
+/* ==========================================================================
+   Wire · PriceWatcher sparkline
+   ========================================================================== */
+
+/* y-axis gutter on the left holds the high/low labels and their ticks. */
+.spark {
+  position: relative;
+  padding-left: 56px;
+}
+.spark__plot {
+  position: relative;
+  height: 112px;
+  border-bottom: 1px solid var(--ink);
+  border-left: 1px solid var(--ink);
+  background-image: linear-gradient(var(--line) 1px, transparent 1px);
+  background-size: 100% 25%;
+}
+.spark__svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.spark__svg .ln {
+  stroke-width: 1.5;
+}
+/* The current price: the island's one accent mark. Hollow after a fall. */
+.spark__mark {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  margin: -4.5px 0 0 -4.5px;
+  border: 1.5px solid var(--accent);
+  background: var(--accent);
+  pointer-events: none;
+}
+.spark__mark[data-direction='down'] {
+  background: var(--paper);
+}
+.spark__axis {
+  position: absolute;
+  left: 0;
+  width: 46px;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  text-align: right;
+  transform: translateY(-50%);
+}
+.spark__axis::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: -10px;
+  width: 6px;
+  height: 1px;
+  background: var(--ink);
+}
+
+/* ==========================================================================
+   Wire · EventToast — the transient toast is a drafting note pinned to the corner
+   ========================================================================== */
+
+.event-toast {
+  position: fixed;
+  z-index: 50;
+  right: 16px;
+  bottom: 16px;
+  left: 16px;
+  margin: 0;
+  box-shadow: 6px 6px 0 var(--line);
+}
+@media (min-width: 640px) {
+  .event-toast {
+    right: 24px;
+    bottom: 24px;
+    left: auto;
+    width: 340px;
+  }
+}
+
+/* ==========================================================================
+   Forms · PlanPicker
+   ========================================================================== */
+
+.plan-opt:has(input:focus-visible) {
+  outline: 2px solid var(--accent-ink);
+  outline-offset: 2px;
+}
+.plan-opt__box {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--ink-2);
+  background: var(--paper);
+}
+.plan-opt__box::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: var(--ink);
+  transform: scale(0);
+  transition: transform var(--t-fast) var(--ease-out);
+}
+.plan-opt[data-selected='true'] .plan-opt__box {
+  border-color: var(--ink);
+}
+.plan-opt[data-selected='true'] .plan-opt__box::after {
+  transform: scale(1);
+}
+
+/* ==========================================================================
+   Uploads · DropzoneSurface — a dashed drop target with crop marks
+   ========================================================================== */
+
+.dropzone {
+  --dz-mark: var(--ink);
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 208px;
+  padding: 36px 20px;
+  border: 1px dashed var(--line-3);
+  background-color: var(--paper);
+  cursor: pointer;
+  text-align: center;
+  transition:
+    border-color var(--t-fast) ease,
+    background-color var(--t-fast) ease;
+}
+/* Crop marks on the four corners. */
+.dropzone::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  background:
+    linear-gradient(var(--dz-mark), var(--dz-mark)) top left / 12px 1px,
+    linear-gradient(var(--dz-mark), var(--dz-mark)) top left / 1px 12px,
+    linear-gradient(var(--dz-mark), var(--dz-mark)) top right / 12px 1px,
+    linear-gradient(var(--dz-mark), var(--dz-mark)) top right / 1px 12px,
+    linear-gradient(var(--dz-mark), var(--dz-mark)) bottom left / 12px 1px,
+    linear-gradient(var(--dz-mark), var(--dz-mark)) bottom left / 1px 12px,
+    linear-gradient(var(--dz-mark), var(--dz-mark)) bottom right / 12px 1px,
+    linear-gradient(var(--dz-mark), var(--dz-mark)) bottom right / 1px 12px;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+.dropzone:focus {
+  outline: none;
+}
+.dropzone:focus-visible {
+  outline: 2px solid var(--accent-ink);
+  outline-offset: 4px;
+}
+.dropzone[aria-busy='true'] {
+  cursor: progress;
+}
+.dropzone[data-dragging='true'] {
+  --dz-mark: var(--accent);
+  border-color: var(--accent);
+  background-color: var(--accent-wash);
+}
+.dropzone__glyph {
+  color: var(--ink-2);
+}
+.dropzone__arrow {
+  transition: transform var(--t-med) var(--ease-spring);
+}
+.dropzone[data-dragging='true'] .dropzone__arrow {
+  transform: translateY(-4px);
+}
+@media (hover: hover) and (pointer: fine) {
+  .dropzone:hover {
+    border-color: var(--ink-2);
+  }
+  .dropzone:hover .dropzone__arrow {
+    transform: translateY(-2px);
+  }
+}
+
+/* ==========================================================================
+   Motion fallbacks
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .core-dot[data-state='live']::after,
+  .core-wire__packet {
+    animation: none;
+  }
+  .plan-opt__box::after,
+  .dropzone,
+  .dropzone__arrow,
+  .core-control {
+    transition: none;
+  }
+  .dropzone[data-dragging='true'] .dropzone__arrow,
+  .dropzone:hover .dropzone__arrow {
+    transform: none;
+  }
+}

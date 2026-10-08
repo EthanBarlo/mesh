@@ -80,11 +80,8 @@
 
     // Flagged state comes from the server: $call("flagOrder") mutates the
     // Livewire component, and the refreshed `orders` prop re-renders the row
-    // with its tint.
-    const rowClassName = (row: Row<Order>) =>
-        row.original.flagged
-            ? "bg-rose-500/10 hover:bg-rose-500/[0.14]"
-            : "hover:bg-white/[0.04]";
+    // with the accent.
+    const rowClassName = (row: Row<Order>) => (row.original.flagged ? "bom__flagged" : "");
 </script>
 
 <div class="space-y-4">
@@ -95,11 +92,13 @@
             ariaLabel="Filter orders"
         />
 
-        <p class="text-xs text-zinc-500 tabular-nums">
-            {filteredCount === orders.length
-                ? `${orders.length} orders`
-                : `${filteredCount} of ${orders.length} orders`}
-            <span class="mx-1.5 text-zinc-700">·</span>
+        <p class="k k--caps text-ink-3 tabular-nums" aria-live="polite">
+            {#if filteredCount === orders.length}
+                <span class="text-ink">{orders.length}</span> orders
+            {:else}
+                <span class="text-ink">{filteredCount}</span> of {orders.length} orders
+            {/if}
+            <span class="mx-2 text-line-3" aria-hidden="true">·</span>
             sorted, filtered &amp; paged client-side
         </p>
     </div>

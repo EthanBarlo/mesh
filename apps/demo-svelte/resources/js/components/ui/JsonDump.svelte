@@ -11,10 +11,10 @@
     const formatted = $derived(JSON.stringify(value, null, 2));
 </script>
 
-<!-- Pretty-printed JSON in the demo's terminal-style block. -->
+<!-- Pretty-printed JSON in a recessed mono block. Long lines wrap. -->
 <pre
     {...rest}
     class={cn(
-        "overflow-x-auto rounded-lg bg-black/30 p-3 font-mono text-xs leading-relaxed text-zinc-400",
+        "whitespace-pre-wrap border border-line-2 bg-paper-2 p-3 font-mono text-xs leading-relaxed text-ink-2 [overflow-wrap:anywhere]",
         className,
     )}>{formatted}</pre>

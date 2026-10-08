@@ -1,0 +1,56 @@
+/* Shared UI kit helpers (resources/js/components/ui). Prefer Tailwind utilities in the components; put only what utilities can't express here.
+   Identical across the three demo apps: read tokens only, never raw colours. */
+
+/* In the components layer, so utilities passed through `className` still win. */
+@layer components {
+  /* Registration marks on two corners, like a figure stage (Panel, GlowCard). */
+  .ui-ticks::before,
+  .ui-ticks::after {
+    content: '';
+    position: absolute;
+    width: 9px;
+    height: 9px;
+    pointer-events: none;
+  }
+  .ui-ticks::before {
+    top: -5px;
+    left: -5px;
+    border-top: 1px solid var(--ink);
+    border-left: 1px solid var(--ink);
+  }
+  .ui-ticks::after {
+    right: -5px;
+    bottom: -5px;
+    border-right: 1px solid var(--ink);
+    border-bottom: 1px solid var(--ink);
+  }
+
+  /* Spinner: a short stroke tracing a square. */
+  .ui-spinner__run {
+    animation: ui-trace 900ms linear infinite;
+  }
+
+  /* ProgressBar: quarter ticks, like a scale rule. */
+  .ui-progress__ticks {
+    border-right: 1px solid var(--line-3);
+    background: linear-gradient(90deg, var(--line-3) 1px, transparent 1px) 0 0 / 25% 100% repeat-x;
+  }
+}
+
+@keyframes ui-trace {
+  to {
+    stroke-dashoffset: -100;
+  }
+}
+
+@keyframes ui-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-spinner__run {
+    animation: ui-pulse 1.6s ease-in-out infinite;
+  }
+}

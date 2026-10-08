@@ -13,26 +13,40 @@
         class: className,
         ...rest
     }: Props = $props();
+
+    const active = $derived(
+        options.findIndex((option) => option.value === value),
+    );
 </script>
 
-<!-- Pill-shaped exclusive choice group with a solid white active segment. -->
+<!--
+    An exclusive choice drawn like the docs' renderer switch: an ink frame of
+    equal mono cells, with a solid ink block that slides to the active one.
+-->
 <div
     {...rest}
     class={cn(
-        "inline-flex items-center gap-1 p-1 rounded-lg bg-white/[0.02] border border-white/10",
+        "relative isolate inline-grid auto-cols-fr grid-flow-col border border-ink bg-paper",
         className,
     )}
     role="group"
 >
-    {#each options as option (option.value)}
+    <span
+        aria-hidden="true"
+        class={cn(
+            "absolute inset-y-0 left-0 -z-10 bg-ink transition-transform duration-320 ease-(--ease-spring) motion-reduce:transition-none",
+            active < 0 && "opacity-0",
+        )}
+        style:width="{100 / Math.max(options.length, 1)}%"
+        style:transform="translateX({Math.max(active, 0) * 100}%)"
+    ></span>
+    {#each options as option, index (option.value)}
         <button
             type="button"
-            aria-pressed={option.value === value}
+            aria-pressed={index === active}
             class={cn(
-                "px-4 py-1.5 rounded-md text-sm font-medium transition-colors duration-150 active:scale-95 focus:outline-none focus:ring-2 focus:ring-white/20 focus:ring-offset-2 focus:ring-offset-zinc-950",
-                option.value === value
-                    ? "bg-white text-zinc-950"
-                    : "text-zinc-400 hover:text-white hover:bg-white/5",
+                "min-h-10 whitespace-nowrap px-3 font-mono text-[11px] uppercase tracking-[0.06em] transition-colors duration-240 focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-accent motion-reduce:transition-none sm:min-h-8",
+                index === active ? "text-paper" : "text-ink-2 hover:text-ink",
             )}
             onclick={() => (value = option.value)}
         >

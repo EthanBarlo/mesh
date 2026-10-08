@@ -11,23 +11,29 @@
 
     export interface DieProps {
         value: number;
+        class?: string;
     }
 </script>
 
 <script lang="ts">
-    let { value }: DieProps = $props();
+    import { cn } from "@/components/ui";
+
+    let { value, class: className }: DieProps = $props();
 </script>
 
-<!-- A single die face rendered as pips on a 3x3 grid. -->
+<!-- A single die face: a square drawn in ink with pips on a 3x3 grid. -->
 <div
-    class="w-14 h-14 rounded-xl bg-white/5 border border-white/10 grid grid-cols-3 grid-rows-3 p-2.5"
+    class={cn(
+        "grid size-14 grid-cols-3 grid-rows-3 border border-ink bg-paper p-2.5",
+        className,
+    )}
     role="img"
     aria-label={`Die showing ${value}`}
 >
     {#each Array.from({ length: 9 }) as _, i (i)}
         <span class="flex items-center justify-center">
             {#if (PIPS[value] ?? []).includes(i)}
-                <span class="w-2 h-2 rounded-full bg-white"></span>
+                <span class="size-2 rounded-full bg-ink"></span>
             {/if}
         </span>
     {/each}

@@ -1,6 +1,5 @@
 <script lang="ts">
     import { useWire } from "@mesh/svelte";
-    import { cn } from "@/components/ui";
     import {
         announceDragEnd,
         readPayload,
@@ -20,12 +19,6 @@
     }
 
     let { columnId, title, count }: Props = $props();
-
-    const ACCENTS: Record<string, string> = {
-        backlog: "bg-zinc-500",
-        "in-progress": "bg-amber-400",
-        done: "bg-emerald-400",
-    };
 
     const wire = useWire();
     const drag = useKanbanDrag();
@@ -62,17 +55,12 @@
     };
 </script>
 
-<header class="flex items-center gap-2.5 px-4 py-3 border-b border-white/5">
-    <span
-        class={cn("h-2 w-2 rounded-full", ACCENTS[columnId] ?? "bg-zinc-500")}
-        aria-hidden="true"
-    ></span>
-    <h3 class="text-sm font-semibold text-white">{title}</h3>
-    <!-- Live count — a reactive prop straight from the Board. -->
-    <span
-        class="ml-auto px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-xs font-medium tabular-nums text-zinc-400"
-    >
-        {count}
+<header class="lane__head">
+    <span class="lane__mark" data-lane={columnId} aria-hidden="true"></span>
+    <h3 class="lane__title">{title}</h3>
+    <!-- Live count: a reactive prop straight from the Board. -->
+    <span class="lane__count" title={`${count} cards`}>
+        {String(count).padStart(2, "0")}
     </span>
 </header>
 
@@ -80,18 +68,16 @@
      flex-1 stretches it over the column's remaining space. -->
 <div
     data-drop-tail={columnId}
-    class={cn(
-        "order-1 flex-1 m-3 min-h-14 rounded-lg flex items-center justify-center transition-colors duration-150",
-        (drag.value || count === 0) && "border border-dashed border-white/10",
-        over && "border-solid border-white/30 bg-white/[0.06]",
-    )}
+    class="lane__tail"
+    data-armed={drag.value || count === 0 ? "" : undefined}
+    data-over={over ? "" : undefined}
     ondragover={handleDragOver}
     ondragleave={() => (over = false)}
     ondrop={handleDrop}
 >
     {#if drag.value || count === 0}
-        <span class="text-xs text-zinc-500 pointer-events-none">
-            {drag.value ? "Drop here" : "No cards — drag one in"}
+        <span class="k k--caps pointer-events-none">
+            {drag.value ? "Drop here" : "No cards. Drag one in."}
         </span>
     {/if}
 </div>

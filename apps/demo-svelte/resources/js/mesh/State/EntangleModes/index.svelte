@@ -26,27 +26,30 @@
     );
 </script>
 
-<div class="space-y-6">
+<div class="space-y-4">
     <div class="grid gap-4 sm:grid-cols-2">
         <!-- Deferred input -->
         <Panel>
-            <label
-                for="entangle-deferred"
-                class="block text-sm font-semibold text-white"
-            >
-                Deferred
-            </label>
-            <p class="mt-0.5 mb-3 font-mono text-xs text-zinc-500">
+            <div class="flex items-baseline justify-between gap-3">
+                <label
+                    for="entangle-deferred"
+                    class="text-sm font-semibold text-ink"
+                >
+                    Deferred
+                </label>
+                <span class="k k--caps text-ink-3">Default</span>
+            </div>
+            <p class="mt-0.5 mb-3 font-mono text-xs text-ink-3">
                 useEntangle("message")
             </p>
             <Input
                 id="entangle-deferred"
                 bind:value={message.value}
-                placeholder="Type — nothing is sent yet"
-                class="px-4 py-3 text-base"
+                placeholder="Type a message"
             />
             <ServerValue
-                class="mt-2"
+                mode="deferred"
+                property="$message"
                 value={serverMessage}
                 synced={messageSynced}
             />
@@ -54,46 +57,51 @@
 
         <!-- Live input -->
         <Panel>
-            <label
-                for="entangle-live"
-                class="block text-sm font-semibold text-white"
-            >
-                Live
-            </label>
-            <p class="mt-0.5 mb-3 font-mono text-xs text-zinc-500">
+            <div class="flex items-baseline justify-between gap-3">
+                <label
+                    for="entangle-live"
+                    class="text-sm font-semibold text-ink"
+                >
+                    Live
+                </label>
+                <span class="k k--caps text-ink-3">Per keystroke</span>
+            </div>
+            <p class="mt-0.5 mb-3 font-mono text-xs text-ink-3">
                 useEntangle("liveMessage", true)
             </p>
             <Input
                 id="entangle-live"
                 bind:value={liveMessage.value}
-                placeholder="Type — every keystroke syncs"
-                class="px-4 py-3 text-base"
+                placeholder="Type a message"
             />
             <ServerValue
-                class="mt-2"
+                mode="live"
+                property="$liveMessage"
                 value={serverLiveMessage}
                 synced={liveMessageSynced}
             />
         </Panel>
     </div>
 
-    <!-- Round-trip panel -->
-    <Panel class="flex flex-col sm:flex-row sm:items-center gap-4">
-        <div class="flex items-center gap-4 grow">
-            <BigNumber class="text-5xl">{requests}</BigNumber>
-            <div>
-                <p class="text-sm font-semibold text-white">
-                    Server round-trips
-                </p>
-                <p class="text-xs text-zinc-500 leading-relaxed max-w-sm">
-                    Counted in the component's Livewire
-                    <code class="font-mono text-zinc-300">updated()</code>
-                    hooks — only requests that actually delivered a property
-                    change increment it.
-                </p>
+    <!-- Round-trip counter -->
+    <Panel class="flex flex-col gap-4 sm:flex-row sm:items-center">
+        <div class="flex grow items-center gap-5">
+            <div class="shrink-0">
+                <p class="k k--caps text-ink-3">Round-trips</p>
+                <BigNumber class="mt-1 block text-5xl leading-none">
+                    {String(requests).padStart(2, "0")}
+                </BigNumber>
             </div>
+            <p
+                class="max-w-sm border-l border-line-2 pl-5 text-xs leading-relaxed text-ink-3"
+            >
+                Counted in the component's Livewire
+                <code class="core-code">updated()</code> hooks. Only requests
+                that delivered a property change count.
+            </p>
         </div>
         <Button
+            variant="secondary"
             class="shrink-0"
             aria-label="Flush deferred changes to the server now"
             onclick={handleFlush}

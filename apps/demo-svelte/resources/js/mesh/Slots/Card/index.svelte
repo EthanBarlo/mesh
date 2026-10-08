@@ -4,10 +4,10 @@
 
     // The default slot — everything between the <mesh:slots.card> tags —
     // arrives as the `children` snippet. Named livewire:slot blocks arrive
-    // in the `slots` record. Both are server-rendered HTML that Mesh
-    // keeps in sync with Livewire re-renders.
+    // together in the `slots` record, keyed by name. Both are server-rendered
+    // HTML that Mesh keeps in sync with Livewire re-renders.
     interface Props {
-        // `variant` still selects behaviour upstream; styling is mono regardless.
+        // `variant` still selects behaviour upstream; styling is the same regardless.
         variant?: string;
         children?: Snippet;
         slots?: Record<string, Snippet | undefined>;
@@ -16,25 +16,30 @@
     let { variant, children, slots = {} }: Props = $props();
 </script>
 
-<GlowCard contentClassName="overflow-hidden p-0">
+<!-- Each region is labelled with the prop it arrived on, like a callout on a drawing. -->
+<GlowCard contentClassName="p-0">
     {#if slots.title}
-        <header class="px-6 pt-5 pb-4 border-b border-white/5">
-            <span class="block text-xs font-medium uppercase tracking-widest text-zinc-500 mb-1.5">
-                slots.title
-            </span>
-            <h3 class="text-lg font-semibold text-white tracking-tight leading-snug">
+        <header class="border-b border-line-2 px-5 pt-4 pb-4">
+            <span class="k text-ink-3">slots.title</span>
+            <h3 class="mt-1 text-lg leading-snug font-semibold tracking-tight text-ink">
                 {@render slots.title?.()}
             </h3>
         </header>
     {/if}
 
-    <div class="px-6 py-5 text-sm text-zinc-300 leading-relaxed">
-        {@render children?.()}
+    <div class="px-5 py-5">
+        <span class="k text-ink-3">children</span>
+        <div class="mt-1.5 text-sm leading-relaxed text-ink-2">
+            {@render children?.()}
+        </div>
     </div>
 
     {#if slots.footer}
-        <footer class="px-6 py-3 border-t border-white/5 text-xs text-zinc-500">
-            {@render slots.footer?.()}
+        <footer class="border-t border-line-2 bg-paper-2 px-5 py-3">
+            <span class="k text-ink-3">slots.footer</span>
+            <div class="mt-0.5 text-xs leading-relaxed text-ink-2">
+                {@render slots.footer?.()}
+            </div>
         </footer>
     {/if}
 </GlowCard>

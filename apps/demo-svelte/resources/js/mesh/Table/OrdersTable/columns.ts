@@ -76,7 +76,7 @@ export function buildColumns(options: {
             header: "Order",
             cell: (info) =>
                 renderSnippet(spanCell, {
-                    class: "font-mono text-zinc-400",
+                    class: "bom__mono text-ink-3",
                     text: `#${info.getValue()}`,
                 }),
         }),
@@ -84,7 +84,7 @@ export function buildColumns(options: {
             header: "Customer",
             cell: (info) =>
                 renderSnippet(spanCell, {
-                    class: "font-medium text-white",
+                    class: "bom__strong",
                     text: info.getValue(),
                 }),
         }),
@@ -97,7 +97,7 @@ export function buildColumns(options: {
             meta: { headerClass: "text-right", cellClass: "text-right" },
             cell: (info) =>
                 renderSnippet(spanCell, {
-                    class: "font-mono tabular-nums text-zinc-300",
+                    class: "bom__mono text-ink",
                     text: formatAmount(info.getValue()),
                 }),
         }),
@@ -105,7 +105,7 @@ export function buildColumns(options: {
             header: "Date",
             cell: (info) =>
                 renderSnippet(spanCell, {
-                    class: "text-zinc-400",
+                    class: "bom__mono",
                     text: info.getValue(),
                 }),
         }),
@@ -113,7 +113,7 @@ export function buildColumns(options: {
             id: "actions",
             header: () =>
                 renderSnippet(spanCell, { class: "sr-only", text: "Actions" }),
-            meta: { headerClass: "text-right", cellClass: "text-right" },
+            meta: { headerClass: "text-right", cellClass: "text-right py-1.5" },
             cell: ({ row }) =>
                 renderComponent(FlagButton, {
                     order: row.original,

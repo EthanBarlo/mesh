@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onDestroy } from "svelte";
     import { useWire } from "@mesh/svelte";
-    import { Button, Eyebrow, Panel } from "@/components/ui";
+    import { BigNumber, Button, Panel } from "@/components/ui";
     import Sparkline from "@/components/demo/Wire/Sparkline.svelte";
 
     interface PriceWatcherProps {
@@ -63,69 +63,63 @@
         previous === null ? null : price >= previous ? "up" : "down",
     );
     const delta = $derived(previous === null ? 0 : price - previous);
-
-    const min = $derived(Math.min(...history));
-    const max = $derived(Math.max(...history));
-
-    const priceColor = $derived(
-        direction === "up"
-            ? "text-emerald-400"
-            : direction === "down"
-              ? "text-rose-400"
-              : "text-white",
-    );
 </script>
 
 <Panel>
     <div class="flex flex-wrap items-start justify-between gap-4">
         <div>
-            <Eyebrow>{symbol} · server-side random walk</Eyebrow>
+            <p class="k k--caps text-ink-3">{symbol} · server-side random walk</p>
             <div class="mt-1 flex items-baseline gap-3">
                 <!-- Key by history length so each server tick re-renders a fresh node -->
                 {#key history.length}
-                    <span
-                        class={`text-4xl font-semibold tracking-tight tabular-nums transition-colors duration-300 ${priceColor}`}
-                    >
-                        ${price.toFixed(2)}
-                    </span>
+                    <BigNumber class="text-4xl">${price.toFixed(2)}</BigNumber>
                 {/key}
                 {#if direction !== null}
-                    <span
-                        class={`text-sm font-semibold tabular-nums ${
-                            direction === "up" ? "text-emerald-400" : "text-rose-400"
-                        }`}
-                    >
-                        {direction === "up" ? "▲" : "▼"} {Math.abs(delta).toFixed(2)}
+                    <span class="font-mono text-sm tabular-nums text-ink-2">
+                        <span aria-hidden="true">{direction === "up" ? "▲" : "▼"}</span><span class="sr-only">{direction === "up" ? "Up" : "Down"}</span>
+                        {Math.abs(delta).toFixed(2)}
                     </span>
                 {/if}
             </div>
         </div>
 
-        <Button
-            variant="secondary"
-            size="sm"
-            aria-pressed={paused}
-            onclick={() => (paused = !paused)}
-        >
-            {paused ? "Resume ticks" : "Pause ticks"}
-        </Button>
+        <div class="flex items-center gap-4">
+            <span class="core-status">
+                <span
+                    class="core-dot"
+                    data-state={paused ? "off" : "live"}
+                    aria-hidden="true"
+                ></span>
+                {paused ? "Paused" : "Every 2s"}
+            </span>
+            <Button
+                variant="secondary"
+                size="sm"
+                aria-pressed={paused}
+                onclick={() => (paused = !paused)}
+            >
+                {paused ? "Resume ticks" : "Pause ticks"}
+            </Button>
+        </div>
     </div>
 
     <Sparkline
-        class="mt-4"
+        class="mt-6"
         values={history}
         {direction}
         ariaLabel={`Sparkline of the last ${history.length} prices for ${symbol}`}
     />
 
-    <div class="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-500">
-        <span>
-            Low <span class="text-zinc-300 tabular-nums">${min.toFixed(2)}</span> · High
-            <span class="text-zinc-300 tabular-nums">${max.toFixed(2)}</span> · {history.length} points
-        </span>
-        <span>
-            <code class="font-mono text-zinc-400">wire.$call("tick")</code> every 2s ·
-            <code class="font-mono text-zinc-400">wire.$watch("price", …)</code> streams it back
-        </span>
+    <!-- Dimension line spanning the plot: how many ticks it holds. -->
+    <div class="mt-2 pl-14">
+        <div class="core-dim">
+            <span>{history.length} of {MAX_POINTS} points</span>
+        </div>
     </div>
+
+    <p class="mt-4 text-xs leading-relaxed text-ink-3">
+        <code class="core-code">wire.$call("tick")</code> every 2s.
+        <code class="core-code">wire.$watch("price", …)</code> streams each
+        change back.
+    </p>
 </Panel>

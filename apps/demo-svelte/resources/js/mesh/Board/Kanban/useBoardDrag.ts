@@ -1,4 +1,4 @@
-import type { ParentConfig } from "@formkit/drag-and-drop";
+import { dragstartClasses, type ParentConfig } from "@formkit/drag-and-drop";
 import type { Card, Column as ColumnType } from "./types";
 
 /** A column's live card list — a writable `{ value }` box over Svelte state. */
@@ -13,6 +13,8 @@ interface UseBoardDragOptions {
     setColumns: (columns: ColumnType[]) => void;
     /** Called once per confirmed move so the server can persist it. */
     onMove: (cardId: string, fromCol: string, toCol: string, position: number) => void | Promise<void>;
+    /** The column the dragged card currently sits in (its drop target), or null when no drag is on. */
+    onOver?: (columnId: string | null) => void;
 }
 
 export interface BoardDrag {
@@ -30,7 +32,7 @@ export interface BoardDrag {
  * just locates where the card started and landed, commits the new board to
  * the entangled state, and reports the confirmed move through `onMove`.
  */
-export function useBoardDrag({ board, setColumns, onMove }: UseBoardDragOptions): BoardDrag {
+export function useBoardDrag({ board, setColumns, onMove, onOver }: UseBoardDragOptions): BoardDrag {
     const lists = new Map<string, CardList>();
 
     // Where the card lived when the drag started, so a drop back in the same
@@ -51,6 +53,12 @@ export function useBoardDrag({ board, setColumns, onMove }: UseBoardDragOptions)
             ...column,
             cards: [...(lists.get(column.id)?.value ?? column.cards)],
         }));
+
+    const begin = (card: Card) => {
+        const location = locate(card.id);
+        origin = location ? { cardId: card.id, ...location } : null;
+        onOver?.(location?.columnId ?? null);
+    };
 
     const settle = async () => {
         if (!origin) return;
@@ -76,19 +84,29 @@ export function useBoardDrag({ board, setColumns, onMove }: UseBoardDragOptions)
         // The "Drop cards here" placeholder <li> lives inside the list —
         // only real cards count as draggable nodes.
         draggable: (el) => el.hasAttribute("data-card-id"),
-        draggingClass: "opacity-40",
-        dragPlaceholderClass: "opacity-40",
-        synthDragPlaceholderClass: "opacity-40",
-        dropZoneParentClass: "bg-white/[0.04]",
-        synthDropZoneParentClass: "bg-white/[0.04]",
-        onDragstart: (data) => {
-            const card = data.draggedNode.data.value as Card;
-            origin = (() => {
-                const location = locate(card.id);
-                return location ? { cardId: card.id, ...location } : null;
-            })();
+        // formkit's drag classes land on the card <li>, which is the `.ticket`
+        // itself. The drag image (mouse) or pointer clone (touch) is snapshotted
+        // while the lifted class is on; then formkit swaps it for the drop-zone
+        // class, which marks the card left in the list as the accent slot where
+        // it will land. formkit re-applies that class when the card transfers
+        // to another column. (The placeholder classes stay unset: giving them
+        // the same name would make formkit keep the class after the drop.)
+        draggingClass: "ticket--lifted",
+        synthDraggingClass: "ticket--lifted",
+        dropZoneClass: "ticket--slot",
+        synthDropZoneClass: "ticket--slot",
+        // Runs at the start of both mouse (native) and touch (synthetic) drags,
+        // so the origin is recorded either way.
+        dragstartClasses: (node, nodes, config, isSynth) => {
+            begin(node.data.value as Card);
+            dragstartClasses(node, nodes, config, isSynth);
+        },
+        onTransfer: (data) => {
+            const card = data.draggedNodes[0]?.data.value as Card | undefined;
+            if (card) onOver?.(locate(card.id)?.columnId ?? null);
         },
         onDragend: () => {
+            onOver?.(null);
             void settle();
         },
     };

@@ -7,24 +7,35 @@
     let { class: className, ...rest }: Props = $props();
 </script>
 
+<!--
+    A line-drawn square with a short stroke tracing its edge. Inherits the
+    text color; size it with `w-*`/`h-*`.
+-->
 <svg
     {...rest}
-    class={cn("w-4 h-4 animate-spin", className)}
-    viewBox="0 0 24 24"
+    class={cn("ui-spinner w-4 h-4 shrink-0", className)}
+    viewBox="0 0 16 16"
     fill="none"
     aria-hidden="true"
 >
-    <circle
-        class="opacity-25"
-        cx="12"
-        cy="12"
-        r="10"
+    <rect
+        x="1.5"
+        y="1.5"
+        width="13"
+        height="13"
         stroke="currentColor"
-        stroke-width="4"
+        stroke-opacity="0.28"
     />
-    <path
-        class="opacity-90"
-        fill="currentColor"
-        d="M12 2a10 10 0 0110 10h-4a6 6 0 00-6-6V2z"
+    <rect
+        class="ui-spinner__run"
+        x="1.5"
+        y="1.5"
+        width="13"
+        height="13"
+        stroke="currentColor"
+        stroke-width="1.5"
+        stroke-linecap="square"
+        pathLength="100"
+        stroke-dasharray="24 76"
     />
 </svg>

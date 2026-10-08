@@ -4,16 +4,27 @@
     import { cn } from "./cn";
 
     interface Props extends HTMLAttributes<HTMLDivElement> {
+        /** Registration marks on two corners, like a figure stage. */
+        ticks?: boolean;
         children?: Snippet;
     }
 
-    let { children, class: className, ...rest }: Props = $props();
+    let {
+        ticks = false,
+        children,
+        class: className,
+        ...rest
+    }: Props = $props();
 </script>
 
-<!-- The standard demo surface: a faint mono panel with a hairline border. -->
+<!-- The standard demo surface: paper, a hairline border, square corners. -->
 <div
     {...rest}
-    class={cn("p-5 rounded-xl bg-white/[0.02] border border-white/5", className)}
+    class={cn(
+        "relative border border-line-2 bg-paper p-5",
+        ticks && "ui-ticks",
+        className,
+    )}
 >
     {@render children?.()}
 </div>

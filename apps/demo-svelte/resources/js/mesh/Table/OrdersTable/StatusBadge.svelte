@@ -2,11 +2,13 @@
     import type { BadgeColor } from "@/components/ui";
     import type { OrderStatus } from "./columns";
 
+    // Drafting tones from the UI kit: paid is inked, pending is blueline, the
+    // rest are muted. The accent stays free for flagged rows.
     const statusColors: Record<OrderStatus, BadgeColor> = {
-        pending: "amber",
-        paid: "emerald",
-        shipped: "slate",
-        refunded: "slate",
+        pending: "blueline",
+        paid: "ink",
+        shipped: "muted",
+        refunded: "muted",
     };
 </script>
 

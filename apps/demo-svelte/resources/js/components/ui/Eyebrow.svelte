@@ -10,11 +10,11 @@
     let { children, class: className, ...rest }: Props = $props();
 </script>
 
-<!-- Tiny uppercase section label. -->
+<!-- The annotation voice (`.k .k--caps`): 11px tracked mono caps. -->
 <span
     {...rest}
     class={cn(
-        "text-xs font-medium uppercase tracking-widest text-zinc-500",
+        "font-mono text-[0.6875rem] font-normal uppercase leading-normal tracking-[0.1em] text-ink-3",
         className,
     )}
 >

@@ -16,11 +16,12 @@
     }: Props = $props();
 </script>
 
+<!-- A native select, drawn like the inputs. The arrow follows the color scheme. -->
 <select
     {...rest}
     bind:value
     class={cn(
-        "px-2.5 py-1.5 rounded-lg bg-white/[0.02] border border-white/10 text-sm text-white transition-colors duration-150 focus:outline-none focus:border-white/20 focus:ring-2 focus:ring-white/20",
+        "border border-line-2 bg-paper px-2.5 py-1.5 font-mono text-base tabular-nums text-ink outline-none transition-[border-color,box-shadow] duration-150 ease-(--ease-out) hover:border-line-3 focus:border-accent focus:ring-1 focus:ring-accent motion-reduce:transition-none sm:text-xs",
         className,
     )}
 >

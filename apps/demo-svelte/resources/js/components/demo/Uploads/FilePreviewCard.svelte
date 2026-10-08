@@ -9,65 +9,74 @@
 
 <script lang="ts">
     import type { HTMLAttributes } from "svelte/elements";
-    import { Badge, Button, cn } from "@/components/ui";
+    import { Button, cn } from "@/components/ui";
     import { formatBytes } from "./formatBytes";
 
-    /** Image preview with a metadata table, validation badge, and Remove action. */
+    /**
+     * Image preview with a dimension line (the image's natural size), a
+     * metadata schedule, the server-validated status, and a Remove action.
+     */
     interface Props extends HTMLAttributes<HTMLDivElement> {
         meta: FilePreviewMeta;
         onRemove?: () => void;
     }
 
     let { meta, onRemove, class: className, ...rest }: Props = $props();
+
+    // Natural pixel size, read from the image once it loads.
+    let natural = $state<{ w: number; h: number } | null>(null);
 </script>
 
-<div
-    {...rest}
-    class={cn(
-        "overflow-hidden rounded-xl border border-white/5 bg-white/[0.02]",
-        className,
-    )}
->
+<div {...rest} class={cn("border border-line-2 bg-paper", className)}>
     <div class="flex flex-col gap-5 p-5 sm:flex-row">
-        <img
-            src={meta.previewUrl}
-            alt={`Preview of ${meta.name}`}
-            class="h-40 w-full rounded-lg border border-white/10 object-cover sm:w-56"
-        />
+        <figure class="w-full shrink-0 sm:w-56">
+            <div class="border border-line-2 bg-paper-2">
+                <img
+                    src={meta.previewUrl}
+                    alt={`Preview of ${meta.name}`}
+                    class="block h-40 w-full object-contain"
+                    onload={(event) => {
+                        natural = {
+                            w: event.currentTarget.naturalWidth,
+                            h: event.currentTarget.naturalHeight,
+                        };
+                    }}
+                />
+            </div>
+            <figcaption class="core-dim mt-2">
+                <span>{natural ? `${natural.w} × ${natural.h} px` : "measuring…"}</span>
+            </figcaption>
+        </figure>
+
         <div class="flex min-w-0 flex-1 flex-col justify-between gap-4">
-            <div class="min-w-0 space-y-2">
-                <p class="truncate font-semibold text-white" title={meta.name}>
+            <div class="min-w-0">
+                <p class="truncate font-semibold text-ink" title={meta.name}>
                     {meta.name}
                 </p>
-                <dl class="space-y-1.5 text-sm">
-                    <div class="flex gap-2">
-                        <dt class="w-16 shrink-0 text-zinc-500">Size</dt>
-                        <dd class="tabular-nums text-zinc-300">
-                            {formatBytes(meta.size)}
-                        </dd>
+                <dl class="core-readout core-readout--caps mt-2">
+                    <div>
+                        <dt>Size</dt>
+                        <dd>{formatBytes(meta.size)}</dd>
                     </div>
-                    <div class="flex gap-2">
-                        <dt class="w-16 shrink-0 text-zinc-500">Type</dt>
-                        <dd class="text-zinc-300">{meta.mime}</dd>
+                    <div>
+                        <dt>Type</dt>
+                        <dd>{meta.mime}</dd>
                     </div>
-                    <div class="flex gap-2">
-                        <dt class="w-16 shrink-0 text-zinc-500">Stored</dt>
-                        <dd class="text-zinc-300">
-                            Livewire temp storage (auto-cleaned, never
-                            persisted)
+                    <div>
+                        <dt>Stored</dt>
+                        <dd class="core-readout__text">
+                            Livewire temp storage. Auto-cleaned, never
+                            persisted.
                         </dd>
                     </div>
                 </dl>
             </div>
-            <div class="flex items-center gap-3">
-                <Badge color="emerald" dot class="px-3 py-1">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <span class="core-status core-status--ink">
+                    <span class="core-dot" aria-hidden="true"></span>
                     Validated server-side
-                </Badge>
-                <Button
-                    variant="secondary"
-                    class="h-auto px-4 py-2"
-                    onclick={() => onRemove?.()}
-                >
+                </span>
+                <Button variant="secondary" size="sm" onclick={() => onRemove?.()}>
                     Remove
                 </Button>
             </div>
