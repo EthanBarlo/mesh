@@ -1,0 +1,225 @@
+---
+title: Renderer API
+description: The MeshRenderer contract, the context objects a renderer receives, and exactly what the Mesh core does before and after it calls a renderer.
+---
+
+A renderer is a plain object that teaches Mesh to mount one framework's components. React, Vue and
+Svelte ship as `@mesh/react`, `@mesh/vue` and `@mesh/svelte`; each is under eighty lines, because the
+Mesh core does everything that is the same across frameworks. This page is the contract. For a
+walkthrough of writing one, see [Custom renderers](/docs/advanced/custom-renderers).
+
+<Figure caption="The renderer contract. Left of the line is the core, shared by every framework; right of it, the four operations a renderer implements.">
+  <RendererContract />
+</Figure>
+
+## MeshRenderer
+
+```ts
+type MeshRenderer<TNode = unknown> = {
+    type: string;
+    nativeSlots?: boolean;
+    renderSlot: SlotRenderer<TNode>;
+    mount: (args: {
+        el: HTMLElement;
+        livewireComponent: LivewireComponent;
+        Component: any;
+        ctx: RenderContext<TNode>;
+    }) => {
+        update: (ctx: RenderContext<TNode>) => void;
+        cleanup: () => void;
+    };
+};
+```
+
+`TNode` is whatever your framework uses to represent a piece of slot content: a `ReactNode` for
+React, a slot function for Vue, a `Snippet` for Svelte.
+
+<TypeTable
+  type={{
+    type: {
+      type: 'string',
+      required: true,
+      description:
+        'The renderer type. Components are matched to it by file extension: "react" for .tsx/.jsx, "vue" for .vue, "svelte" for .svelte.',
+    },
+    nativeSlots: {
+      type: 'boolean',
+      default: 'false',
+      description:
+        'Set to true when slots reach components through a native slot API instead of props. Turns off the reserved-prop check.',
+    },
+    renderSlot: {
+      type: 'SlotRenderer<TNode>',
+      required: true,
+      description:
+        'Turns one slot of HTML into a TNode. Must be pure.',
+    },
+    mount: {
+      type: '(args) => { update, cleanup }',
+      required: true,
+      description:
+        'Mounts the component once and returns the functions the core calls later.',
+    },
+  }}
+/>
+
+Only the three types above can be reached today, because the core infers a component's renderer
+from its extension and knows no others. A renderer with `type: 'react'` replaces the built-in React
+renderer for every `.tsx` and `.jsx` component. See
+[what a custom renderer can do](/docs/advanced/custom-renderers#what-you-can-build-today).
+
+## mount()
+
+Called once per island, after the component's chunk has loaded.
+
+<TypeTable
+  type={{
+    el: {
+      type: 'HTMLElement',
+      description:
+        'The island\'s .mesh-root element. Empty, display: contents, and marked wire:ignore, so Livewire never morphs inside it. The renderer owns its children.',
+    },
+    livewireComponent: {
+      type: 'LivewireComponent',
+      description:
+        'The Livewire component that owns the island. Provide it to your framework\'s context so the hooks can find it.',
+    },
+    Component: {
+      type: 'any',
+      description:
+        'The default export of the component\'s entry file.',
+    },
+    ctx: {
+      type: 'RenderContext<TNode>',
+      description:
+        'The initial props and prepared slots. The reserved-prop check has already passed.',
+    },
+  }}
+/>
+
+`mount` returns two functions:
+
+<TypeTable
+  type={{
+    'update(ctx)': {
+      type: '(ctx: RenderContext<TNode>) => void',
+      description:
+        'Called with the latest props and slots whenever either changes.',
+    },
+    'cleanup()': {
+      type: '() => void',
+      description:
+        'Called once when Livewire removes the component. Unmount and release everything here.',
+    },
+  }}
+/>
+
+## RenderContext and slots
+
+```ts
+type RenderContext<TNode> = {
+    props: Record<string, any>;
+    slots: PreparedSlots<TNode>;
+};
+
+type PreparedSlots<TNode> = {
+    children: TNode | undefined;
+    named: Record<string, TNode>;
+    hasNamed: boolean;
+};
+
+type SlotRenderer<TNode> = (html: string, name: string) => TNode;
+
+type MeshSlots = Record<string, string>;
+```
+
+<TypeTable
+  type={{
+    'props': {
+      type: 'Record<string, any>',
+      description:
+        'The parsed JSON from props(). Missing or malformed JSON becomes {}.',
+    },
+    'slots.children': {
+      type: 'TNode | undefined',
+      description:
+        'The default slot, rendered through renderSlot(html, "default"). undefined when its HTML is empty.',
+    },
+    'slots.named': {
+      type: 'Record<string, TNode>',
+      description:
+        'Every named slot, rendered through renderSlot(html, name). Kept even when its HTML is empty.',
+    },
+    'slots.hasNamed': {
+      type: 'boolean',
+      description: 'true when there is at least one named slot.',
+    },
+  }}
+/>
+
+The core reads slot HTML from the direct children of the hidden `[data-mesh-slots]` holder
+(`MeshSlots`, keyed by name, the unnamed slot as `default`) and strips Livewire's fragment marker
+comments before handing it to `renderSlot`.
+
+**`renderSlot` must be pure.** The core calls it once per slot, outside any mount, before the first
+`mount` and again for every slot whenever slot content changes. It cannot depend on per-mount
+state. Every built-in renderer wraps the HTML in `<div style="display: contents">` so the wrapper
+does not take part in layout.
+
+## Reserved props and nativeSlots
+
+React and Svelte pass slots through props (`children` and `slots`), so a prop with one of those
+names would silently replace slot content. Before `mount` and before every `update`, the core
+checks:
+
+| Condition | Error |
+| --- | --- |
+| Any slot present and `"children" in props` | ``Mesh: `children` is reserved for slot content — rename the prop from props().`` |
+| Named slots present and `"slots" in props` | ``Mesh: `slots` is reserved for named slot content — rename the prop from props().`` |
+
+A renderer that delivers slots through a native API, as Vue does with `<slot>`, sets
+`nativeSlots: true` and the check is skipped. A `slots` prop is always fine when only the default
+slot is used.
+
+## Who owns what
+
+| The Mesh core | The renderer |
+| --- | --- |
+| Discovering entries and building the registry | `type` |
+| Loading the lazy chunk, caching it, retrying a failed load | `renderSlot(html, name)` |
+| Checking for a default export | `mount(...)` |
+| Reading `data-mesh-props` and the slot holders | `update(ctx)` |
+| Finding `.mesh-root` | `cleanup()` |
+| Splitting default and named slots | Providing `livewireComponent` to the framework's context |
+| The reserved-prop check | Wrapping slot HTML so it does not affect layout |
+| Dirty-checking props | |
+| Watching slot holders with a `MutationObserver` | |
+| Teardown, including teardown during a load | |
+| Catching and logging errors | |
+
+## The update contract
+
+What the core guarantees about calls to `update` and `cleanup`:
+
+- **Full context, every time.** `update` always receives complete props and complete prepared slots,
+  never a diff.
+- **Props-only updates reuse slot nodes.** After a Livewire morph the core re-reads
+  `data-mesh-props` and compares it with the last props as JSON. Identical JSON is a no-op. Otherwise
+  `update` receives the new props and the **same** `slots` object as before, with the same node
+  references, so a reconciler can skip unchanged slot content.
+- **Slot updates re-render every slot.** When the slot holders change, the core runs `renderSlot` for
+  every slot again and calls `update` with fresh slots and the current props.
+- **Validate, then commit.** The core only adopts new props or slots after the reserved-prop check
+  and your `update` both succeed. If `update` throws, the error is logged (`Mesh: failed to update
+  props` or `Mesh: failed to update slots`) and the previous state stays the baseline, so the next
+  identical morph tries again instead of being skipped.
+- **Mount failures are contained.** If `mount` throws, the core logs `Mesh: failed to render "<id>"`
+  with the error; other islands are unaffected.
+- **Cleanup is wired before loading.** The core registers its teardown with Livewire before it starts
+  loading the chunk. If Livewire removes the component while the chunk loads, `mount` is never
+  called.
+
+For frameworks that re-render from the top (React), `update` can simply render again. For frameworks
+that mount once and then mutate state (Vue, Svelte), `update` assigns the new context into reactive
+state created in `mount`. Both shapes are walked through in
+[Custom renderers](/docs/advanced/custom-renderers).

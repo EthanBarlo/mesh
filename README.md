@@ -78,11 +78,15 @@ Livewire.start()
 
 ## Documentation
 
-- [Installation](docs/installation.mdx)
-- [Building components](docs/guides/building-components.mdx)
-- [`Mesh\Component` API](docs/api/mesh-component.mdx)
-- [Renderers (React/Vue/Svelte)](docs/advanced/renderers.mdx)
-- [Troubleshooting](docs/advanced/troubleshooting.mdx)
+Full documentation lives at **[mesh.ebarlow.dev](https://mesh.ebarlow.dev)**.
+
+- [Installation](https://mesh.ebarlow.dev/docs/installation)
+- [Quickstart](https://mesh.ebarlow.dev/docs/quickstart)
+- [Components and discovery](https://mesh.ebarlow.dev/docs/guides/components)
+- [Two-way state](https://mesh.ebarlow.dev/docs/guides/state)
+- [React](https://mesh.ebarlow.dev/docs/frameworks/react), [Vue](https://mesh.ebarlow.dev/docs/frameworks/vue), [Svelte](https://mesh.ebarlow.dev/docs/frameworks/svelte)
+- [`Mesh\Component` reference](https://mesh.ebarlow.dev/docs/reference/component)
+- [Troubleshooting](https://mesh.ebarlow.dev/docs/advanced/troubleshooting)
 
 ## Laravel Boost
 
@@ -90,7 +94,7 @@ Mesh ships AI guidelines and a `mesh-development` agent skill for [Laravel Boost
 
 ## Requirements
 
-- PHP 8.2+, Laravel 11+
+- PHP 8.3+, Laravel 11 or 12
 - Livewire 4
 - Node with Vite (host app)
 
@@ -108,4 +112,4 @@ A component's **id** is a simple string, derived identically on both sides. The 
 method derives it from the class name relative to `App\Mesh` (`App\Mesh\Counter` → `Counter`,
 `App\Mesh\Forms\Input` → `Forms/Input`), and the JS registry derives the same id from the folder
 path under the fixed `resources/js/mesh` directory. Because `make:mesh` StudlyCases both the class
-segments and the folder names, the two always agree. See [building components](docs/guides/building-components.mdx) for details.
+segments and the folder names, the two always agree. See [components and discovery](https://mesh.ebarlow.dev/docs/guides/components) for details.

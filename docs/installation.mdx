@@ -1,148 +1,475 @@
 ---
 title: Installation
-description: Set up Mesh in a host Laravel app.
+description: Add Mesh to a Laravel app running Livewire 4, with React, Vue, Svelte, or any mix of them.
 ---
-
-# Installation
-
-Mesh bridges Livewire 4 with React, Vue, or Svelte islands. The frontend ships inside the Composer package and is consumed through a Vite **alias** (`@mesh`), not npm.
 
 ## Requirements
 
-- PHP 8.2+, Laravel 11+
+- PHP 8.3 or newer
+- Laravel 11 or 12
 - Livewire 4
-- Node + Vite in the host app
+- Node and Vite, with `laravel-vite-plugin`
+- At least one of React 18+, Vue 3.3+, or Svelte 5
 
-## Step 1 — Require the package
+Mesh hooks into the Livewire instance your own bundle imports, so the app
+bundles Livewire itself (Livewire's "manual bundling" setup). The steps
+below cover that.
+
+## Install
+
+<Steps>
+<Step>
+
+### Require the package
 
 ```bash
 composer require ethanbarlo/mesh
 ```
 
-## Step 2 — Vite alias + plugins
+Laravel discovers the service provider. It registers the `<mesh:…>` Blade
+tag, a `mesh` Livewire namespace that points at `App\Mesh`, and the
+`make:mesh` command. There is no npm package to install for Mesh itself.
 
-Mesh auto-discovers components from `resources/js/mesh`, so they do **not** need individual Vite input
-entries. Your `input` array only lists your real app entrypoints.
+</Step>
+<Step>
 
-This example uses React. For Vue or Svelte, install the corresponding framework and Vite plugin,
-then register `@mesh/vue` or `@mesh/svelte` as shown in [renderers](advanced/renderers.mdx).
+### Install your framework and its Vite plugin
 
-```ts
-// vite.config.ts
-import { defineConfig } from 'vite'
-import laravel from 'laravel-vite-plugin'
-import react from '@vitejs/plugin-react'
+<Frameworks>
+<Tab value="React">
+
+```bash
+npm install react react-dom
+npm install -D @vitejs/plugin-react
+```
+
+</Tab>
+<Tab value="Vue">
+
+```bash
+npm install vue
+npm install -D @vitejs/plugin-vue
+```
+
+</Tab>
+<Tab value="Svelte">
+
+```bash
+npm install svelte
+npm install -D @sveltejs/vite-plugin-svelte
+```
+
+The scaffolded components use `<script lang="ts">`. The Svelte demo app
+preprocesses it with `vitePreprocess`:
+
+```js title="svelte.config.js"
+import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
+
+export default {
+    preprocess: vitePreprocess(),
+};
+```
+
+</Tab>
+</Frameworks>
+
+</Step>
+<Step>
+
+### Add the plugin and the `@mesh` alias to Vite
+
+<Frameworks>
+<Tab value="React">
+
+```ts title="vite.config.ts"
+import { defineConfig } from 'vite';
+import laravel from 'laravel-vite-plugin';
+import react from '@vitejs/plugin-react';
 
 export default defineConfig({
-  plugins: [
-    laravel({
-      input: [
-        'resources/css/app.css',
-        'resources/js/app.ts',
-      ],
-    }),
-    react(),
-  ],
-  resolve: {
-    alias: {
-      '@mesh': '/vendor/ethanbarlo/mesh/resources/js',
+    plugins: [
+        laravel({
+            input: ['resources/css/app.css', 'resources/js/app.ts'],
+            refresh: true,
+        }),
+        react(),
+    ],
+    resolve: {
+        alias: {
+            '@mesh': '/vendor/ethanbarlo/mesh/resources/js',
+        },
     },
-  },
-})
+});
 ```
 
-## Step 3 — Configure `app.ts`
+</Tab>
+<Tab value="Vue">
 
-Register your renderers — that's all. Mesh auto-discovers every component under the fixed
-`resources/js/mesh` directory: `index.{tsx,jsx,vue,svelte}` entries are picked up (co-located helper files
-are ignored), and each becomes its own lazy, code-split chunk fetched on first render. Register a
-matching renderer for each extension you use.
+```ts title="vite.config.ts"
+import { defineConfig } from 'vite';
+import laravel from 'laravel-vite-plugin';
+import vue from '@vitejs/plugin-vue';
 
-```ts
-// resources/js/app.ts
-import { Livewire, Alpine } from '../../vendor/livewire/livewire/dist/livewire.esm'
-import { initMesh } from '@mesh'
-import reactRenderer from '@mesh/react'
+export default defineConfig({
+    plugins: [
+        laravel({
+            input: ['resources/css/app.css', 'resources/js/app.ts'],
+            refresh: true,
+        }),
+        vue(),
+    ],
+    resolve: {
+        alias: {
+            '@mesh': '/vendor/ethanbarlo/mesh/resources/js',
+        },
+    },
+});
+```
+
+</Tab>
+<Tab value="Svelte">
+
+```ts title="vite.config.ts"
+import { defineConfig } from 'vite';
+import laravel from 'laravel-vite-plugin';
+import { svelte } from '@sveltejs/vite-plugin-svelte';
+
+export default defineConfig({
+    plugins: [
+        laravel({
+            input: ['resources/css/app.css', 'resources/js/app.ts'],
+            refresh: true,
+        }),
+        svelte(),
+    ],
+    resolve: {
+        alias: {
+            '@mesh': '/vendor/ethanbarlo/mesh/resources/js',
+        },
+    },
+});
+```
+
+</Tab>
+</Frameworks>
+
+Components are not Vite inputs. Mesh discovers them itself, so `input`
+lists only your real entry points.
+
+</Step>
+<Step>
+
+### Start Livewire and Mesh in `app.ts`
+
+<Frameworks>
+<Tab value="React">
+
+```ts title="resources/js/app.ts"
+import {
+    Livewire,
+    Alpine,
+} from '../../vendor/livewire/livewire/dist/livewire.esm';
+import { initMesh } from '@mesh';
+import reactRenderer from '@mesh/react';
 
 initMesh(Livewire, {
-  renderers: [reactRenderer],
-  debug: true,
-})
+    renderers: [reactRenderer],
+    debug: import.meta.env.DEV,
+});
 
-Livewire.start()
+Livewire.start();
 ```
 
-Put `@livewireScriptConfig` in the Blade layout that loads this bundle, not in `app.ts`:
+</Tab>
+<Tab value="Vue">
 
-```blade
-@vite(['resources/css/app.css', 'resources/js/app.ts'])
-@livewireScriptConfig
+```ts title="resources/js/app.ts"
+import {
+    Livewire,
+    Alpine,
+} from '../../vendor/livewire/livewire/dist/livewire.esm';
+import { initMesh } from '@mesh';
+import vueRenderer from '@mesh/vue';
+
+initMesh(Livewire, {
+    renderers: [vueRenderer],
+    debug: import.meta.env.DEV,
+});
+
+Livewire.start();
 ```
 
-## Step 4 — Publish config (optional)
+</Tab>
+<Tab value="Svelte">
+
+```ts title="resources/js/app.ts"
+import {
+    Livewire,
+    Alpine,
+} from '../../vendor/livewire/livewire/dist/livewire.esm';
+import { initMesh } from '@mesh';
+import svelteRenderer from '@mesh/svelte';
+
+initMesh(Livewire, {
+    renderers: [svelteRenderer],
+    debug: import.meta.env.DEV,
+});
+
+Livewire.start();
+```
+
+</Tab>
+</Frameworks>
+
+Call `initMesh()` before `Livewire.start()`. It builds the component
+registry and registers its Livewire hooks synchronously, so they are in
+place before Livewire initializes the first component. `debug` logs
+discovery and every mount to the console; `import.meta.env.DEV` keeps it out
+of production builds. Every option is described in the
+[`initMesh` reference](/docs/reference/init-mesh).
+
+</Step>
+<Step>
+
+### Load the bundle from your layout
+
+```blade title="resources/views/components/layouts/app.blade.php"
+<!DOCTYPE html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ $title ?? config('app.name') }}</title>
+
+    @livewireStyles
+    @vite(['resources/css/app.css', 'resources/js/app.ts'])
+</head>
+<body>
+    {{ $slot }}
+
+    @livewireScriptConfig
+</body>
+</html>
+```
+
+Use `@livewireScriptConfig`, not `@livewireScripts`. Your bundle already
+contains Livewire; the directive only prints the configuration that copy
+reads when `Livewire.start()` runs.
+
+<Callout type="warn" title="The step people miss">
+  Without `@livewireScriptConfig`, Livewire never initializes. Nothing on
+  the page mounts, and there is no error to say why.
+</Callout>
+
+</Step>
+<Step>
+
+### Check the setup
+
+Run `npm run dev` and open any page that uses the layout. With no
+components yet, the browser console shows a warning that begins
+`Mesh: no components found under resources/js/mesh`. That warning means the
+runtime loaded and its hooks are registered. The
+[Quickstart](/docs/quickstart) creates the first component.
+
+</Step>
+</Steps>
+
+## Mixing renderers
+
+Each component's renderer comes from its file extension, so one app can mix
+frameworks. Install each framework and its Vite plugin, add every plugin to
+`vite.config.ts`, and register every renderer:
+
+```ts title="resources/js/app.ts"
+import { initMesh } from '@mesh';
+import reactRenderer from '@mesh/react';
+import vueRenderer from '@mesh/vue';
+import svelteRenderer from '@mesh/svelte';
+
+initMesh(Livewire, {
+    renderers: [reactRenderer, vueRenderer, svelteRenderer],
+    debug: import.meta.env.DEV,
+});
+```
+
+- `make:mesh` uses React unless told otherwise. Pass `--renderer=vue` or
+  `--renderer=svelte`, or change the default in `config/mesh.php`.
+- Register only the renderers you use. Each one imports its framework, so
+  every registered renderer adds that framework's runtime to your main
+  bundle.
+- A component whose renderer isn't registered fails to mount, and the
+  console logs `Mesh renderer for "vue" not found`.
+
+## The `@mesh` alias
+
+The JavaScript runtime ships inside the Composer package, at
+`vendor/ethanbarlo/mesh/resources/js`. The alias points Vite at it instead
+of at an npm package, so `composer update ethanbarlo/mesh` updates the PHP
+and JavaScript halves together and they can never drift apart.
+
+| Import | What it provides |
+| --- | --- |
+| `@mesh` | `initMesh` and the public types, such as `Wire` and `MeshRenderer` |
+| `@mesh/react` | The React renderer (default export), `useWire`, `useEntangle`, `useErrorBag` |
+| `@mesh/vue` | The Vue renderer and the same three composables |
+| `@mesh/svelte` | The Svelte renderer and the same three, built on runes |
+
+Two consequences are worth knowing:
+
+- **`vendor/` must exist before Vite runs.** Vite reads Mesh, and Livewire's
+  ESM build, from `vendor/`. In CI or a Docker build, run `composer install`
+  before `npm run build`.
+- **Your app provides the framework.** The runtime imports `react`, `vue`,
+  or `svelte`, and Vite resolves them from your app's `node_modules`. They
+  are optional peer dependencies of Mesh, which is why you installed them
+  yourself.
+
+The alias above is root-relative. The demo apps write the same thing as
+`path.resolve(__dirname, 'vendor/ethanbarlo/mesh/resources/js')`.
+
+## Configuration
+
+Publishing the config is optional:
 
 ```bash
 php artisan vendor:publish --tag=mesh-config
 ```
 
-This writes `config/mesh.php`:
-
-```php
+```php title="config/mesh.php"
 return [
     'make' => [
+        // 'react', 'vue' or 'svelte'
         'renderer' => 'react',
     ],
 ];
 ```
 
-The component directory for auto-discovery is fixed at `resources/js/mesh`. Frontend entries shipped by
-Composer packages can be added through the `sources` option of `initMesh` — see
-[building components](/docs/guides/building-components#components-from-composer-packages). The only
-published PHP option is the default renderer used by `make:mesh`.
+That is the only option: the renderer `make:mesh` scaffolds when you don't
+pass `--renderer`. The component directory is fixed at `resources/js/mesh`
+on purpose. Both halves derive the component id from that path, so keeping
+it fixed means the PHP class, the frontend folder, and the discovery glob
+always agree. Components shipped in Composer packages are added with the
+`sources` option of `initMesh`; see
+[Components in Composer packages](/docs/guides/packages).
 
-## Step 5 — Create your first component
+## TypeScript
 
-```bash
-php artisan make:mesh Counter
+Vite strips types without checking them, so this matters for your editor
+and `tsc`, not for the build. Map the alias, include the vendored runtime,
+and exclude the renderer folders for frameworks you haven't installed (they
+import packages your app doesn't have).
+
+<Frameworks>
+<Tab value="React">
+
+```json title="tsconfig.json"
+{
+    "compilerOptions": {
+        "jsx": "react-jsx",
+        "paths": {
+            "@mesh": ["./vendor/ethanbarlo/mesh/resources/js/index.ts"],
+            "@mesh/*": ["./vendor/ethanbarlo/mesh/resources/js/*"]
+        }
+    },
+    "include": [
+        "resources/js/**/*.ts",
+        "resources/js/**/*.tsx",
+        "vendor/ethanbarlo/mesh/resources/js/**/*.ts",
+        "vendor/ethanbarlo/mesh/resources/js/**/*.tsx"
+    ],
+    "exclude": [
+        "node_modules",
+        "vendor/ethanbarlo/mesh/resources/js/vue",
+        "vendor/ethanbarlo/mesh/resources/js/svelte"
+    ]
+}
 ```
 
-This creates `app/Mesh/Counter.php` and `resources/js/mesh/Counter/index.tsx` (whose default export
-is the component). Pass `--renderer=vue` for `index.vue` or `--renderer=svelte` for `index.svelte`.
+Install the React types with `npm install -D @types/react @types/react-dom`.
 
-## Step 6 — Render in Blade
+</Tab>
+<Tab value="Vue">
 
-```blade
-<mesh:counter />
+```json title="tsconfig.json"
+{
+    "compilerOptions": {
+        "paths": {
+            "@mesh": ["./vendor/ethanbarlo/mesh/resources/js/index.ts"],
+            "@mesh/*": ["./vendor/ethanbarlo/mesh/resources/js/*"]
+        }
+    },
+    "include": [
+        "resources/js/**/*.ts",
+        "resources/js/**/*.vue",
+        "vendor/ethanbarlo/mesh/resources/js/**/*.ts"
+    ],
+    "exclude": [
+        "node_modules",
+        "vendor/ethanbarlo/mesh/resources/js/react",
+        "vendor/ethanbarlo/mesh/resources/js/svelte"
+    ]
+}
 ```
 
-## How the alias works
+```ts title="resources/js/env.d.ts"
+declare module "*.vue" {
+    import type { DefineComponent } from "vue";
+    const component: DefineComponent<{}, {}, any>;
+    export default component;
+}
+```
 
-The `@mesh` alias points Vite at the package's `resources/js` directory inside `vendor/`. When you `import { initMesh } from '@mesh'`, Vite resolves it to the runtime inside `vendor/ethanbarlo/mesh/resources/js`. This keeps the runtime versioned with the PHP package.
+</Tab>
+<Tab value="Svelte">
 
-## A simple id, derived identically on both sides
+```json title="tsconfig.json"
+{
+    "compilerOptions": {
+        "paths": {
+            "@mesh": ["./vendor/ethanbarlo/mesh/resources/js/index.ts"],
+            "@mesh/*": ["./vendor/ethanbarlo/mesh/resources/js/*"]
+        }
+    },
+    "include": [
+        "resources/js/**/*.ts",
+        "resources/js/**/*.svelte",
+        "vendor/ethanbarlo/mesh/resources/js/**/*.ts"
+    ],
+    "exclude": [
+        "node_modules",
+        "vendor/ethanbarlo/mesh/resources/js/react",
+        "vendor/ethanbarlo/mesh/resources/js/vue"
+    ]
+}
+```
 
-Every component has an **id** that is just a short string — `Counter`, or `Forms/Input` for a nested
-component. It is derived the same way on each side:
+```ts title="resources/js/env.d.ts"
+/// <reference types="vite/client" />
+/// <reference types="svelte" />
+```
 
-- **PHP** strips the `App\Mesh\` prefix from the class name and replaces the remaining backslashes
-  with forward slashes (`App\Mesh\Forms\Input` → `Forms/Input`).
-- **JS** takes the discovered entry's path, keeps everything after `resources/js/mesh/`, drops the
-  file extension and the trailing `/index` (`/resources/js/mesh/Forms/Input/index.tsx` → `Forms/Input`).
+</Tab>
+</Frameworks>
 
-Because `make:mesh` StudlyCases both the class segments and the folder names, the ids match. The
-renderer is inferred from the entry's file extension (`tsx`/`jsx` → React, `vue` → Vue,
-`svelte` → Svelte). See
-[building components](guides/building-components.mdx).
+Livewire's ESM build ships without types, so declare the module once:
 
-## Step 7 — Production build
+```ts title="resources/js/livewire.d.ts"
+declare module "*livewire.esm" {
+    export const Livewire: any;
+    export const Alpine: any;
+}
+```
+
+## Production build
 
 ```bash
+composer install --no-dev --optimize-autoloader
+npm ci
 npm run build
 ```
 
-Each component is emitted as a separate code-split chunk. The runtime imports a component's chunk on
-first render, so only the components actually used on a page are loaded.
-
-## Troubleshooting
-
-See [troubleshooting](advanced/troubleshooting.mdx) for common mount failures (id mismatch, entry not discovered, Livewire not started).
+Each component becomes its own chunk in `public/build`, and a page fetches a
+component's chunk the first time it renders that component. Pages without
+islands never download component code. With `debug: import.meta.env.DEV`,
+production builds log nothing.

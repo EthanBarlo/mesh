@@ -1,0 +1,399 @@
+---
+title: Hooks and composables
+description: Signatures, return shapes and exact behavior of useEntangle, useWire, useErrorBag and useLivewireComponent in React, Vue and Svelte.
+---
+
+Each renderer package exports the same four functions, shaped for its framework. They read the
+Livewire component that owns the island, so they only work inside a component Mesh mounted (or a
+test that provides one, see [Testing outside Mesh](#testing-outside-mesh)).
+
+| | React (`@mesh/react`) | Vue (`@mesh/vue`) | Svelte (`@mesh/svelte`) |
+| --- | --- | --- | --- |
+| `useEntangle<T>(key, live?)` | `[T, setter]` | `Ref<T>` | `{ value: T }` |
+| `useWire<T>()` | `Wire & T` | `Wire & T` | `Wire & T` |
+| `useErrorBag()` | `Record<string, string[]>` | `ShallowRef<…>` | `{ readonly value: … }` |
+| `useLivewireComponent()` | `LivewireComponent` | `LivewireComponent` | `LivewireComponent` |
+| Where to call it | Component body (a hook) | `setup` / `<script setup>` | Component initialisation |
+
+## useEntangle
+
+Two-way binding between frontend state and a **public property** of the PHP class.
+
+<Frameworks>
+<Tab value="React">
+
+```ts
+function useEntangle<T = string>(
+    key: string,
+    live?: boolean, // default false
+): [T, React.Dispatch<React.SetStateAction<T>>];
+```
+
+```tsx
+const [count, setCount] = useEntangle<number>('count');
+const [slug, setSlug] = useEntangle<string>('slug', true);
+
+setCount((c) => c + 1);
+```
+
+- Returns a `useState` pair. The setter accepts a value or an updater function.
+- The initial state is `wire.$get(key)`.
+- **Inbound:** an effect registers `wire.$watch(key, setValue)`, so server changes re-render the
+  component. The watcher is not unsubscribed by the hook; Livewire removes it when the component
+  is torn down.
+- **Outbound:** an effect calls `wire.$set(key, value, live)` whenever the value changes, and once
+  after mount. With `live` this means a request on mount and after every server-driven change (see
+  [React gotchas](/docs/frameworks/react#useentangle-writes-its-value-back)).
+- `key` and `live` are read on mount. Keep them constant.
+
+</Tab>
+<Tab value="Vue">
+
+```ts
+function useEntangle<T = string>(
+    key: string,
+    live?: boolean, // default false
+): Ref<T>;
+```
+
+```vue
+<script setup lang="ts">
+const count = useEntangle<number>('count');
+const slug = useEntangle<string>('slug', true);
+</script>
+
+<template>
+    <input v-model="slug" />
+    <button @click="count++">{{ count }}</button>
+</template>
+```
+
+- Returns a `shallowRef`, seeded with `wire.$get(key)`.
+- **Inbound:** `wire.$watch(key, …)` assigns the server value to the ref. The watcher is removed
+  with `onScopeDispose`.
+- **Outbound:** a shallow `watch` calls `wire.$set(key, value, live)` when the ref changes, but only
+  if the new value differs (`!==`) from what Livewire holds. Nothing is sent on mount, and a server
+  push is not echoed back.
+- Shallow: assign a new object or array to `.value`. Mutating inside it does not sync.
+
+</Tab>
+<Tab value="Svelte">
+
+```ts
+function useEntangle<T = string>(
+    key: string,
+    live?: boolean, // default false
+): { value: T };
+```
+
+```svelte
+<script lang="ts">
+    const count = useEntangle<number>('count');
+    const slug = useEntangle<string>('slug', true);
+</script>
+
+<input bind:value={slug.value} />
+<button onclick={() => count.value++}>{count.value}</button>
+```
+
+- Returns a box with a `value` getter and setter, backed by `$state.raw`, seeded with
+  `wire.$get(key)`.
+- **Inbound:** `wire.$watch(key, …)` assigns the server value. The watcher is removed with
+  `onDestroy`.
+- **Outbound:** the setter calls `wire.$set(key, value, live)` only if the new value differs (`!==`)
+  from what Livewire holds. Nothing is sent on mount, and a server push is not echoed back.
+- Shallow: assign a new object or array to `.value`. Do not destructure the box.
+
+</Tab>
+</Frameworks>
+
+In every framework, `live` decides when Livewire hears about a change:
+
+| Mode | Call | Network |
+| --- | --- | --- |
+| Deferred (default) | `useEntangle('name')` | None. The change rides along with the next request: an action, `$commit`, `$refresh`, or a live update. |
+| Live | `useEntangle('slug', true)` | One request per change. `updatedSlug()` runs on the server each time. |
+
+The [Two-way state guide](/docs/guides/state) shows both modes side by side.
+
+## useWire
+
+Returns the Livewire `$wire` object of the island's component.
+
+```ts
+function useWire<T = {}>(): Wire & T;
+```
+
+The type argument adds your component's own members to the `Wire` type, so typed calls and
+property reads work:
+
+<Frameworks>
+<Tab value="React">
+
+```tsx
+import { useWire } from '@mesh/react';
+
+type OrdersWire = { flagOrder: (id: number) => Promise<void> };
+
+const wire = useWire<OrdersWire>();
+await wire.flagOrder(42); // same as wire.$call('flagOrder', 42)
+```
+
+</Tab>
+<Tab value="Vue">
+
+```ts
+import { useWire } from '@mesh/vue';
+
+type OrdersWire = { flagOrder: (id: number) => Promise<void> };
+
+const wire = useWire<OrdersWire>();
+await wire.flagOrder(42); // same as wire.$call('flagOrder', 42)
+```
+
+</Tab>
+<Tab value="Svelte">
+
+```ts
+import { useWire } from '@mesh/svelte';
+
+type OrdersWire = { flagOrder: (id: number) => Promise<void> };
+
+// `$wire` is not a legal name in Svelte: use `wire`.
+const wire = useWire<OrdersWire>();
+await wire.flagOrder(42); // same as wire.$call('flagOrder', 42)
+```
+
+</Tab>
+</Frameworks>
+
+The object is the same in all three frameworks, and it is stable for the life of the island, so it
+is safe in dependency arrays. Every member is documented in the [`$wire` API](/docs/reference/wire).
+The type argument only changes types; it does not check that the PHP method exists.
+
+## useErrorBag
+
+Returns Livewire's validation errors for the component, keyed by property name.
+
+<Frameworks>
+<Tab value="React">
+
+```ts
+function useErrorBag(): Record<string, string[]>;
+```
+
+```tsx
+const errors = useErrorBag();
+
+{errors.email && <p role="alert">{errors.email[0]}</p>}
+```
+
+</Tab>
+<Tab value="Vue">
+
+```ts
+function useErrorBag(): ShallowRef<Record<string, string[]>>;
+```
+
+```vue
+<script setup lang="ts">
+const errors = useErrorBag();
+</script>
+
+<template>
+    <p v-if="errors.email" role="alert">{{ errors.email[0] }}</p>
+</template>
+```
+
+</Tab>
+<Tab value="Svelte">
+
+```ts
+function useErrorBag(): {
+    readonly value: Record<string, string[]>;
+};
+```
+
+```svelte
+<script lang="ts">
+    const errors = useErrorBag();
+</script>
+
+{#if errors.value.email}
+    <p role="alert">{errors.value.email[0]}</p>
+{/if}
+```
+
+</Tab>
+</Frameworks>
+
+- The initial value comes from the component's snapshot (`snapshot.memo.errors`), so errors from
+  the server render show on mount.
+- It refreshes after **every** successful Livewire request for the component, through Livewire's
+  `commit` hook. A `$call` whose validation failed is still a successful request, so its messages
+  appear straight away.
+- The bag is replaced as a whole each time. Errors clear when the server validates again and the
+  key is gone. There is no client-side `clear()`.
+- Livewire only keeps errors whose key is a property of the component. An empty bag is serialized
+  as `[]`, so test for a key (`errors.email`) rather than comparing with `{}`.
+- Each package also exports `type ErrorBagItem = string[] | null`.
+
+See [Forms and validation](/docs/guides/forms) for the full pattern.
+
+## useLivewireComponent
+
+Returns the raw Livewire component instance that owns the island. Prefer `useWire`; reach for this
+when you need the element, the id or the snapshot.
+
+```ts
+function useLivewireComponent(): LivewireComponent;
+```
+
+<TypeTable
+  type={{
+    el: {
+      type: 'HTMLElement',
+      description:
+        'The component root: the wrapper div with data-mesh-component.',
+    },
+    id: {
+      type: 'string',
+      description: 'The Livewire component id.',
+    },
+    name: {
+      type: 'string',
+      description: 'The Livewire component name.',
+    },
+    $wire: {
+      type: 'Wire',
+      description: 'The object useWire() returns.',
+    },
+    snapshot: {
+      type: 'LivewireSnapshot',
+      description:
+        'data (public properties), memo (id, name, errors, …) and checksum.',
+    },
+    children: {
+      type: 'any[]',
+      description: 'Nested Livewire components.',
+    },
+  }}
+/>
+
+Each framework reads it from its own context mechanism:
+
+| Framework | Provided by the renderer with | Throws outside an island |
+| --- | --- | --- |
+| React | `<LivewireContext.Provider>` around the component | yes |
+| Vue | `app.provide(LivewireComponentKey, …)` on the island's app | yes |
+| Svelte | `mount(…, { context })` with `LivewireComponentKey` | yes |
+
+Outside an island it throws `useLivewireComponent must be used within a Mesh component`. Because
+`useWire`, `useEntangle` and `useErrorBag` all call it, they throw the same error.
+
+## Framework-specific exports
+
+Besides the four functions, each package exports what its renderer is built from.
+
+| Export | React | Vue | Svelte |
+| --- | --- | --- | --- |
+| Default export | the renderer | the renderer | the renderer |
+| Named renderer | `reactRenderer` | `vueRenderer` | `svelteRenderer` |
+| Slot node helper | `MeshSlot` | `renderSlotHtml` | `renderSlotHtml` |
+| Slot type | `React.ReactNode` | `VueSlot` | `SvelteSlot` |
+| Context | `LivewireContext` | `LivewireComponentKey` | `LivewireComponentKey` |
+| Error type | `ErrorBagItem` | `ErrorBagItem` | `ErrorBagItem` |
+
+### MeshSlot (React)
+
+```tsx
+function MeshSlot(props: { html: string }): JSX.Element;
+```
+
+Renders `<div style="display: contents">` with `html` set through `dangerouslySetInnerHTML`. The
+React renderer uses it for every slot. Only pass HTML you trust.
+
+### renderSlotHtml (Vue and Svelte)
+
+```ts
+// @mesh/vue
+type VueSlot = () => VNodeChild;
+function renderSlotHtml(html: string): VueSlot;
+
+// @mesh/svelte
+type SvelteSlot = Snippet;
+function renderSlotHtml(html: string): SvelteSlot;
+```
+
+Turns an HTML string into a slot: a Vue slot function that renders
+`<div style="display: contents">` with `innerHTML`, or a Svelte raw snippet that renders the same
+wrapper. The renderers use it for every slot, and a [custom renderer](/docs/advanced/custom-renderers)
+can reuse it.
+
+### LivewireContext and LivewireComponentKey
+
+`LivewireContext` is the React context (`createContext<LivewireComponent | null>`).
+`LivewireComponentKey` is the Vue `InjectionKey<LivewireComponent>` or the Svelte context key (a
+`Symbol`). The hooks read from them; a custom renderer must provide them.
+
+## Testing outside Mesh
+
+To render a Mesh component in a unit test or a component explorer, provide a stand-in Livewire
+component through the same context. Mesh's own test suite does this with a fake `$wire` whose
+`$get`, `$set`, `$watch` and `$hook` are stubs.
+
+<Frameworks>
+<Tab value="React">
+
+```tsx
+import { LivewireContext } from '@mesh/react';
+import type { LivewireComponent } from '@mesh';
+
+const fake = { $wire: fakeWire } as unknown as LivewireComponent;
+
+render(
+    <LivewireContext.Provider value={fake}>
+        <Counter initialCount={0} />
+    </LivewireContext.Provider>,
+);
+```
+
+</Tab>
+<Tab value="Vue">
+
+```ts
+import { createApp, h } from 'vue';
+import { LivewireComponentKey } from '@mesh/vue';
+import type { LivewireComponent } from '@mesh';
+
+const fake = { $wire: fakeWire } as unknown as LivewireComponent;
+
+const app = createApp({
+    render: () => h(Counter, { initialCount: 0 }),
+});
+app.provide(LivewireComponentKey, fake);
+app.mount(document.createElement('div'));
+```
+
+</Tab>
+<Tab value="Svelte">
+
+```ts
+import { mount } from 'svelte';
+import { LivewireComponentKey } from '@mesh/svelte';
+import type { LivewireComponent } from '@mesh';
+
+const fake = { $wire: fakeWire } as unknown as LivewireComponent;
+
+mount(Counter, {
+    target: document.body,
+    props: { initialCount: 0 },
+    context: new Map([[LivewireComponentKey, fake]]),
+});
+```
+
+</Tab>
+</Frameworks>
+
+`useErrorBag` also reads `fake.$wire.__instance.snapshot.memo.errors`, so give the fake `$wire` an
+`__instance` if the component uses it.

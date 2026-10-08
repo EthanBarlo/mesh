@@ -1,0 +1,188 @@
+---
+title: Composing islands
+description: Choose between one large island and several small ones, and share state between islands that can't share a framework tree.
+---
+
+An island is a whole framework app mounted inside one Livewire component.
+You can build a screen as one large island, or let Blade lay out several
+small ones and keep the shared state in Livewire. The demo app builds the
+same kanban board both ways:
+[/board](https://mesh-demo-react.ebarlow.dev/board) as one island and
+[/kanban](https://mesh-demo-react.ebarlow.dev/kanban) as thirteen.
+
+<Figure caption="The same board twice. A: one Mesh component, one React root, one dnd-kit context. B: a plain Livewire component owns the board and Blade lays out thirteen islands; a drop goes up as a Livewire event and the new order comes down as reactive props. Filled squares mark framework roots.">
+  <IslandComposition />
+</Figure>
+
+## One island or several
+
+**Use one island** when the pieces need to share something that only exists
+inside a framework tree: a drag-and-drop context, a form library, a theme or
+router provider, focus and keyboard handling across the pieces. One Mesh
+component owns the state, usually entangled, and the framework handles
+everything inside.
+
+**Use several islands** when Blade already owns the layout and you only need
+interactivity in places, when the pieces are independent, or when the server
+is the source of truth anyway. Each island stays small, and each component's
+code loads the first time it renders. Several instances of one component
+share a single chunk, and all islands share the framework runtime from the
+main bundle, so splitting a screen into more islands doesn't load the
+framework again.
+
+## One island: the dnd-kit board
+
+The board demo is one Mesh component. Its `$columns` property is entangled,
+and dnd-kit's `DndContext` wraps every column and card because they all live
+in one React tree:
+
+```tsx title="resources/js/mesh/Board/Kanban/index.tsx (condensed)"
+const [columns, setColumns] = useEntangle<ColumnType[]>("columns");
+const wire = useWire<KanbanWire>();
+const board = columns ?? [];
+
+const { sensors, activeCard, handlers } = useBoardDrag({
+    board,
+    setColumns,
+    // The deferred columns ride along with this call.
+    onMove: (cardId, fromCol, toCol, position) =>
+        wire.$call("moveCard", cardId, fromCol, toCol, position),
+});
+
+return (
+    <DndContext sensors={sensors} {...handlers}>
+        {board.map((column) => (
+            <Column key={column.id} column={column} />
+        ))}
+        <DragOverlay>
+            {activeCard ? <CardFace card={activeCard} lifted /> : null}
+        </DragOverlay>
+    </DndContext>
+);
+```
+
+A drag reorders `columns` locally for instant feedback. The deferred
+entangle sends the new order with the `moveCard` call, and `moveCard()`
+re-applies the move on the server, so it stays correct whatever the client
+sent. Because the whole board is one tree, dnd-kit's keyboard sensor works
+across columns.
+
+## Many islands: the Blade-composed kanban
+
+The kanban demo turns this inside out. A plain Livewire component owns the
+board, and its Blade view renders one island per column header and one per
+card:
+
+```blade title="resources/views/livewire/kanban/board.blade.php (condensed)"
+@foreach ($columns as $column)
+    <div wire:key="col-{{ $column['id'] }}" class="flex flex-col">
+        <mesh:kanban.column
+            :column-id="$column['id']"
+            :title="$column['title']"
+            :count="count($column['cards'])"
+            wire:key="colhead-{{ $column['id'] }}"
+        />
+
+        @foreach ($column['cards'] as $i => $card)
+            <mesh:kanban.card
+                :card="$card"
+                :column-id="$column['id']"
+                :position="$i"
+                wire:key="card-{{ $card['id'] }}"
+            />
+        @endforeach
+    </div>
+@endforeach
+```
+
+- **State lives in one place.** The card and column islands hold no board
+  state. Their properties are `#[Reactive]`, so when the board re-renders,
+  new counts and positions flow into the mounted islands as props.
+- **Changes go up as events.** A drop calls
+  `wire.$dispatch("kanban.card-moved", …)`; the board's
+  `#[On('kanban.card-moved')]` method moves the card and saves it. A second
+  plain Livewire component, an activity log, hears the same event. See
+  [Events](/docs/guides/events#connecting-islands).
+- **Every island in a loop has a `wire:key`,** so Livewire matches each card
+  to its island when the order changes.
+- **Layout uses `display: contents`.** Mesh's wrapper adds no box, so the
+  column island's header and drop zone and the card islands are all flex items
+  of the same Blade cell. The cards are siblings of the column island rather
+  than slot content, because [slots](/docs/guides/slots) can't hold
+  interactive islands.
+- **Keep loop islands stateless.** Moving a card to another column remounts
+  its island in the new cell, so any local state in it starts over.
+
+## Each island is its own root
+
+Every island is a separate React root, Vue app, or Svelte mount. Anything
+that travels down a framework tree stops at the island's edge: React context,
+Vue `provide`/`inject`, Svelte context. That is why the kanban demo can't use
+dnd-kit across islands, and uses the browser's native drag and drop instead,
+which belongs to the page rather than to any one tree.
+
+Inside an island, `useWire()` and the other hooks always refer to that
+island's own Livewire component. To reach the component that rendered it,
+use `wire.$parent`: the parent component's wire, when there is one.
+
+## Sharing state between islands
+
+| What you need | Use |
+| --- | --- |
+| State the server must know, shown in several islands | A property on a parent Livewire component, passed down as `#[Reactive]` attributes or bound with `wire:model`. Changes go up with `$dispatch` and `#[On]`, or `wire.$parent`. |
+| Several islands editing one value | `#[Modelable]` on each island's property and `wire:model` to one parent property. |
+| Browser-only state: a drag in progress, a hover, an open panel | A `CustomEvent` on `window`, or a module-level store. |
+
+The kanban demo shares "a card is being dragged" with a window event, so
+every island can highlight its drop targets without a request. Persistent
+state still goes through Livewire:
+
+```ts title="resources/js/components/demo/Kanban/dnd.ts (condensed)"
+const DRAG_START = "mesh-kanban:dragstart";
+const DRAG_END = "mesh-kanban:dragend";
+
+export function announceDragStart(payload: DragPayload): void {
+    window.dispatchEvent(
+        new CustomEvent<DragPayload>(DRAG_START, { detail: payload }),
+    );
+}
+
+/** The card being dragged, or null: the same in every island. */
+export function useKanbanDrag(): DragPayload | null {
+    const [drag, setDrag] = useState<DragPayload | null>(null);
+
+    useEffect(() => {
+        const onStart = (event: Event) =>
+            setDrag((event as CustomEvent<DragPayload>).detail);
+        const onEnd = () => setDrag(null);
+
+        window.addEventListener(DRAG_START, onStart);
+        window.addEventListener(DRAG_END, onEnd);
+        return () => {
+            window.removeEventListener(DRAG_START, onStart);
+            window.removeEventListener(DRAG_END, onEnd);
+        };
+    }, []);
+
+    return drag;
+}
+```
+
+The Vue and Svelte demos implement the same protocol with a composable and a
+`.svelte.ts` module.
+
+All islands load from the same bundle, so a module imported by several
+islands is one shared instance, as with any ES module. A store created at
+module level (a Vue `reactive()` object, Svelte `$state` in a `.svelte.ts`
+module, or a React store read through `useSyncExternalStore`) is therefore
+shared too. Use it for browser-only state; anything the server should know
+belongs in Livewire.
+
+<Cards>
+  <Card title="Events" href="/docs/guides/events">
+    Dispatching and listening across islands and the page.
+  </Card>
+  <Card title="Using JavaScript libraries" href="/docs/guides/libraries">
+    The table, chart, and drag-and-drop integrations from the demos.
+  </Card>
+</Cards>

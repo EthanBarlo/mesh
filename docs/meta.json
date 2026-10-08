@@ -1,12 +1,19 @@
 {
   "title": "Mesh",
   "pages": [
-    "---Getting Started---",
+    "---Getting started---",
     "index",
     "why",
     "installation",
-    "guides",
-    "api",
-    "advanced"
+    "quickstart",
+    "how-it-works",
+    "---Guides---",
+    "...guides",
+    "---Frameworks---",
+    "...frameworks",
+    "---Reference---",
+    "...reference",
+    "---Advanced---",
+    "...advanced"
   ]
 }

@@ -1,6 +1,6 @@
 # Installing Mesh
 
-> This guide sets up a React island inside Livewire 4. Mesh also ships Vue and Svelte renderers; see the [renderer guide](docs/advanced/renderers.mdx) for their host-app setup.
+> This guide sets up a React island inside Livewire 4. Mesh also ships Vue and Svelte renderers; see the [Vue](https://mesh.ebarlow.dev/docs/frameworks/vue) and [Svelte](https://mesh.ebarlow.dev/docs/frameworks/svelte) guides for their host-app setup.
 
 ## 1. Require the package
 
@@ -107,7 +107,9 @@ Your layout loads the bundle with `@vite` and emits Livewire's runtime config wi
 ```
 
 Then render a Mesh component anywhere in a Livewire view with the `<mesh:…>` tag. The tag name
-is the component **id** in kebab-case (`Counter` → `counter`), and props pass through as attributes:
+is the component **id** in kebab-case (`Counter` → `counter`, `Forms/Input` → `forms.input`). Tag
+attributes set the component's public properties, like any Livewire component; the frontend's props
+come from the class's `props()` method:
 
 ```blade
 <mesh:counter />
@@ -117,9 +119,9 @@ is the component **id** in kebab-case (`Counter` → `counter`), and props pass 
 
 - The component **id** is what links the two sides — a simple string like `Counter` (or `Forms/Input`),
   derived identically from the PHP class name and the folder path. `make:mesh` keeps them in sync.
-- Read the [building components guide](docs/guides/building-components.mdx).
-- See [renderers](docs/advanced/renderers.mdx) to use the built-in Vue or Svelte renderers instead of React.
-- See [troubleshooting](docs/advanced/troubleshooting.mdx) if a component doesn't mount.
+- Read the [components and discovery guide](https://mesh.ebarlow.dev/docs/guides/components).
+- See the [Vue](https://mesh.ebarlow.dev/docs/frameworks/vue) or [Svelte](https://mesh.ebarlow.dev/docs/frameworks/svelte) guides to use those renderers instead of React.
+- See [troubleshooting](https://mesh.ebarlow.dev/docs/advanced/troubleshooting) if a component doesn't mount.
 
 ## Notes
 

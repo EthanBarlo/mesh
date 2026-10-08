@@ -1,4 +1,16 @@
 {
   "title": "Guides",
-  "pages": ["building-components", "state"]
+  "pages": [
+    "components",
+    "props",
+    "state",
+    "server-actions",
+    "events",
+    "forms",
+    "uploads",
+    "slots",
+    "composition",
+    "libraries",
+    "packages"
+  ]
 }

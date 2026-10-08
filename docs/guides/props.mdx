@@ -1,0 +1,396 @@
+---
+title: Props
+description: Server data the island renders, recomputed by props() on every render and patched into the mounted component without a remount.
+---
+
+`props()` is how the PHP half hands read-only data to the frontend. It returns
+an array; Mesh JSON-encodes it into the page, and the keys arrive as your
+component's props.
+
+```php title="app/Mesh/Counter.php"
+public function props(): array
+{
+    return ['label' => 'Clicks', 'start' => 5];
+}
+```
+
+## A snapshot per render
+
+`props()` runs on the server every time the component renders: when it
+mounts, and again on every later request that re-renders it. That includes
+its own actions, property updates it receives, events it listens for,
+`$refresh`, and `#[Reactive]` properties changing in a parent.
+
+The result is serialized with `json_encode`, so props are plain JSON. Arrays
+with string keys become objects, lists become arrays, models and collections
+serialize through their `toArray()`, and dates become strings. Nothing in a
+prop is a live reference to server state.
+
+After each request Mesh compares the new JSON with the props the island
+already has. If they match, nothing happens. If they differ, the island
+re-renders with the new values.
+
+<Callout type="warn" title="Props are visible in the page">
+The encoded props are written into the HTML as a `data-mesh-props`
+attribute, and anyone can read them with view-source. Treat `props()` like
+Livewire's public properties: never return secrets or data the current user
+may not see.
+</Callout>
+
+## Updated in place
+
+When props change, Mesh hands the new values to the component that is
+already mounted. It never unmounts and remounts the island, so local state,
+focus, scroll position, and running timers all survive.
+
+The [state demo](https://mesh-demo-react.ebarlow.dev/state) shows this with a
+palette picker. A Blade `<select>` on the page is bound to the component's
+`$theme` through `wire:model`; `props()` looks up a palette for the theme:
+
+```php title="app/Mesh/State/PropsInPlace.php (abridged)"
+use Livewire\Attributes\Modelable;
+
+class PropsInPlace extends Component
+{
+    #[Modelable]
+    public string $theme = 'rose';
+
+    protected const PALETTES = [
+        'rose' => ['label' => 'Rose', 'accent' => '#f43f5e'],
+        'amber' => ['label' => 'Amber', 'accent' => '#f59e0b'],
+        // …
+    ];
+
+    public function props(): array
+    {
+        return [
+            'theme' => $this->theme,
+            'palette' => self::PALETTES[$this->theme],
+        ];
+    }
+}
+```
+
+```blade
+<select wire:model.live="theme">…</select>
+
+<mesh:state.props-in-place wire:model="theme" />
+```
+
+The island renders the palette and runs a timer in plain local state. Change
+the theme and the colours update while the timer keeps counting:
+
+<Frameworks>
+<Tab value="React">
+
+```tsx title="resources/js/mesh/State/PropsInPlace/index.tsx"
+import { useEffect, useState } from "react";
+
+interface Palette {
+    label: string;
+    accent: string;
+}
+
+interface Props {
+    theme: string;
+    palette: Palette;
+}
+
+export default function PropsInPlace({ theme, palette }: Props) {
+    // Local state: never sent to the server, survives new props.
+    const [seconds, setSeconds] = useState(0);
+
+    useEffect(() => {
+        const id = setInterval(() => setSeconds((s) => s + 1), 1000);
+        return () => clearInterval(id);
+    }, []);
+
+    return (
+        <div>
+            <p style={{ color: palette.accent }}>
+                {palette.label} ({theme})
+            </p>
+            <p>Mounted for {seconds}s</p>
+        </div>
+    );
+}
+```
+
+</Tab>
+<Tab value="Vue">
+
+```vue title="resources/js/mesh/State/PropsInPlace/index.vue"
+<script setup lang="ts">
+import { onMounted, onUnmounted, ref } from "vue";
+
+interface Palette {
+    label: string;
+    accent: string;
+}
+
+defineProps<{
+    theme: string;
+    palette: Palette;
+}>();
+
+// Local state: never sent to the server, survives new props.
+const seconds = ref(0);
+let id: number | undefined;
+
+onMounted(() => {
+    id = window.setInterval(() => seconds.value++, 1000);
+});
+onUnmounted(() => window.clearInterval(id));
+</script>
+
+<template>
+    <div>
+        <p :style="{ color: palette.accent }">
+            {{ palette.label }} ({{ theme }})
+        </p>
+        <p>Mounted for {{ seconds }}s</p>
+    </div>
+</template>
+```
+
+</Tab>
+<Tab value="Svelte">
+
+```svelte title="resources/js/mesh/State/PropsInPlace/index.svelte"
+<script lang="ts">
+    interface Palette {
+        label: string;
+        accent: string;
+    }
+
+    interface Props {
+        theme: string;
+        palette: Palette;
+    }
+
+    let { theme, palette }: Props = $props();
+
+    // Local state: never sent to the server, survives new props.
+    let seconds = $state(0);
+
+    $effect(() => {
+        const id = setInterval(() => (seconds += 1), 1000);
+        return () => clearInterval(id);
+    });
+</script>
+
+<div>
+    <p style:color={palette.accent}>{palette.label} ({theme})</p>
+    <p>Mounted for {seconds}s</p>
+</div>
+```
+
+</Tab>
+</Frameworks>
+
+Each renderer applies new props in its own idiom. React renders the same root
+again with the new props. Vue swaps the props object behind the same app.
+Svelte assigns the new values into the component's reactive props.
+
+## Props flow one way
+
+Props go from the server to the island and never back. Changing a value
+derived from a prop changes nothing on the server, and the next render
+replaces it. To send data the other way:
+
+- **The user edits it, and the server should know:** bind a public property
+  with [`useEntangle`](/docs/guides/state).
+- **The user triggers work on the server:** call a method with
+  [`$call`](/docs/guides/server-actions). The method can change properties,
+  and the next `props()` reflects that.
+
+## Don't copy props into state
+
+A prop is already the current server value. Copying it into local state
+freezes it at the first render: the island keeps showing the old value after
+the server sends a new one.
+
+<Frameworks>
+<Tab value="React">
+
+```tsx
+// Stuck on the first palette the island received.
+const [palette, setPalette] = useState(props.palette); // [!code --]
+
+// Read the prop. It is always current.
+const palette = props.palette; // [!code ++]
+```
+
+</Tab>
+<Tab value="Vue">
+
+```ts
+// Stuck on the first palette the island received.
+const palette = ref(props.palette); // [!code --]
+
+// Read the prop, or wrap it in computed() to derive from it.
+const palette = computed(() => props.palette); // [!code ++]
+```
+
+</Tab>
+<Tab value="Svelte">
+
+```ts
+let { palette }: Props = $props();
+
+// Stuck on the first palette the island received.
+let current = $state(palette); // [!code --]
+
+// Read the prop, or derive from it.
+const current = $derived(palette); // [!code ++]
+```
+
+</Tab>
+</Frameworks>
+
+If the user needs to edit the value, the fix is not a local copy either.
+Entangle the public property behind it, so edits reach the server and server
+changes reach the island.
+
+Seeding state from a prop is fine when you only ever want the first value.
+Name it so readers can tell. The demo's price watcher starts its history from
+`initialPrice` and appends every later price it receives from `$watch`:
+
+```tsx title="resources/js/mesh/Wire/PriceWatcher/index.tsx"
+const [history, setHistory] = useState<number[]>([initialPrice]);
+```
+
+The same applies on the server. `props()` runs on every render, so a value
+that should stay fixed belongs in `mount()`. The demo counter captures its
+reset target once:
+
+```php title="app/Mesh/Counter.php"
+public int $initialCount = 0;
+
+public function mount(): void
+{
+    // props() runs on every render; capture the start value once.
+    $this->initialCount = $this->count;
+}
+
+public function props(): array
+{
+    return ['initialCount' => $this->initialCount];
+}
+```
+
+## Derive, don't store
+
+Compute derived data from props instead of storing a second copy. Data that
+needs the database or other server state belongs in `props()`. The revenue
+chart demo builds its whole series there from one `$range` property. Values
+that only reshape what is already in the props belong in the component:
+
+<Frameworks>
+<Tab value="React">
+
+```tsx
+const total = series.revenue.reduce((sum, v) => sum + v, 0);
+
+const option = useMemo(
+    () => buildRevenueChartOption(labels, series),
+    [labels, series],
+);
+```
+
+</Tab>
+<Tab value="Vue">
+
+```ts
+const total = computed(() =>
+    props.series.revenue.reduce((sum, v) => sum + v, 0),
+);
+
+const option = computed(() =>
+    buildRevenueChartOption(props.labels, props.series),
+);
+```
+
+</Tab>
+<Tab value="Svelte">
+
+```ts
+const total = $derived(series.revenue.reduce((sum, v) => sum + v, 0));
+
+const option = $derived(buildRevenueChartOption(labels, series));
+```
+
+</Tab>
+</Frameworks>
+
+Prop objects only change identity when the server sends different JSON, so
+memoizing on them works as expected. A re-render caused by local state
+reuses the same objects.
+
+## Typing props
+
+Declare props the way each framework normally does. Nothing generates the
+types from PHP, so keep the two shapes in step by hand:
+
+<Frameworks>
+<Tab value="React">
+
+```tsx
+interface RevenueChartProps {
+    labels: string[];
+    series: { revenue: number[]; orders: number[] };
+    range: "7d" | "30d" | "90d";
+}
+
+export default function RevenueChart(props: RevenueChartProps) {
+    // …
+}
+```
+
+</Tab>
+<Tab value="Vue">
+
+```vue
+<script setup lang="ts">
+const props = defineProps<{
+    labels: string[];
+    series: { revenue: number[]; orders: number[] };
+    range: "7d" | "30d" | "90d";
+}>();
+</script>
+```
+
+</Tab>
+<Tab value="Svelte">
+
+```svelte
+<script lang="ts">
+    interface Props {
+        labels: string[];
+        series: { revenue: number[]; orders: number[] };
+        range: "7d" | "30d" | "90d";
+    }
+
+    let { labels, series, range }: Props = $props();
+</script>
+```
+
+</Tab>
+</Frameworks>
+
+One JSON detail catches people out: an empty PHP array always encodes as
+`[]`, even where you meant an empty object. Return `(object) []` if the
+frontend expects `{}`.
+
+In React and Svelte, `children` and `slots` carry [slot](/docs/guides/slots)
+content. If the tag has slots, `props()` must not return keys with those
+names.
+
+<Cards>
+  <Card title="Two-way state" href="/docs/guides/state">
+    For values the user edits, bind the property instead.
+  </Card>
+  <Card title="Mesh\Component" href="/docs/reference/component">
+    `props()`, `component()`, and the rest of the base class.
+  </Card>
+</Cards>

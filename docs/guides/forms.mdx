@@ -1,0 +1,364 @@
+---
+title: Forms and validation
+description: Entangled fields, rules on the PHP class, a $call submit, and server-side errors read with useErrorBag.
+---
+
+In a Mesh form, Livewire owns the data and the rules, and the island owns the
+markup. Each field is an entangled property, the submit is
+`wire.$call("save")`, and validation messages come back through
+`useErrorBag()`. There is no request code and no second copy of the rules.
+The [forms demo](https://mesh-demo-react.ebarlow.dev/forms) is the full
+version of the example below.
+
+## The recipe
+
+```php title="app/Mesh/Forms/ProjectForm.php (abridged)"
+use Livewire\Attributes\Validate;
+
+class ProjectForm extends Component
+{
+    #[Validate('required|min:3')]
+    public string $name = '';
+
+    #[Validate('required|regex:/^[a-z0-9-]+$/|min:3')]
+    public string $slug = '';
+
+    #[Validate('required|email')]
+    public string $email = '';
+
+    public function save(): array
+    {
+        $this->validate();
+
+        // Persist here. The demo returns the values instead.
+        return [
+            'ok' => true,
+            'project' => ['name' => $this->name, 'slug' => $this->slug],
+        ];
+    }
+}
+```
+
+<Frameworks>
+<Tab value="React">
+
+```tsx title="resources/js/mesh/Forms/ProjectForm/index.tsx (condensed)"
+import { useState, type FormEvent } from "react";
+import { useEntangle, useErrorBag, useWire } from "@mesh/react";
+
+interface SaveResult {
+    ok: boolean;
+    project: { name: string; slug: string };
+}
+
+export default function ProjectForm() {
+    // Deferred: sent with the submit request.
+    const [name, setName] = useEntangle<string>("name");
+    const [email, setEmail] = useEntangle<string>("email");
+    // Live: validated on the server as the user types.
+    const [slug, setSlug] = useEntangle<string>("slug", true);
+
+    const errors = useErrorBag();
+    const wire = useWire();
+    const [submitting, setSubmitting] = useState(false);
+
+    const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        setSubmitting(true);
+        try {
+            const res = (await wire.$call("save")) as SaveResult | null;
+            if (res?.ok) {
+                // Saved, and the error bag is empty again.
+            }
+        } catch {
+            // Network or server error. See Server actions.
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    return (
+        <form onSubmit={handleSubmit} noValidate>
+            <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+            />
+            {errors.name && <p role="alert">{errors.name[0]}</p>}
+
+            <input
+                value={slug}
+                onChange={(e) => setSlug(e.target.value)}
+            />
+            {errors.slug && <p role="alert">{errors.slug[0]}</p>}
+
+            <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+            />
+            {errors.email && <p role="alert">{errors.email[0]}</p>}
+
+            <button type="submit" disabled={submitting}>
+                {submitting ? "Creating…" : "Create project"}
+            </button>
+        </form>
+    );
+}
+```
+
+</Tab>
+<Tab value="Vue">
+
+```vue title="resources/js/mesh/Forms/ProjectForm/index.vue (condensed)"
+<script setup lang="ts">
+import { ref } from "vue";
+import { useEntangle, useErrorBag, useWire } from "@mesh/vue";
+
+interface SaveResult {
+    ok: boolean;
+    project: { name: string; slug: string };
+}
+
+// Deferred: sent with the submit request.
+const name = useEntangle<string>("name");
+const email = useEntangle<string>("email");
+// Live: validated on the server as the user types.
+const slug = useEntangle<string>("slug", true);
+
+const errors = useErrorBag();
+const wire = useWire();
+const submitting = ref(false);
+
+const handleSubmit = async () => {
+    submitting.value = true;
+    try {
+        const res = (await wire.$call("save")) as SaveResult | null;
+        if (res?.ok) {
+            // Saved, and the error bag is empty again.
+        }
+    } catch {
+        // Network or server error. See Server actions.
+    } finally {
+        submitting.value = false;
+    }
+};
+</script>
+
+<template>
+    <form novalidate @submit.prevent="handleSubmit">
+        <input v-model="name" />
+        <p v-if="errors.name" role="alert">{{ errors.name[0] }}</p>
+
+        <input v-model="slug" />
+        <p v-if="errors.slug" role="alert">{{ errors.slug[0] }}</p>
+
+        <input v-model="email" type="email" />
+        <p v-if="errors.email" role="alert">{{ errors.email[0] }}</p>
+
+        <button type="submit" :disabled="submitting">
+            {{ submitting ? "Creating…" : "Create project" }}
+        </button>
+    </form>
+</template>
+```
+
+</Tab>
+<Tab value="Svelte">
+
+```svelte title="resources/js/mesh/Forms/ProjectForm/index.svelte (condensed)"
+<script lang="ts">
+    import { useEntangle, useErrorBag, useWire } from "@mesh/svelte";
+
+    interface SaveResult {
+        ok: boolean;
+        project: { name: string; slug: string };
+    }
+
+    // Deferred: sent with the submit request.
+    const name = useEntangle<string>("name");
+    const email = useEntangle<string>("email");
+    // Live: validated on the server as the user types.
+    const slug = useEntangle<string>("slug", true);
+
+    const errors = useErrorBag();
+    const wire = useWire();
+    let submitting = $state(false);
+
+    const handleSubmit = async (event: SubmitEvent) => {
+        event.preventDefault();
+        submitting = true;
+        try {
+            const res = (await wire.$call("save")) as SaveResult | null;
+            if (res?.ok) {
+                // Saved, and the error bag is empty again.
+            }
+        } catch {
+            // Network or server error. See Server actions.
+        } finally {
+            submitting = false;
+        }
+    };
+</script>
+
+<form novalidate onsubmit={handleSubmit}>
+    <input bind:value={name.value} />
+    {#if errors.value.name}
+        <p role="alert">{errors.value.name[0]}</p>
+    {/if}
+
+    <input bind:value={slug.value} />
+    {#if errors.value.slug}
+        <p role="alert">{errors.value.slug[0]}</p>
+    {/if}
+
+    <input type="email" bind:value={email.value} />
+    {#if errors.value.email}
+        <p role="alert">{errors.value.email[0]}</p>
+    {/if}
+
+    <button type="submit" disabled={submitting}>
+        {submitting ? "Creating…" : "Create project"}
+    </button>
+</form>
+```
+
+</Tab>
+</Frameworks>
+
+## Deferred fields, one live field
+
+`name` and `email` are [deferred](/docs/guides/state#deferred-or-live):
+typing sends nothing, and the values travel with the submit request.
+Livewire applies those updates before it calls `save()`, so `save()` always
+sees what the user typed. Don't call `$commit()` before submitting; the
+request already carries the fields.
+
+`slug` is live, so every keystroke is a request and its errors appear and
+clear as the user types. Make a field live only when that feedback is worth
+a request per keystroke. In the demo, the slug also fills itself from the
+name until the user edits it.
+
+## Validation runs on the server
+
+The rules live on the PHP class, and the server is the only place they are
+enforced. Entangled values are ordinary public properties that anyone can set
+from the browser, so client-side checks are a convenience at most. Render
+your own messages and set `noValidate` on the form so the browser's built-in
+bubbles stay out of the way.
+
+Two things run the rules:
+
+- **`#[Validate]` checks a property whenever an update for it arrives.**
+  Livewire runs the field's rules each time a new value is applied, so the
+  live slug is checked per keystroke and the deferred fields are checked as
+  they land with the submit, before `save()` runs.
+- **`$this->validate()` in the action checks every rule** and throws on
+  failure, which stops the method there.
+
+Per-update checks come from the attribute. If you declare rules in a
+`rules()` method instead, add an update hook for each field that should
+validate as it changes. Use `validateOnly()` there:
+
+```php
+public function updatedSlug(): void
+{
+    $this->validateOnly('slug');
+}
+```
+
+`validateOnly()` checks one field and leaves the other fields' errors as they
+are. Calling `validate()` in an update hook would flag every empty field the
+moment the user types into the first one. (The demo's `ProjectForm` has
+`updatedSlug()` as well as the attribute, so its slug is checked twice.)
+
+## Submitting
+
+The submit handler calls the action and branches on the result. With a
+normal action, a failed validation does not reject the promise: Livewire
+fills the error bag and the call resolves with `null`. The promise rejects
+only on a network failure or an error response:
+
+| Result of `$call("save")` | Meaning |
+| --- | --- |
+| `{ ok: true, … }` | Saved. The bag has been cleared. |
+| `null` | Validation failed. The messages are in `useErrorBag()`. |
+| rejected | The request failed. Show a generic error. |
+
+Return an explicit payload from the action so success is unambiguous, keep
+a `catch` for failures, and reset the submitting flag in `finally`. Prevent
+the browser's default submit (`preventDefault()`, `@submit.prevent`):
+otherwise the browser posts the form and reloads the page. See
+[Server actions](/docs/guides/server-actions#when-a-call-fails) for the
+rejection's shape.
+
+## Reading errors with useErrorBag
+
+`useErrorBag()` returns the component's error bag: an object keyed by
+property name, where each value is a list of messages. A field without errors
+has no key.
+
+```json
+{ "slug": ["The slug field format is invalid."] }
+```
+
+| Framework | Returns | First message for `slug` |
+| --- | --- | --- |
+| React | the object | `errors.slug?.[0]` |
+| Vue | a shallow ref | `errors.slug?.[0]` in templates, `errors.value.slug` in script |
+| Svelte | a read-only `{ value }` box | `errors.value.slug?.[0]` |
+
+How the bag changes:
+
+- **On mount** it holds the errors from the first render, so errors the
+  server rendered with the page show straight away.
+- **After every completed request** of the component it is replaced with the
+  server's bag. A failed validation is a completed request, so a `null`
+  `$call` result and the new messages arrive together.
+- **Errors persist** across requests until that field passes validation
+  again (`validateOnly`), every rule passes (`validate()`), or the server
+  calls `resetValidation()`. There is no client-side clear; the upload demo's
+  "Try again" button calls a `clear()` action that does
+  `$this->resetValidation()`.
+- **Only errors for real properties arrive.** Messages under a key that is
+  not a public property, such as a custom `Validator::make` key, are dropped
+  before they reach the island.
+
+## Common mistakes
+
+<Accordions>
+<Accordion title="Treating $call as rejecting on validation failure">
+It resolves with `null`. Code that only handles `catch` treats a failed
+validation as a success. Check the resolved value.
+</Accordion>
+<Accordion title="Forgetting to prevent the default submit">
+The browser posts the form and reloads the page, and the Livewire request
+never finishes. Call `event.preventDefault()`, or use `@submit.prevent` in
+Vue.
+</Accordion>
+<Accordion title="Calling $commit() before $call()">
+Deferred fields already ride on the call's request. The commit only adds a
+round-trip.
+</Accordion>
+<Accordion title="Copying entangled values into local state">
+The entangled value is already state. A second copy goes stale when the
+server changes the property and bypasses the dirty tracking that makes the
+deferred submit work. Derive from the entangled value instead.
+</Accordion>
+<Accordion title="Calling validate() in an update hook">
+It checks every rule, so the first keystroke in one field fills the bag with
+"required" errors for all the others. Use `validateOnly('field')`.
+</Accordion>
+<Accordion title="Validating only in the browser">
+Entangled values are public properties, which anyone can set. Keep the rules
+on the PHP class and call `$this->validate()` in the action.
+</Accordion>
+</Accordions>
+
+<Cards>
+  <Card title="File uploads" href="/docs/guides/uploads">
+    Upload into a property, validate it, and preview it.
+  </Card>
+  <Card title="Hooks and composables" href="/docs/reference/hooks">
+    `useEntangle`, `useErrorBag`, and `useWire` in reference form.
+  </Card>
+</Cards>

@@ -1,0 +1,266 @@
+---
+title: Mesh\Component
+description: The base class every Mesh PHP component extends, its four methods, and what it inherits from Livewire.
+---
+
+Every Mesh component has a PHP class that extends `EthanBarlo\Mesh\Component`. That class extends
+`Livewire\Component`, so a Mesh component **is** a Livewire component: everything Livewire offers
+works on it, and Mesh adds the methods that connect it to a frontend entry.
+
+```php title="src/Component.php (outline)"
+namespace EthanBarlo\Mesh;
+
+abstract class Component extends \Livewire\Component
+{
+    /** @return array<string, mixed> */
+    public function props(): array;
+
+    public function component(): string;
+
+    public function render();
+
+    /** @internal */
+    public function meshSlots(): array;
+}
+```
+
+<TypeTable
+  type={{
+    'props()': {
+      type: 'array<string, mixed>',
+      default: '[]',
+      description:
+        'Data for the frontend component. JSON-encoded into the page on every render.',
+    },
+    'component()': {
+      type: 'string',
+      default: 'Derived from the class name',
+      description:
+        'The id of the frontend entry, for example Counter or Forms/Input.',
+    },
+    'render()': {
+      type: 'View',
+      default: "view('mesh::component')",
+      description: 'Renders the island wrapper. Do not override it.',
+    },
+    'meshSlots()': {
+      type: 'array<string, string>',
+      description: 'Internal. Real slot content keyed by name.',
+    },
+  }}
+/>
+
+## props()
+
+`props()` returns the data your frontend component receives as props. The keys become prop names.
+
+```php title="app/Mesh/Wire/PriceWatcher.php"
+public function props(): array
+{
+    return [
+        'symbol' => 'MESH',
+        'initialPrice' => $this->price,
+    ];
+}
+```
+
+### When it runs
+
+`props()` runs inside the component's view, so it runs on **every render**: the first page load and
+every later Livewire request that re-renders this component. That includes actions called with
+`$call`, live entangled updates, `$refresh`, `#[On]` listeners and `#[Reactive]` changes from a
+parent. Requests that skip the render (`$this->skipRender()`, or an action marked `#[Renderless]`)
+leave the props as they were.
+
+On the frontend the island is **updated in place**, never remounted. Mesh compares the new props
+with the previous ones as JSON and only re-renders the component when they differ, so local
+component state survives every round trip.
+
+Because it runs on every render, `props()` is the wrong place to capture a starting value. The
+demo's counter records it once in `mount()`:
+
+```php title="app/Mesh/Counter.php"
+public function mount(): void
+{
+    // props() runs on every render, so returning $this->count
+    // there would make Reset a no-op.
+    $this->initialCount = $this->count;
+}
+```
+
+### Encoding
+
+The array goes through `json_encode()` into the `data-mesh-props` attribute of the wrapper element.
+
+- Eloquent models, collections and other `JsonSerializable` objects are encoded the way they encode
+  anywhere else in Laravel (models respect `$hidden`). Dates become strings.
+- An empty PHP array is encoded as `[]`, a JSON array, even when you meant an empty object.
+- If encoding fails (invalid UTF-8, a resource), `json_encode()` returns `false`, the attribute is
+  empty, and the frontend component receives no props at all.
+
+<Callout type="warn" title="Props are public">
+  Everything `props()` returns is written into the HTML and is visible in the page source, exactly
+  like Livewire's own snapshot of your public properties. Never return secrets.
+</Callout>
+
+### Props are one-way
+
+Props flow from the server to the frontend only. Changing a prop-derived value in the browser never
+reaches PHP. For values the browser edits, entangle a public property instead (see
+[Two-way state](/docs/guides/state)). For React and Svelte islands with slots, `children` and
+`slots` are reserved prop names (see [Reserved prop names](/docs/advanced/limitations#reserved-prop-names)).
+
+## component()
+
+`component()` returns the **id** that links the class to its frontend entry. You rarely write it:
+the default derives the id from the class name relative to `App\Mesh`. It strips the `App\Mesh\`
+prefix and turns the remaining backslashes into forward slashes.
+
+| PHP class | `component()` | Frontend entry |
+| --- | --- | --- |
+| `App\Mesh\Counter` | `Counter` | `resources/js/mesh/Counter/index.tsx` |
+| `App\Mesh\Forms\Input` | `Forms/Input` | `resources/js/mesh/Forms/Input/index.vue` |
+| `App\Mesh\Wire\PriceWatcher` | `Wire/PriceWatcher` | `resources/js/mesh/Wire/PriceWatcher/index.svelte` |
+
+The match is exact and case-sensitive. `Counter` and `counter` are different ids, and a mismatch that
+works on a case-insensitive macOS disk fails on Linux.
+
+### Overriding it
+
+A class outside `App\Mesh` (for example one shipped in a Composer package) cannot derive an id and
+must return one:
+
+```php title="src/Mesh/Chart.php"
+namespace Acme\Widgets\Mesh;
+
+use EthanBarlo\Mesh\Component;
+
+class Chart extends Component
+{
+    public function component(): string
+    {
+        // Matches a frontend source registered with prefix "Acme".
+        return 'Acme/Chart';
+    }
+}
+```
+
+Without the override, rendering it throws a `LogicException`:
+
+```text
+Mesh component [Acme\Widgets\Mesh\Chart] lives outside the [App\Mesh]
+namespace; override component() to return an explicit id.
+```
+
+The `<mesh:…>` tag only resolves classes under `App\Mesh`, so such a class is registered with
+Livewire and rendered with a `<livewire:…>` tag. The whole setup is in
+[Components in Composer packages](/docs/guides/packages).
+
+## render()
+
+```php
+public function render()
+{
+    return view('mesh::component');
+}
+```
+
+`render()` returns the package's wrapper view: an element carrying the id and the encoded props, a
+hidden holder for slot content, and the empty `.mesh-root` element the frontend mounts into. The
+runtime depends on all three, so **do not override `render()`**. The exact markup is shown in
+[Blade tags](/docs/reference/blade#the-rendered-dom).
+
+## meshSlots()
+
+`meshSlots()` is marked `@internal`. It returns the real slot content keyed by name (the unnamed slot
+is `default`), skipping placeholder slots and whitespace-only content. Slot content is only present
+on the render where the parent passes it in; on the component's own re-renders Livewire hands it
+placeholder slots instead, and `meshSlots()` returns `[]`. You do not need to call it. See
+[Slots](/docs/guides/slots) for how slots reach the frontend.
+
+## Everything from Livewire
+
+Since the class is a Livewire component, the usual Livewire features apply and mean something
+specific for an island.
+
+### Public properties
+
+Public properties are the component's state. They survive between requests in Livewire's snapshot,
+and they are what `useEntangle(key)`, `$get` and `$set` read and write from the browser.
+
+Any public property can be written from the browser. Mark properties the client must not change with
+`#[Locked]`; an attempt to update one fails with `Cannot update locked property: [name]`.
+
+```php
+use Livewire\Attributes\Locked;
+
+#[Locked]
+public int $projectId;
+```
+
+### Actions
+
+Every public method is an action the browser can call with `wire.$call('method', ...$args)`. The
+arguments arrive as ordinary parameters and the return value resolves the promise. Treat actions as
+public endpoints: authorize inside them.
+
+```php title="app/Mesh/Wire/ServerActions.php"
+public function rollDice(): array
+{
+    $dice = [random_int(1, 6), random_int(1, 6), random_int(1, 6)];
+
+    return ['dice' => $dice, 'total' => array_sum($dice)];
+}
+```
+
+See [Server actions](/docs/guides/server-actions).
+
+### Lifecycle hooks
+
+| Hook | Runs | Note for Mesh |
+| --- | --- | --- |
+| `mount(...)` | Once, on the first render | Tag attributes arrive as parameters (or fill matching properties). Capture initial values here. |
+| `boot()` / `booted()` | At the start of every request | |
+| `hydrate()` / `dehydrate()` | When the snapshot is loaded / saved | |
+| `updating($name, $value)` / `updated($name)` | Around a property update from the browser | Fires when an entangled value is committed |
+| `updatedFoo($value)` | After the property `foo` is updated | Per keystroke for a live entangle |
+| `rendering()` / `rendered()` | Around each render | `props()` runs between them |
+| `exception($e, $stopPropagation)` | When an action throws | |
+
+A deferred entangled value fires its `updated` hooks on the request that delivers it (the next
+action, `$commit`, or live update), not when the user types.
+
+### Attributes
+
+| Attribute | What it does for an island | In the demo |
+| --- | --- | --- |
+| `#[Modelable]` | Lets a parent bind the property with `wire:model` on the tag | `Counter`, `State/PropsInPlace` |
+| `#[Reactive]` | The property follows the parent's value on every parent render, so `props()` re-runs | `Kanban/Card`, `Kanban/Column` |
+| `#[On('event')]` | Runs the method when a Livewire event is dispatched | `Wire/EventBridge` |
+| `#[Validate('rules')]` | Rules for `$this->validate()` and `validateOnly()`; messages reach `useErrorBag()` | `Forms/ProjectForm`, `Uploads/Dropzone` |
+| `#[Locked]` | Rejects updates to the property from the browser | |
+| `#[Computed]` | A derived value, memoized for the request, usable inside `props()` | |
+| `#[Renderless]` | The action skips the render, so props are not refreshed | |
+
+File uploads use Livewire's `WithFileUploads` trait as usual (see [File uploads](/docs/guides/uploads)).
+
+## Testing
+
+Mesh components test like any Livewire component. The rendered wrapper carries the id and the
+encoded props, so you can assert on both:
+
+```php title="tests/Feature/GreeterTest.php"
+use App\Mesh\Greeter;
+use Livewire\Livewire;
+
+it('renders the island with fresh props', function () {
+    Livewire::test(Greeter::class, ['name' => 'Ethan'])
+        ->assertSeeHtml('data-mesh-component="Greeter"')
+        ->assertSee('Hello Ethan')
+        ->set('name', 'Mesh')
+        ->assertSee('Hello Mesh');
+});
+```
+
+Here `Greeter::props()` returns `['greeting' => "Hello {$this->name}"]`. The frontend half is tested
+with your framework's own tools.

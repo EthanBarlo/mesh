@@ -14,6 +14,17 @@ const config = {
   // The app lives in apps/docs but its content + lockfile resolution span the
   // repo root (it reads ../../docs), so trace files from the repo root.
   outputFileTracingRoot: path.join(__dirname, '../../'),
+  // Pages moved in the docs restructure (v0.2 → drawing-set layout). Keep old
+  // links from the README, demos, and search engines working.
+  async redirects() {
+    return [
+      ['/docs/guides/building-components', '/docs/guides/components'],
+      ['/docs/api/hooks', '/docs/reference/hooks'],
+      ['/docs/api/mesh-component', '/docs/reference/component'],
+      ['/docs/api', '/docs/reference/component'],
+      ['/docs/advanced/renderers', '/docs/advanced/custom-renderers'],
+    ].map(([source, destination]) => ({ source, destination, permanent: true }));
+  },
 };
 
 export default withMDX(config);

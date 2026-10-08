@@ -1,71 +1,314 @@
 ---
-title: State with useEntangle
-description: Two-way binding between React state and a Livewire property.
+title: Two-way state
+description: Bind island state to a public Livewire property with useEntangle, and decide when each change reaches the server.
 ---
 
-`useEntangle` is the primary way to share state between React and Livewire. It works like
-`useState`, but the value is kept in sync with a Livewire property in **both** directions: when the
-server changes the property, React re-renders; when React updates the value, the change is written
-back to Livewire.
+`useEntangle(key, live?)` binds a value in your component to a public
+property on the Livewire class. Writes in the island update the property, and
+changes the server makes to the property update the island. It is the
+channel for anything the user edits that the server also needs to know.
 
-```tsx
+## useEntangle in each framework
+
+The PHP side is an ordinary public property:
+
+```php title="app/Mesh/Counter.php"
+class Counter extends Component
+{
+    public int $count = 0;
+
+    public function props(): array
+    {
+        return ['label' => 'Clicks'];
+    }
+}
+```
+
+Each framework gets the binding in its own idiom:
+
+<Frameworks>
+<Tab value="React">
+
+```tsx title="resources/js/mesh/Counter/index.tsx"
 import { useEntangle } from "@mesh/react";
 
-function Counter() {
+export default function Counter({ label }: { label: string }) {
     const [count, setCount] = useEntangle<number>("count");
 
     return (
-        <div>
-            <button onClick={() => setCount(count - 1)}>-</button>
-            <span>{count}</span>
-            <button onClick={() => setCount(count + 1)}>+</button>
-        </div>
+        <button onClick={() => setCount(count + 1)}>
+            {label}: {count}
+        </button>
     );
 }
 ```
 
-Here `"count"` is the name of a public property on the Livewire component. The returned tuple is
-exactly a `useState` pair — `[value, setValue]` — so it drops into existing React code.
+</Tab>
+<Tab value="Vue">
 
-## Live vs. deferred sync
+```vue title="resources/js/mesh/Counter/index.vue"
+<script setup lang="ts">
+import { useEntangle } from "@mesh/vue";
 
-The second argument controls **when** a change is sent to the server:
+defineProps<{ label: string }>();
 
-```tsx
-const [name, setName] = useEntangle<string>("name");        // deferred (default)
-const [name, setName] = useEntangle<string>("name", true);  // live
+const count = useEntangle<number>("count");
+</script>
+
+<template>
+    <button @click="count++">{{ label }}: {{ count }}</button>
+</template>
 ```
 
-- **Deferred (`live = false`, the default)** — React state updates immediately, but the value is
-  only committed to the server on the next Livewire network request. Best for inputs where you
-  don't want a round-trip on every keystroke.
-- **Live (`live = true`)** — every change is committed to the server immediately. Use when the
-  server needs to react to each change (e.g. live validation or dependent fields).
+</Tab>
+<Tab value="Svelte">
 
-<Callout>
-  `live` maps directly to Livewire's `$wire.$set(key, value, live)`. Deferred updates batch with
-  the next request; live updates trigger their own.
-</Callout>
+```svelte title="resources/js/mesh/Counter/index.svelte"
+<script lang="ts">
+    import { useEntangle } from "@mesh/svelte";
 
-## Under the hood
+    let { label }: { label: string } = $props();
 
-`useEntangle` is a small wrapper over [`useWire`](/docs/api/hooks#usewire):
+    const count = useEntangle<number>("count");
+</script>
 
-- It seeds React state from `wire.$get(key)`.
-- It calls `wire.$watch(key, ...)` so server-driven changes flow **into** React state.
-- It calls `wire.$set(key, value, live)` whenever the React value changes, flowing **out** to
-  Livewire.
-
-Because Mesh updates props without remounting, an entangled value and any other local React state
-both persist across Livewire requests.
-
-## Typing the value
-
-Pass a type parameter to type both the value and the setter:
-
-```tsx
-const [count, setCount] = useEntangle<number>("count");
-const [tags, setTags]   = useEntangle<string[]>("tags");
+<button onclick={() => count.value++}>
+    {label}: {count.value}
+</button>
 ```
 
-The default is `string` if no type argument is provided.
+</Tab>
+</Frameworks>
+
+| Framework | Returns | Write | Bind an input |
+| --- | --- | --- | --- |
+| React | `[value, setValue]`, a `useState` pair | `setValue(next)` or `setValue(v => …)` | `value` + `onChange` |
+| Vue | a writable shallow ref | `count.value = next` | `v-model="count"` |
+| Svelte | a writable `{ value }` box | `count.value = next` | `bind:value={count.value}` |
+
+A few rules hold everywhere:
+
+- `key` names a **public** property. The type parameter defaults to `string`.
+- Treat `key` and `live` as fixed. They are read when the component sets up
+  the binding, and changing them after mount is not supported.
+- **Replace values, don't mutate them.** Vue and Svelte track the entangled
+  value shallowly, so `tags.value.push("new")` changes nothing on the server.
+  Assign a new array or object instead:
+  `tags.value = [...tags.value, "new"]`. In React this is already the rule
+  for state.
+
+An entangled property is writable from the browser, like any public Livewire
+property. Validate it on the server, and mark properties the client must not
+change with `#[Locked]` (and don't entangle those).
+
+## Deferred or live
+
+The second argument decides when a write reaches the server:
+
+<Frameworks>
+<Tab value="React">
+
+```tsx
+const [message, setMessage] = useEntangle<string>("message");
+const [liveMessage, setLiveMessage] = useEntangle<string>(
+    "liveMessage",
+    true,
+);
+```
+
+</Tab>
+<Tab value="Vue">
+
+```ts
+const message = useEntangle<string>("message");
+const liveMessage = useEntangle<string>("liveMessage", true);
+```
+
+</Tab>
+<Tab value="Svelte">
+
+```ts
+const message = useEntangle<string>("message");
+const liveMessage = useEntangle<string>("liveMessage", true);
+```
+
+</Tab>
+</Frameworks>
+
+**Deferred** (the default). The island re-renders straight away and
+Livewire's client-side copy of the property is updated, but nothing is sent.
+The property is marked dirty and travels with the next request this
+component makes, whatever triggers it: a `$call`, a `$commit`, a `$refresh`,
+or a live write to another property.
+
+**Live** (`true`). Every write sends its own request immediately. The flag is
+passed straight through to Livewire's `$wire.$set(key, value, live)`.
+
+<Figure caption="Deferred vs live: the same four keystrokes and one save. Deferred holds the value in the browser and sends it with the save; live sends a request per keystroke, so the server's copy follows the typing.">
+  <EntangleTimeline />
+</Figure>
+
+Deferred is right for most fields: the server sees every value before any
+method runs, because Livewire applies property updates first. Reach for live
+only when the server has to react to each change:
+
+- per-field validation while the user types
+  ([Forms and validation](/docs/guides/forms));
+- dependent data, like the revenue chart demo, which recomputes its series
+  in `props()` when a live-entangled `range` changes;
+- server-side search or filtering.
+
+Live has no debounce. On a text input it means one request per keystroke. If
+that is too many, keep the field deferred and call `$commit()` from your own
+debounced handler.
+
+Try both modes side by side on the
+[state demo](https://mesh-demo-react.ebarlow.dev/state): it shows what the
+server holds for each input and counts the round-trips.
+
+## Flush with $commit
+
+`wire.$commit()` sends every dirty property now, without calling a method:
+
+```tsx title="resources/js/mesh/State/EntangleModes/index.tsx"
+const wire = useWire();
+
+const handleFlush = () => {
+    // Pushes any deferred (dirty) properties to the server now.
+    wire.$commit();
+};
+```
+
+Use it for an explicit "save now" button, or to make the server's
+`updated()` hooks run at a moment you choose. Don't call it right before a
+`$call`: the call's request already carries the dirty properties, so the
+commit only adds a round-trip.
+
+## Server hooks: updated() and updatedFoo()
+
+Livewire's property hooks run when an entangled value _arrives_, which
+depends on the mode:
+
+- **Live:** on every change, because each change is its own request.
+- **Deferred:** on the request that delivers it. If one request carries
+  several deferred properties, `updated()` runs once for each of them.
+
+Updates are applied, and their hooks run, before any method called in the
+same request. A `save()` that rides on the request therefore sees the latest
+values. The state demo counts the requests that delivered an update:
+
+```php title="app/Mesh/State/EntangleModes.php (abridged)"
+class EntangleModes extends Component
+{
+    public string $message = '';     // useEntangle("message")
+    public string $liveMessage = ''; // useEntangle("liveMessage", true)
+    public int $requests = 0;
+
+    // Not persisted between requests, so it resets each time.
+    protected bool $tallied = false;
+
+    public function updated(string $property): void
+    {
+        // Runs once per delivered property, even within one request.
+        if (! $this->tallied) {
+            $this->requests++;
+            $this->tallied = true;
+        }
+    }
+
+    public function props(): array
+    {
+        return [
+            'requests' => $this->requests,
+            'serverMessage' => $this->message,
+        ];
+    }
+}
+```
+
+Protected properties are not part of Livewire's state, so they reset on every
+request. That makes a protected flag a simple way to do something once per
+request when several properties arrive together.
+
+Properties with `#[Validate]` are validated automatically when an update
+arrives, through the same mechanism. See
+[Forms and validation](/docs/guides/forms).
+
+## Observe only: $watch
+
+When the island only reacts to a property and never writes it, skip the
+binding and watch it. The demo's price watcher lets the server own `price`
+and appends every new value to a local history:
+
+<Frameworks>
+<Tab value="React">
+
+```tsx title="resources/js/mesh/Wire/PriceWatcher/index.tsx"
+const wire = useWire();
+const [history, setHistory] = useState<number[]>([initialPrice]);
+
+useEffect(() => {
+    // $watch returns its unwatch function: use it as the cleanup.
+    return wire.$watch("price", (value: number) => {
+        setHistory((prev) => [...prev, value].slice(-40));
+    });
+}, [wire]);
+```
+
+</Tab>
+<Tab value="Vue">
+
+```ts title="resources/js/mesh/Wire/PriceWatcher/index.vue"
+const wire = useWire();
+const history = ref<number[]>([props.initialPrice]);
+
+const unwatch = wire.$watch("price", (value: number) => {
+    history.value = [...history.value, value].slice(-40);
+});
+
+onUnmounted(unwatch);
+```
+
+</Tab>
+<Tab value="Svelte">
+
+```ts title="resources/js/mesh/Wire/PriceWatcher/index.svelte"
+const wire = useWire();
+let history = $state<number[]>([initialPrice]);
+
+const unwatch = wire.$watch("price", (value: number) => {
+    history = [...history, value].slice(-40);
+});
+
+onDestroy(unwatch);
+```
+
+</Tab>
+</Frameworks>
+
+The callback runs whenever the property's value changes, whether a server
+response or a client-side write changed it. Livewire also removes watchers
+when the component is removed. In React, still return the unwatch function
+from the effect: Mesh mounts React islands in `StrictMode`, which runs
+effects twice in development, and an effect without cleanup leaves two
+watchers behind.
+
+## Choosing a channel
+
+| The state is… | Use |
+| --- | --- |
+| Server data the island only displays | [`props()`](/docs/guides/props) |
+| Edited in the island; the server needs it eventually | `useEntangle(key)` + an action or `$commit()` |
+| Edited in the island; the server reacts to every change | `useEntangle(key, true)` |
+| Changed by the server; the island reacts with side effects | `wire.$watch(key, cb)` |
+| UI-only: open/closed, hover, drafts the server never sees | Local state. It survives every request. |
+| A request for the server to do something, with a result | [`wire.$call(method, …args)`](/docs/guides/server-actions) |
+
+<Cards>
+  <Card title="Hooks and composables" href="/docs/reference/hooks">
+    Signatures for `useEntangle`, `useWire`, and `useErrorBag`.
+  </Card>
+  <Card title="The $wire API" href="/docs/reference/wire">
+    `$set`, `$commit`, `$watch`, and the rest of the bridge.
+  </Card>
+</Cards>

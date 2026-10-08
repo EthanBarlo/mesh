@@ -1,0 +1,198 @@
+---
+title: Blade tags
+description: How mesh tags compile, how attributes and wire:model reach the component, and the exact markup an island renders into the page.
+---
+
+A Mesh component is placed in any Blade view with a `mesh` tag. The tag is compiled into an ordinary
+Livewire component mount, so everything you can do with a Livewire tag works here too.
+
+## Tag forms
+
+```blade
+{{-- Self-closing --}}
+<mesh:counter />
+
+{{-- Nested class: dots between namespace segments --}}
+<mesh:forms.input />
+<mesh:wire.server-actions />
+
+{{-- Hyphen form: identical to the colon form --}}
+<mesh-counter />
+
+{{-- Paired, with slot content --}}
+<mesh:slots.card>Body</mesh:slots.card>
+```
+
+The name after `mesh:` is the class path under `App\Mesh`, kebab-cased, with dots for namespace
+separators:
+
+| Tag | PHP class | Component id |
+| --- | --- | --- |
+| `<mesh:counter />` | `App\Mesh\Counter` | `Counter` |
+| `<mesh:forms.input />` | `App\Mesh\Forms\Input` | `Forms/Input` |
+| `<mesh:wire.server-actions />` | `App\Mesh\Wire\ServerActions` | `Wire/ServerActions` |
+| `<mesh:table.orders-table />` | `App\Mesh\Table\OrdersTable` | `Table/OrdersTable` |
+
+A name that does not resolve to a class fails at render time with Livewire's
+`Unable to find component: [mesh::countr]`.
+
+### How the tag compiles
+
+Mesh registers a Blade precompiler that rewrites the tag before Livewire sees it:
+
+```text
+<mesh:counter />     →  <livewire:mesh::counter />
+<mesh-counter />     →  <livewire:mesh::counter />
+<mesh:card>          →  <livewire:mesh::card>
+</mesh:card>         →  </livewire:mesh::card>
+```
+
+`mesh::` is a Livewire component namespace that Mesh registers for `App\Mesh` (in
+`app/Mesh`). So `<livewire:mesh::counter />` is a valid way to write the same tag, and the `mesh`
+shorthand only ever resolves classes in `App\Mesh`. Components elsewhere, such as those shipped in a
+package, are registered with Livewire and rendered with `<livewire:…>` (see
+[Components in Composer packages](/docs/guides/packages)).
+
+<Callout type="warn" title="The rewrite is textual">
+  Every tag that starts with `<mesh:` or `<mesh-` is rewritten, including closing tags. A custom
+  element named `<mesh-gradient>` in the same view would be turned into a Livewire mount. Wrap
+  literal markup like that, or code samples that show a mesh tag, in `@verbatim`, which Blade
+  processes before the precompiler runs. `<mesh:styles />` is not Livewire's styles directive; it
+  looks for a class `App\Mesh\Styles`.
+</Callout>
+
+## Attributes
+
+Attributes on the tag set the component's public properties when it mounts, exactly as on a
+Livewire tag. They are also passed to `mount()` when it declares a parameter of the same name.
+
+```blade title="resources/views/livewire/kanban/board.blade.php"
+@foreach ($column['cards'] as $i => $card)
+    <mesh:kanban.card
+        :card="$card"
+        :column-id="$column['id']"
+        :position="$i"
+        wire:key="card-{{ $card['id'] }}"
+    />
+@endforeach
+```
+
+- A plain attribute passes a string: `variant="cyan"`.
+- A `:`-prefixed attribute passes a PHP expression: `:card="$card"`, `:count="5"`.
+- Kebab-case names map to camelCase properties: `:column-id` sets `$columnId`.
+- Inside loops, give each tag a unique `wire:key`, as you would for any Livewire child.
+
+Attributes set PHP state, not frontend props. What the frontend receives is whatever `props()`
+returns. A property set from the parent is only re-sent to the child on later parent renders if it
+is marked `#[Reactive]`, as the kanban card above does.
+
+## wire:model
+
+A parent component can bind one of its own properties to a Mesh component with `wire:model`. The
+Mesh class marks the receiving property with `#[Modelable]`:
+
+```php title="app/Mesh/Counter.php"
+use Livewire\Attributes\Modelable;
+
+class Counter extends Component
+{
+    #[Modelable]
+    public int $count = 0;
+}
+```
+
+```blade title="resources/views/livewire/demo-page.blade.php"
+<mesh:counter wire:model="count" />
+```
+
+The parent's `$count` and the island's `count` property stay linked. When the island changes
+`count` with `useEntangle('count')`, the parent's value follows, and a change in the parent flows
+into the island. The demo's state page drives a whole island from a plain `<select>` this way:
+`<mesh:state.props-in-place wire:model="theme" />`.
+
+## Slots
+
+Content between a paired tag's opening and closing tags is the **default slot**. Content in
+`<livewire:slot name="…">` is a **named slot**:
+
+```blade
+<mesh:slots.card variant="cyan">
+    <livewire:slot name="title">{{ strtoupper($name) }}</livewire:slot>
+
+    <p>Hello <strong>{{ $name }}</strong></p>
+
+    <livewire:slot name="footer">Rendered by the server.</livewire:slot>
+</mesh:slots.card>
+```
+
+- Use the `name="title"` form. Livewire 4 has no `:title` shorthand for slots.
+- Slot content is rendered by Blade in the **parent's** scope, so `$name` above is the parent
+  component's property. When the parent re-renders, Mesh swaps the new HTML into the island in place.
+- The frontend receives static HTML. Nested Livewire components and Alpine behaviour inside a slot
+  are not supported.
+- `{{ }}` output is escaped. `{!! !!}` output is injected as raw HTML, so never use it with user input
+  in a slot.
+
+How each framework receives slots is on its page ([React](/docs/frameworks/react#slots),
+[Vue](/docs/frameworks/vue#slots), [Svelte](/docs/frameworks/svelte#slots)). The
+[Slots guide](/docs/guides/slots) covers the rest.
+
+## The rendered DOM
+
+This is what the `mesh::component` view renders for the card above. Livewire adds its own
+attributes (`wire:id`, `wire:snapshot`, `wire:effects`) to the outer element:
+
+```html
+<div
+    wire:id="…"
+    wire:snapshot="…"
+    data-mesh-component="Slots/Card"
+    data-mesh-props="{&quot;variant&quot;:&quot;cyan&quot;}"
+    style="display: contents"
+>
+    <div data-mesh-slots hidden>
+        <div data-mesh-slot="title" wire:key="mesh-slot-title">
+            …
+        </div>
+        <div data-mesh-slot="default" wire:key="mesh-slot-default">
+            …
+        </div>
+    </div>
+
+    <div wire:ignore class="mesh-root" style="display: contents">
+    </div>
+</div>
+```
+
+| Element | What it is for |
+| --- | --- |
+| Outer `div` | The Livewire component's root. `data-mesh-component` holds the id from `component()`; `data-mesh-props` holds the JSON from `props()`. Livewire morphs both attributes on every render. |
+| `[data-mesh-slots]` | Only rendered when the tag has slots. Hidden. Livewire keeps it current, and Mesh watches it and copies each slot's HTML into the island. |
+| `.mesh-root` | Empty when the page arrives. The renderer mounts your component into it in the browser. `wire:ignore` stops Livewire's morph from touching anything inside. |
+
+`.mesh-root` is empty in the server response: Mesh does not server-render the island. Your component
+appears once the browser has loaded its chunk and mounted it (see
+[Limitations](/docs/advanced/limitations#no-server-side-rendering)).
+
+### What `display: contents` means for layout
+
+Both the outer element and `.mesh-root` use `display: contents`. They stay in the DOM, but they
+generate no box. The layout engine treats your component's top-level element as if it were a direct
+child of whatever contains the tag.
+
+<Figure caption="A mesh tag inside a two-column grid. In the DOM, section.card is three levels below div.board; in layout it is a grid item next to div.note.">
+  <IslandDom />
+</Figure>
+
+What follows from that:
+
+- **Grid and flex work as expected.** Your component's root element is the grid or flex item. If it
+  renders several top-level elements (a fragment, or several root nodes), each one becomes an item.
+  The demo's kanban board relies on this to place one island's header and drop zone around sibling
+  card islands in the same flex column.
+- **Style your own element, not the wrapper.** Margin, padding, borders and backgrounds on the outer
+  element have no effect. Inherited properties such as `color` and `font` still pass through it.
+- **Selectors still see the wrapper.** `.board > *` and `:first-child` match the outer `div`, not
+  your component's root. Target your own classes instead.
+- **The wrapper has no geometry.** `getBoundingClientRect()` on it returns zeros. Measure an element
+  inside your component.

@@ -1,0 +1,303 @@
+---
+title: Events
+description: Dispatch Livewire events from an island, handle them in PHP or in the browser, and use them to connect islands to the page and to each other.
+---
+
+Islands use Livewire's event bus as it is. A Livewire event is a DOM event
+with the parameters in its `detail`, so the same event can be handled by a
+PHP `#[On]` listener, by an island, or by plain JavaScript. The
+[wire demo](https://mesh-demo-react.ebarlow.dev/wire) and the
+[kanban demo](https://mesh-demo-react.ebarlow.dev/kanban) use every pattern
+on this page.
+
+## Dispatch from the island
+
+```tsx title="resources/js/mesh/Wire/EventBridge/index.tsx"
+const wire = useWire();
+
+const handlePing = () => {
+    // Onto Livewire's event bus: any #[On('mesh.ping')] hears it.
+    wire.$dispatch("mesh.ping", { message });
+};
+```
+
+The call is the same in Vue and Svelte. Three methods decide who hears the
+event:
+
+| Method | Heard by |
+| --- | --- |
+| `wire.$dispatch(name, params)` | Every listener on the page: any component's `#[On(name)]`, and `window` listeners. |
+| `wire.$dispatchTo(component, name, params)` | Only components with that Livewire name. |
+| `wire.$dispatchSelf(name, params)` | Only this component. |
+
+`params` is an object, and its keys become named arguments of the PHP
+listener. Mesh's types require it, so pass `{}` when there is nothing to
+send. Dispatching doesn't touch the server by itself. Each component with a
+PHP listener for the event calls the server to run it.
+
+A plain Livewire component on the same page handles the ping above:
+
+```php title="app/Livewire/EventToast.php"
+use Livewire\Attributes\On;
+
+class EventToast extends Component
+{
+    public int $count = 0;
+
+    public string $message = '';
+
+    #[On('mesh.ping')]
+    public function onMeshPing(string $message = ''): void
+    {
+        $this->count++;
+        $this->message = $message;
+    }
+}
+```
+
+`$dispatchTo` takes a Livewire component name. A plain component uses its
+usual name (`event-toast`). A Mesh component lives in the `mesh` namespace,
+so `<mesh:wire.event-bridge />` is named `mesh::wire.event-bridge`.
+
+## Handle it in PHP with #[On]
+
+An island's own PHP class can listen too. The handler changes state, the
+component re-renders, and the island receives new props. Nothing on the
+frontend subscribes to anything:
+
+```php title="app/Mesh/Wire/EventBridge.php"
+use Livewire\Attributes\On;
+
+class EventBridge extends Component
+{
+    public int $received = 0;
+
+    #[On('page.ping')]
+    public function onPagePing(): void
+    {
+        $this->received++;
+    }
+
+    public function props(): array
+    {
+        return ['received' => $this->received];
+    }
+}
+```
+
+On the demo page, the event comes from a Blade button on the page's own
+Livewire component:
+
+```php title="app/Livewire/Pages/WirePage.php"
+public function pingIslands(): void
+{
+    $this->dispatch('page.ping');
+}
+```
+
+```blade
+<button type="button" wire:click="pingIslands">
+    Dispatch page.ping
+</button>
+
+<mesh:wire.event-bridge />
+```
+
+This is the default way to push something into an island: dispatch an
+event, handle it on the island's class, and let `props()` carry the result.
+The data passes through PHP, where you can check and shape it.
+
+## Handle it in the island with $on
+
+`wire.$on(name, callback)` runs the callback in the browser with the event's
+parameters. It listens on the component's own element, so it hears:
+
+- events the component's PHP class dispatches, like `$this->dispatch()` in
+  an action;
+- `$dispatchTo` calls aimed at this component, and `$dispatchSelf`;
+- the island's own `$dispatch` calls.
+
+It does **not** hear a `$dispatch` from another component elsewhere on the
+page. That event starts at the other component's element and bubbles up to
+`window` without passing through this one. Handle those with `#[On]` on the
+island's class, or [on `window`](#page-wide-events-in-the-browser).
+
+A typical use is a notice after a save. The PHP action dispatches:
+
+```php title="app/Mesh/Projects/Editor.php"
+public function save(): void
+{
+    $project = Project::create($this->validate());
+
+    $this->dispatch('project-saved', id: $project->id);
+}
+```
+
+The island shows it:
+
+<Frameworks>
+<Tab value="React">
+
+```tsx
+useEffect(() => {
+    const onSaved = (event: Event) => {
+        const { id } = (event as CustomEvent<{ id: number }>).detail;
+        setNotice(`Saved project #${id}`);
+    };
+
+    // What $on does, plus a cleanup for React's effects.
+    wire.$el.addEventListener("project-saved", onSaved);
+    return () => wire.$el.removeEventListener("project-saved", onSaved);
+}, [wire]);
+```
+
+</Tab>
+<Tab value="Vue">
+
+```ts
+const notice = ref("");
+
+wire.$on("project-saved", ({ id }: { id: number }) => {
+    notice.value = `Saved project #${id}`;
+});
+```
+
+</Tab>
+<Tab value="Svelte">
+
+```ts
+let notice = $state("");
+
+wire.$on("project-saved", ({ id }: { id: number }) => {
+    notice = `Saved project #${id}`;
+});
+```
+
+</Tab>
+</Frameworks>
+
+`$on` returns nothing, so a listener can't be removed. That is fine in Vue
+and Svelte, where setup runs once per island. React is different: Mesh
+mounts React islands in `StrictMode`, which runs effects twice in
+development, so a `$on` inside `useEffect` would register twice. `$on` is a
+listener on `wire.$el`; adding that listener yourself, as above, gives the
+effect a cleanup.
+
+## Page-wide events in the browser
+
+Events dispatched with `$dispatch`, or with `$this->dispatch()` on the
+server, bubble up to `window` as DOM events. An island can handle one there
+with no request at all. Remove the listener when the island unmounts:
+
+<Frameworks>
+<Tab value="React">
+
+```tsx
+useEffect(() => {
+    const onMoved = (event: Event) => {
+        const move = (event as CustomEvent<CardMove>).detail;
+        setLastMove(move);
+    };
+
+    window.addEventListener("kanban.card-moved", onMoved);
+    return () => {
+        window.removeEventListener("kanban.card-moved", onMoved);
+    };
+}, []);
+```
+
+</Tab>
+<Tab value="Vue">
+
+```ts
+const onMoved = (event: Event) => {
+    lastMove.value = (event as CustomEvent<CardMove>).detail;
+};
+
+onMounted(() => window.addEventListener("kanban.card-moved", onMoved));
+onUnmounted(() =>
+    window.removeEventListener("kanban.card-moved", onMoved),
+);
+```
+
+</Tab>
+<Tab value="Svelte">
+
+```ts
+$effect(() => {
+    const onMoved = (event: Event) => {
+        lastMove = (event as CustomEvent<CardMove>).detail;
+    };
+
+    window.addEventListener("kanban.card-moved", onMoved);
+    return () => {
+        window.removeEventListener("kanban.card-moved", onMoved);
+    };
+});
+```
+
+</Tab>
+</Frameworks>
+
+`$dispatchTo` and `$dispatchSelf` events don't bubble, so they never reach
+`window`.
+
+## Connecting islands
+
+There are three ways for one island to affect another, depending on whether
+the server needs to know.
+
+**Through the server.** Island A dispatches; a PHP `#[On]` listener changes
+state; the component that renders island B re-renders and B gets new props.
+This costs a request and gives you validation, persistence, and one source of
+truth. In the kanban demo, each card is its own island. A drop dispatches an
+event:
+
+```tsx title="resources/js/mesh/Kanban/Card/index.tsx"
+wire.$dispatch("kanban.card-moved", {
+    cardId: payload.cardId,
+    title: payload.title,
+    fromColumnId: payload.fromColumnId,
+    toColumnId: columnId,
+    position: insertAt,
+});
+```
+
+The board, a plain Livewire component, moves the card. Its re-render passes
+the new order down to every island as `#[Reactive]` properties:
+
+```php title="app/Livewire/Kanban/Board.php"
+#[On('kanban.card-moved')]
+public function moveCard(
+    string $cardId,
+    string $fromColumnId,
+    string $toColumnId,
+    int $position,
+    string $title = '',
+): void {
+    // Detach the card, re-insert it, persist.
+}
+```
+
+Anything else can listen to the same event. The demo's activity log is a
+second plain Livewire component with its own `#[On('kanban.card-moved')]`.
+
+**Through a shared parent property.** Bind several islands to one parent
+property with `wire:model` and `#[Modelable]`, or pass it down as a
+`#[Reactive]` attribute. See
+[Components and discovery](/docs/guides/components#keys-and-wiremodel).
+
+**In the browser only.** For state the server never needs, such as "a drag
+is in progress", dispatch a plain `CustomEvent` on `window` and listen for it
+in each island. The kanban demo highlights every drop target this way while
+a card is dragged. [Composing islands](/docs/guides/composition) covers the
+trade-offs.
+
+<Cards>
+  <Card title="Composing islands" href="/docs/guides/composition">
+    When to split a UI into several islands, and how they share state.
+  </Card>
+  <Card title="The $wire API" href="/docs/reference/wire">
+    `$dispatch`, `$dispatchTo`, `$dispatchSelf`, and `$on`.
+  </Card>
+</Cards>

@@ -1,0 +1,187 @@
+---
+title: make:mesh and config
+description: The make:mesh generator, how it normalises names, the files and stubs it writes, how it fails, and the one setting in config/mesh.php.
+---
+
+`make:mesh` writes both halves of a component with names that are guaranteed to match. Use it for
+every new component; most "nothing mounts" bugs come from a hand-made pair whose ids differ.
+
+## Signature
+
+```bash
+php artisan make:mesh {name} {--renderer=}
+```
+
+<TypeTable
+  type={{
+    name: {
+      type: 'string',
+      required: true,
+      description:
+        'The component name. Segments separated by / (or \\) become namespaces and folders.',
+    },
+    '--renderer': {
+      type: 'react | vue | svelte',
+      default: "config('mesh.make.renderer', 'react')",
+      description:
+        'Which frontend stub to write. Overrides the configured default.',
+    },
+  }}
+/>
+
+```bash
+php artisan make:mesh Counter
+php artisan make:mesh Forms/Input
+php artisan make:mesh Counter --renderer=vue
+php artisan make:mesh Charts/RevenueChart --renderer=svelte
+```
+
+On success it prints both paths:
+
+```text
+Mesh component created:
+  PHP:      /path/to/app/app/Mesh/Forms/Input.php
+  Frontend: /path/to/app/resources/js/mesh/Forms/Input/index.tsx
+```
+
+## Name normalisation
+
+The name is split on `/` (backslashes are converted to `/` first), empty segments are dropped, and
+each segment is passed through Laravel's `Str::studly()`. The last segment is the class name; the
+others become sub-namespaces of `App\Mesh` and sub-folders of `resources/js/mesh`.
+
+| You type | PHP class | Frontend entry (React) | Blade tag |
+| --- | --- | --- | --- |
+| `Counter` | `App\Mesh\Counter` | `resources/js/mesh/Counter/index.tsx` | `<mesh:counter />` |
+| `counter` | `App\Mesh\Counter` | `resources/js/mesh/Counter/index.tsx` | `<mesh:counter />` |
+| `Forms/Input` | `App\Mesh\Forms\Input` | `resources/js/mesh/Forms/Input/index.tsx` | `<mesh:forms.input />` |
+| `forms/text-input` | `App\Mesh\Forms\TextInput` | `resources/js/mesh/Forms/TextInput/index.tsx` | `<mesh:forms.text-input />` |
+| `admin/user_card` | `App\Mesh\Admin\UserCard` | `resources/js/mesh/Admin/UserCard/index.tsx` | `<mesh:admin.user-card />` |
+
+Because both halves come from the same StudlyCase segments, the id from `component()` and the id
+derived from the folder are always identical: `Forms/TextInput` in the example above.
+
+## Renderers and stubs
+
+The renderer is the `--renderer` option, or `config('mesh.make.renderer')` when the option is
+missing, or `react` when neither is set. Each renderer has a stub folder in the package
+(`stubs/renderers/<renderer>/`) holding a single `index.<ext>.stub`. The stub's filename decides the
+entry's extension, which is what the runtime later uses to pick the renderer, so the two cannot
+drift apart.
+
+The PHP stub is the same for every renderer:
+
+```php title="app/Mesh/Counter.php"
+<?php
+
+declare(strict_types=1);
+
+namespace App\Mesh;
+
+use EthanBarlo\Mesh\Component;
+
+class Counter extends Component
+{
+    public function props(): array
+    {
+        return [];
+    }
+}
+```
+
+The frontend stub per renderer, with the class name filled in:
+
+<Frameworks>
+<Tab value="React">
+
+```tsx title="resources/js/mesh/Counter/index.tsx"
+export default function Counter() {
+    return <div className="Counter">Counter component</div>;
+}
+```
+
+</Tab>
+<Tab value="Vue">
+
+```vue title="resources/js/mesh/Counter/index.vue"
+<script setup lang="ts"></script>
+
+<template>
+    <div class="Counter">Counter component</div>
+</template>
+```
+
+</Tab>
+<Tab value="Svelte">
+
+```svelte title="resources/js/mesh/Counter/index.svelte"
+<script lang="ts"></script>
+
+<div class="Counter">Counter component</div>
+```
+
+</Tab>
+</Frameworks>
+
+The stubs live inside the package and are not publishable.
+
+## Failure cases
+
+Both checks run before anything is written, so a failed run never leaves half a component behind.
+
+| Situation | Output | Exit code |
+| --- | --- | --- |
+| `--renderer` (or the config value) has no stub folder | `Unsupported renderer [solid].` | 1 |
+| `app/Mesh/<Name>.php` already exists | `Component already exists.` | 1 |
+| `resources/js/mesh/<Name>/` already exists | `Component already exists.` | 1 |
+
+The second check covers either half: if you delete only the PHP class, the leftover frontend folder
+still blocks the command. Remove both, or rename the leftover, and run it again.
+
+## Configuration
+
+`config/mesh.php` has one setting: the default renderer for `make:mesh`. Publish it to change it:
+
+```bash
+php artisan vendor:publish --tag=mesh-config
+```
+
+```php title="config/mesh.php"
+<?php
+
+declare(strict_types=1);
+
+return [
+    /*
+    |--------------------------------------------------------------
+    | Make Defaults
+    |--------------------------------------------------------------
+    |
+    | Default settings for the make:mesh generator command. Supported
+    | renderers: 'react', 'vue', 'svelte'.
+    |
+    */
+    'make' => [
+        'renderer' => 'react',
+    ],
+];
+```
+
+The setting only affects the generator. At runtime the renderer always comes from the entry file's
+extension, so a Vue project can still contain React components, and the reverse.
+
+<Callout title="The component directory is fixed">
+  `resources/js/mesh` (and the `App\Mesh` namespace behind the `mesh` tag) is not configurable, by
+  design. The PHP command, the Blade tag and the browser-side discovery all assume it, and keeping
+  one fixed location is what lets ids match without registration. Components that live elsewhere,
+  such as in a Composer package, are added with [`sources`](/docs/reference/init-mesh#meshsource).
+</Callout>
+
+### Published views
+
+The package also registers its wrapper view under the `mesh-views` tag, so
+`php artisan vendor:publish --tag=mesh-views` copies `component.blade.php` to
+`resources/views/vendor/mesh`. The runtime depends on its exact structure
+(`data-mesh-component`, `data-mesh-props`, `[data-mesh-slots]`, and a `wire:ignore` `.mesh-root`; see
+[the rendered DOM](/docs/reference/blade#the-rendered-dom)). There is rarely a reason to publish it,
+and a published copy will not pick up fixes from package updates.

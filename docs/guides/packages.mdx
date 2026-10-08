@@ -1,0 +1,202 @@
+---
+title: Components in Composer packages
+description: Ship Mesh components in a Composer package, add their frontend entries with the sources option, and register their PHP classes with Livewire.
+---
+
+Auto-discovery only scans the host app's `resources/js/mesh`, and the `mesh:`
+tag only resolves classes in `App\Mesh`. A component that ships in a package
+lives outside both, so each half is registered explicitly:
+
+- **Frontend:** the host app globs the package's entries and passes them to
+  `initMesh` with the `sources` option.
+- **PHP:** the package's class returns its id from `component()`, and the
+  package's service provider registers it with Livewire.
+
+`make:mesh` always writes into the host app, so create package components by
+hand.
+
+## Package layout
+
+Keep the frontend entries under a `resources/js/mesh/` directory inside the
+package. Mesh derives ids from the path after that marker, exactly as it
+does in the host app:
+
+<Files>
+  <Folder name="vendor/acme/widgets" defaultOpen>
+    <Folder name="resources/js/mesh" defaultOpen>
+      <Folder name="Chart" defaultOpen>
+        <File name="index.tsx" />
+        <File name="series.ts" />
+      </Folder>
+    </Folder>
+    <Folder name="src" defaultOpen>
+      <Folder name="Mesh" defaultOpen>
+        <File name="Chart.php" />
+      </Folder>
+      <File name="WidgetsServiceProvider.php" />
+    </Folder>
+  </Folder>
+</Files>
+
+## Add the entries with sources
+
+`import.meta.glob` only accepts literal patterns, so Mesh can't glob a
+package for you. The host app writes the glob and hands Mesh the result:
+
+```ts title="resources/js/app.ts"
+import {
+    Livewire,
+} from "../../vendor/livewire/livewire/dist/livewire.esm";
+import { initMesh } from "@mesh";
+import reactRenderer from "@mesh/react";
+
+const acme = import.meta.glob(
+    "/vendor/acme/widgets/resources/js/mesh/**/index.{tsx,jsx}",
+);
+
+initMesh(Livewire, {
+    renderers: [reactRenderer],
+    sources: [acme],
+});
+
+Livewire.start();
+```
+
+The leading `/` makes the pattern relative to the project root. With this
+source, `…/resources/js/mesh/Chart/index.tsx` registers as `Chart`. Source
+components are split into lazy chunks exactly like the host's own.
+
+- **Every entry needs the marker.** A matched file whose path has no
+  `resources/js/mesh/` segment throws when `initMesh` runs. Mesh fails loudly
+  here because a silently skipped entry would only show up later as a
+  missing component.
+- **Glob only the entries.** Every matched file becomes a component. A broad
+  pattern such as `**/*.tsx` would also register `Chart/series` from the
+  helper file above.
+- **The host builds the package's code.** Imports inside the package's
+  files are resolved by the host app's Vite, so the host installs whatever
+  libraries they import.
+
+## Namespace the ids with a prefix
+
+Ids from every source share one registry with the host app's components, and
+a duplicate id throws at startup. Pass the wrapped form with a `prefix` to
+namespace a package's ids:
+
+```ts
+initMesh(Livewire, {
+    renderers: [reactRenderer],
+    sources: [{ modules: acme, prefix: "Acme" }],
+});
+```
+
+Now `Chart` registers as `Acme/Chart` and can't collide with a host
+component called `Chart`. `sources` takes any mix of bare glob results and
+wrapped ones.
+
+## The PHP class
+
+The class lives outside `App\Mesh`, so the default `component()` has no
+prefix to strip and throws. Override it to return the frontend id, prefix
+included:
+
+```php title="vendor/acme/widgets/src/Mesh/Chart.php"
+namespace Acme\Widgets\Mesh;
+
+use EthanBarlo\Mesh\Component;
+
+class Chart extends Component
+{
+    public function component(): string
+    {
+        // Must equal the frontend id, prefix included.
+        return 'Acme/Chart';
+    }
+
+    public function props(): array
+    {
+        return ['points' => [3, 1, 4, 1, 5]];
+    }
+}
+```
+
+With many components, derive the id once in a shared base class:
+
+```php title="vendor/acme/widgets/src/Mesh/AcmeComponent.php"
+namespace Acme\Widgets\Mesh;
+
+use EthanBarlo\Mesh\Component;
+use Illuminate\Support\Str;
+
+abstract class AcmeComponent extends Component
+{
+    public function component(): string
+    {
+        $class = Str::after(static::class, 'Acme\\Widgets\\Mesh\\');
+
+        return 'Acme/'.str_replace('\\', '/', $class);
+    }
+}
+```
+
+## Register and render it
+
+The frontend id and the Livewire name are separate things. The id joins the
+two halves; the Livewire name is what Blade uses. Register the class in the
+package service provider's `boot()` method:
+
+```php title="vendor/acme/widgets/src/WidgetsServiceProvider.php"
+use Acme\Widgets\Mesh\Chart;
+use Livewire\Livewire;
+
+public function boot(): void
+{
+    Livewire::component('acme-chart', Chart::class);
+}
+```
+
+```blade
+<livewire:acme-chart />
+```
+
+For a package with many components, register a Livewire namespace instead,
+the same mechanism Mesh uses for its own `mesh:` prefix:
+
+```php
+Livewire::addNamespace(
+    'acme',
+    classNamespace: 'Acme\\Widgets\\Mesh',
+    classPath: __DIR__.'/Mesh',
+);
+```
+
+```blade
+<livewire:acme::chart />
+```
+
+## Vue and Svelte entries
+
+The renderer comes from each entry's extension, as in the host app, so
+include the extensions you ship in the glob:
+
+```ts
+const acme = import.meta.glob(
+    "/vendor/acme/widgets/resources/js/mesh/**/index.{vue,svelte}",
+);
+```
+
+The host app must pass the matching renderer to `initMesh` and add the
+framework's Vite plugin. An entry whose renderer isn't registered fails when
+it first renders.
+
+<Cards>
+  <Card title="initMesh" href="/docs/reference/init-mesh">
+    The `sources` option and the rest of the config.
+  </Card>
+  <Card title="Mesh\Component" href="/docs/reference/component">
+    `component()`, `props()`, and how the id is derived.
+  </Card>
+  <Card title="Components and discovery" href="/docs/guides/components">
+    How the host app's own components are found.
+  </Card>
+</Cards>

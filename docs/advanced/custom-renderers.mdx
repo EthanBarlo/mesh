@@ -1,0 +1,319 @@
+---
+title: Custom renderers
+description: How the three shipped renderers work, how to replace one with your own to add providers or plugins, and what custom renderers cannot do yet.
+---
+
+A renderer is the small adapter between Mesh and a UI framework: it turns slot HTML into the
+framework's nodes and mounts, updates and unmounts a component. The contract is on the
+[Renderer API](/docs/reference/renderer) page. This page reads the shipped renderers line by line and
+then builds a replacement.
+
+## What you can build today
+
+Be clear about the limits before you start. The core picks a component's renderer from its file
+extension, and it only knows three mappings:
+
+```ts title="resources/js/buildRegistry.ts (inferRenderer, simplified)"
+if (ext === 'tsx' || ext === 'jsx') return 'react';
+if (ext === 'vue') return 'vue';
+if (ext === 'svelte') return 'svelte';
+throw new Error('Mesh: cannot infer renderer for component entry …');
+```
+
+Discovery in `initMesh` only globs `/resources/js/mesh/**/index.{tsx,jsx,vue,svelte}`, and entries
+added through `sources` go through the same `inferRenderer`, so any other extension throws. That
+means:
+
+- **You can replace a built-in renderer.** A renderer whose `type` is `'react'`, `'vue'` or
+  `'svelte'` takes over every component with that extension. Pass it to `initMesh` instead of the
+  built-in one (if you pass both, the one listed last wins). This is how you wrap every island in
+  providers, install Vue plugins, add an error boundary, or drop React's StrictMode.
+- **You cannot add a new framework with its own file type yet.** A Solid, Lit or Angular renderer has
+  no extension that maps to it, and a Solid renderer registered as `'react'` would take over every
+  `.tsx` file in the app.
+- **You cannot pick a renderer per component.** The PHP side carries only an id and props; the
+  extension decides.
+
+<Callout title="Planning a new framework?">
+  Supporting another framework needs a change to `inferRenderer` and the discovery glob in the
+  package. Open an issue on [GitHub](https://github.com/EthanBarlo/mesh) to discuss it.
+</Callout>
+
+## Walkthrough: React
+
+The shipped React renderer, lightly reformatted, with imports omitted:
+
+```tsx title="resources/js/react/renderer.tsx"
+export function MeshSlot({ html }: { html: string }) {
+    return (
+        <div
+            style={{ display: 'contents' }}
+            dangerouslySetInnerHTML={{ __html: html }}
+        />
+    );
+}
+
+const reactRenderer: MeshRenderer<React.ReactNode> = {
+    type: 'react',
+
+    renderSlot: (html, name) => (
+        <MeshSlot
+            key={name === 'default' ? undefined : name}
+            html={html}
+        />
+    ),
+
+    mount: ({ el, livewireComponent, Component, ctx }) => {
+        const root = createRoot(el);
+
+        const render = ({
+            props,
+            slots,
+        }: RenderContext<React.ReactNode>) => {
+            const named = slots.hasNamed ? { slots: slots.named } : {};
+
+            root.render(
+                <React.StrictMode>
+                    <LivewireContext.Provider value={livewireComponent}>
+                        <Component {...props} {...named}>
+                            {slots.children}
+                        </Component>
+                    </LivewireContext.Provider>
+                </React.StrictMode>,
+            );
+        };
+
+        render(ctx);
+
+        return { update: render, cleanup: () => root.unmount() };
+    },
+};
+```
+
+Reading it top to bottom:
+
+1. **`MeshSlot`** is the slot node. React fragments cannot take `dangerouslySetInnerHTML`, so the
+   HTML needs a host element; `display: contents` keeps that element out of layout.
+2. **`renderSlot`** keys named slots by name so React keeps their identity across renders. The
+   default slot becomes `children` and needs no key. It does nothing but build an element, which
+   keeps it pure.
+3. **`mount`** creates one root per island in `el`, the empty `.mesh-root`.
+4. **`render`** is used for both the first paint and every update. In React, updating is rendering
+   again; the reconciler works out what changed. Because the core passes the same slot elements on
+   props-only updates, React skips the slot subtrees.
+5. **`LivewireContext.Provider`** is what makes `useWire()` and the other hooks work. A replacement
+   renderer must provide it.
+6. **`cleanup`** unmounts the root when Livewire removes the component.
+
+## Mount once, then mutate: Vue
+
+Vue does not re-render from the top. It mounts an app once and reacts to state changes, so the
+renderer keeps the context in reactive state and `update` writes into it (shipped code, lightly
+reformatted):
+
+```ts title="resources/js/vue/renderer.ts"
+export type VueSlot = () => VNodeChild;
+
+export const renderSlotHtml = (html: string): VueSlot => () =>
+    h('div', { style: 'display: contents', innerHTML: html });
+
+const vueRenderer: MeshRenderer<VueSlot> = {
+    type: 'vue',
+    nativeSlots: true,
+
+    renderSlot: (html) => renderSlotHtml(html),
+
+    mount: ({ el, livewireComponent, Component, ctx }) => {
+        const state = shallowReactive<RenderContext<VueSlot>>({
+            props: ctx.props,
+            slots: ctx.slots,
+        });
+
+        const app = createApp({
+            render: () =>
+                h(Component, { ...state.props }, {
+                    ...(state.slots.children
+                        ? { default: state.slots.children }
+                        : {}),
+                    ...state.slots.named,
+                }),
+        });
+
+        app.provide(LivewireComponentKey, livewireComponent);
+        app.mount(el);
+
+        return {
+            update: (next) => {
+                state.props = next.props;
+                state.slots = next.slots;
+            },
+            cleanup: () => app.unmount(),
+        };
+    },
+};
+```
+
+What is different from React:
+
+- **`renderSlot` returns a function, not a vnode.** Vnodes are single-use, but a Vue slot *is* a
+  function that returns vnodes. A stable function is exactly what the core keeps across props-only
+  updates.
+- **`nativeSlots: true`.** Slots go to Vue's own slot system (`<slot />`, `<slot name="…" />`), so
+  `children` and `slots` are ordinary props and the core skips the reserved-prop check.
+- **`shallowReactive` state.** The core replaces `props` and `slots` wholesale on every update, so a
+  shallow wrapper is enough to trigger a re-render, and server props are not deep-proxied.
+- **`app.provide`.** Each island is its own app, so an app-level provide reaches every component
+  inside it. The key must be the `LivewireComponentKey` exported from `@mesh/vue`; it is what the
+  composables `inject`.
+
+## Svelte: state you can assign into
+
+The Svelte renderer has the same mount-once shape. Svelte components take everything as props, so
+it flattens the context into a single props object kept in `$state` (shipped code, lightly
+reformatted):
+
+```ts title="resources/js/svelte/renderer.svelte.ts"
+export const renderSlotHtml = (html: string): SvelteSlot =>
+    createRawSnippet(() => ({
+        render: () => `<div style="display: contents">${html}</div>`,
+    }));
+
+const flattenContext = (ctx: RenderContext<SvelteSlot>) => ({
+    ...ctx.props,
+    ...(ctx.slots.children ? { children: ctx.slots.children } : {}),
+    ...(ctx.slots.hasNamed ? { slots: ctx.slots.named } : {}),
+});
+
+const svelteRenderer: MeshRenderer<SvelteSlot> = {
+    type: 'svelte',
+
+    renderSlot: (html) => renderSlotHtml(html),
+
+    mount: ({ el, livewireComponent, Component, ctx }) => {
+        const props: Record<string, any> = $state(flattenContext(ctx));
+
+        const app = mount(Component, {
+            target: el,
+            props,
+            context: new Map([
+                [LivewireComponentKey, livewireComponent],
+            ]),
+        });
+
+        return {
+            update: (next) => {
+                const flat = flattenContext(next);
+                for (const key of Object.keys(props)) {
+                    if (!(key in flat)) delete props[key];
+                }
+                Object.assign(props, flat);
+            },
+            cleanup: () => unmount(app),
+        };
+    },
+};
+```
+
+- **The file is `renderer.svelte.ts`.** `$state` is a rune, and runes only compile in files the
+  Svelte plugin processes. A Svelte renderer of your own needs the same suffix.
+- **`createRawSnippet`** turns HTML into a snippet. It must render a single root element, which is
+  another reason for the `display: contents` wrapper.
+- **Slots mirror React, not Vue.** The default slot is the `children` snippet and named slots are a
+  `slots` record, so `nativeSlots` is left off and the reserved-prop check applies.
+- **`update` deletes keys that disappeared** (for example a slot that emptied out) before assigning
+  the rest, because both deletions and assignments are tracked by the `$state` proxy.
+- **Context goes through `mount`'s `context` option**, keyed by the `LivewireComponentKey` from
+  `@mesh/svelte`.
+
+## Example: shared providers
+
+The most common reason to write a renderer today is to put something around every island: a theme,
+a data-fetching client, an error boundary. Each island is its own root, so there is no other place
+to do it. Copy the built-in renderer and add your wrapper:
+
+```tsx title="resources/js/renderers/react.tsx"
+import { StrictMode, type ReactNode } from 'react';
+import { createRoot } from 'react-dom/client';
+import { LivewireContext, MeshSlot } from '@mesh/react';
+import type { MeshRenderer, RenderContext } from '@mesh';
+import { AppProviders } from '@/providers';
+
+export const reactRenderer: MeshRenderer<ReactNode> = {
+    type: 'react',
+
+    renderSlot: (html, name) => (
+        <MeshSlot
+            key={name === 'default' ? undefined : name}
+            html={html}
+        />
+    ),
+
+    mount: ({ el, livewireComponent, Component, ctx }) => {
+        const root = createRoot(el);
+
+        const render = ({ props, slots }: RenderContext<ReactNode>) => {
+            const named = slots.hasNamed ? { slots: slots.named } : {};
+            const island = (
+                <Component {...props} {...named}>
+                    {slots.children}
+                </Component>
+            );
+
+            root.render(
+                <StrictMode>
+                    <LivewireContext.Provider value={livewireComponent}>
+                        <AppProviders>{island}</AppProviders>
+                    </LivewireContext.Provider>
+                </StrictMode>,
+            );
+        };
+
+        render(ctx);
+
+        return { update: render, cleanup: () => root.unmount() };
+    },
+};
+```
+
+```ts title="resources/js/app.ts"
+import { Livewire } from
+    '../../vendor/livewire/livewire/dist/livewire.esm';
+import { initMesh } from '@mesh';
+import { reactRenderer } from './renderers/react';
+
+initMesh(Livewire, {
+    renderers: [reactRenderer],
+});
+
+Livewire.start();
+```
+
+Keep renderer files out of `resources/js/mesh`, which is for components. Anything created at module
+scope in `@/providers` (a client, a store) is created once and shared by every island on the page,
+while each island still gets its own provider instance.
+
+The Vue version follows the same pattern: copy the shipped renderer, then call your setup on the app
+before mounting it.
+
+```ts
+app.provide(LivewireComponentKey, livewireComponent);
+installPlugins(app); // your function: app.use(...), app.component(...)
+app.mount(el);
+```
+
+Every island is a separate app, so `installPlugins` runs once per island. Whether one plugin
+instance can be installed on several apps depends on the plugin; when in doubt, create one per call.
+
+## Testing a renderer
+
+Mesh's own renderer tests (`tests/js/vueRenderer.test.ts` and `svelteRenderer.test.ts`) call
+`mount` directly with a fake component and a hand-built context. They are a good template. A
+renderer should pass the same checks:
+
+- mounts a component with props;
+- renders the default slot HTML inside a `display: contents` wrapper;
+- exposes named slots the way your framework expects;
+- re-renders in place on a props update, without remounting;
+- swaps slot content on a slot update;
+- unmounts on `cleanup`;
+- makes the Livewire component available to `useLivewireComponent`.

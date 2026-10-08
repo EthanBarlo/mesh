@@ -1,0 +1,334 @@
+---
+title: Components and discovery
+description: How a Mesh component is laid out on disk, how its PHP and frontend halves find each other, and how to render one from Blade.
+---
+
+A Mesh component is one Livewire component with two halves: a PHP class in
+`app/Mesh/` that owns state and actions, and a React, Vue, or Svelte
+component in `resources/js/mesh/` that renders it. Nothing is registered by
+hand. Both halves derive the same short id from where they live, and that id
+is how they find each other.
+
+## Create a component
+
+`make:mesh` writes both halves with matching names:
+
+```bash
+php artisan make:mesh Counter
+```
+
+```txt
+app/Mesh/Counter.php
+resources/js/mesh/Counter/index.tsx
+```
+
+The renderer comes from `make.renderer` in `config/mesh.php` (`react` by
+default). Override it per component with `--renderer`:
+
+```bash
+php artisan make:mesh Counter --renderer=vue
+php artisan make:mesh Counter --renderer=svelte
+```
+
+An unknown renderer fails before anything is written, and the command
+refuses to overwrite a component that already exists. The PHP stub is the
+same for every renderer:
+
+```php title="app/Mesh/Counter.php"
+<?php
+
+declare(strict_types=1);
+
+namespace App\Mesh;
+
+use EthanBarlo\Mesh\Component;
+
+class Counter extends Component
+{
+    public function props(): array
+    {
+        return [];
+    }
+}
+```
+
+The frontend stub is a placeholder you replace:
+
+<Frameworks>
+<Tab value="React">
+
+```tsx title="resources/js/mesh/Counter/index.tsx"
+export default function Counter() {
+    return <div className="Counter">Counter component</div>;
+}
+```
+
+</Tab>
+<Tab value="Vue">
+
+```vue title="resources/js/mesh/Counter/index.vue"
+<script setup lang="ts"></script>
+
+<template>
+    <div class="Counter">Counter component</div>
+</template>
+```
+
+</Tab>
+<Tab value="Svelte">
+
+```svelte title="resources/js/mesh/Counter/index.svelte"
+<script lang="ts"></script>
+
+<div class="Counter">Counter component</div>
+```
+
+</Tab>
+</Frameworks>
+
+### Nested components
+
+Pass a path to group components. Every segment is StudlyCased, so
+`forms/text-input` and `Forms/TextInput` produce the same files:
+
+```bash
+php artisan make:mesh Forms/Input
+```
+
+```txt
+app/Mesh/Forms/Input.php            (App\Mesh\Forms\Input)
+resources/js/mesh/Forms/Input/index.tsx
+```
+
+## One folder per component
+
+Each component is a folder under `resources/js/mesh/`, and its entry is the
+`index` file inside it. Anything else in the folder is an ordinary module:
+subcomponents, hooks, types. This is the demo app's board, which keeps its
+drag logic next to the entry:
+
+<Files>
+  <Folder name="resources/js/mesh" defaultOpen>
+    <Folder name="Counter" defaultOpen>
+      <File name="index.tsx" />
+    </Folder>
+    <Folder name="Board" defaultOpen>
+      <Folder name="Kanban" defaultOpen>
+        <File name="index.tsx" />
+        <File name="Column.tsx" />
+        <File name="CardItem.tsx" />
+        <File name="useBoardDrag.ts" />
+        <File name="types.ts" />
+      </Folder>
+    </Folder>
+    <Folder name="Forms" defaultOpen>
+      <Folder name="ProjectForm" defaultOpen>
+        <File name="index.tsx" />
+      </Folder>
+    </Folder>
+  </Folder>
+</Files>
+
+Discovery is a single glob over that directory:
+
+```ts
+import.meta.glob("/resources/js/mesh/**/index.{tsx,jsx,vue,svelte}")
+```
+
+- **Only `index` files are entries.** `Column.tsx` above is never treated as
+  a component. The flip side: an `index.tsx` in a helper subfolder _is_ an
+  entry (`Board/Kanban/parts/index.tsx` would register `Board/Kanban/parts`),
+  so give helper files other names.
+- **The entry must `export default` the component.** A module without a
+  default export fails when the component first renders.
+- **The extension picks the renderer.** `tsx` and `jsx` render with React,
+  `vue` with Vue, `svelte` with Svelte. Another extension throws at startup.
+  You can mix renderers in one app as long as each one is passed to
+  [`initMesh`](/docs/reference/init-mesh).
+- **One entry per folder.** `Counter/index.tsx` next to `Counter/index.vue`
+  derives the same id twice, and Mesh throws a duplicate-id error at
+  startup.
+- **Each component is its own chunk.** Vite splits every entry into a lazy
+  chunk that loads the first time that component renders on a page. Adding a
+  component never touches `app.ts` or your Vite `input` list. The framework
+  runtime is different: each renderer imported in `app.ts` brings its
+  framework into the main bundle, which loads on every page.
+
+The directory is fixed at `resources/js/mesh` and is not configurable.
+Components that ship in a Composer package are added with the `sources`
+option instead; see [Components in Composer packages](/docs/guides/packages).
+
+## The component id
+
+The id is the path after `resources/js/mesh/`, without `/index` and the
+extension. The PHP side derives the same string from the class name: it
+strips `App\Mesh\` and turns the remaining backslashes into slashes.
+
+| PHP class | Frontend entry | Id |
+| --- | --- | --- |
+| `App\Mesh\Counter` | `mesh/Counter/index.tsx` | `Counter` |
+| `App\Mesh\Forms\Input` | `mesh/Forms/Input/index.vue` | `Forms/Input` |
+| `App\Mesh\Board\Kanban` | `mesh/Board/Kanban/index.svelte` | `Board/Kanban` |
+
+The PHP half renders its id into the page as `data-mesh-component`, and the
+runtime looks it up in the registry it built from the glob. If nothing
+matches, the console names the id it wanted and lists the ids it knows,
+which is the quickest way to spot a mismatch. Turn on `debug: true` in
+`initMesh` to log every component as it mounts.
+
+The derivation lives in `Component::component()`. A class outside
+`App\Mesh` has no prefix to strip, so it throws until you override the
+method and return the id yourself. That is the normal setup for
+[package components](/docs/guides/packages).
+
+<Callout type="warn" title="Ids are case-sensitive">
+`App\Mesh\Counter` with a `resources/js/mesh/counter/` folder works on
+macOS, whose filesystem ignores case, and breaks on Linux in CI or
+production. Keep both halves StudlyCase. `make:mesh` always does.
+</Callout>
+
+## Render it from Blade
+
+```blade
+<mesh:counter />
+<mesh:forms.input />
+<mesh:wire.server-actions />
+```
+
+The tag is the class path in kebab case, with dots between segments:
+`App\Mesh\Wire\ServerActions` becomes `mesh:wire.server-actions`. Mesh
+rewrites `<mesh:…>` into a namespaced Livewire tag at compile time, so
+`<mesh:counter />` is exactly `<livewire:mesh::counter />`, and the
+component's Livewire name is `mesh::counter`. A dash form compiles the same
+way:
+
+```blade
+<mesh-counter />
+```
+
+Use a paired tag when you pass [slots](/docs/guides/slots):
+`<mesh:card>…</mesh:card>`. The `mesh:` prefix only resolves classes under
+`App\Mesh`; anything else is rendered with its own Livewire name.
+
+Because a Mesh component _is_ a Livewire component, the usual Livewire tag
+features apply: attributes, `wire:key`, and `wire:model`. The wrapper Mesh renders around the island uses `display: contents`, so it
+adds no box of its own to your grid or flex layout.
+
+## Passing data in
+
+Tag attributes set public properties, or `mount()` parameters, when the
+component mounts. Kebab-case attributes map to camelCase properties:
+
+```blade
+<mesh:slots.card variant="cyan" />
+<mesh:counter :count="$startingCount" />
+<mesh:kanban.column :column-id="$column['id']" />
+```
+
+Public properties are server state, not props. The frontend only receives
+what [`props()`](/docs/guides/props) returns, plus any property it
+[entangles](/docs/guides/state). The demo's card forwards its `variant`:
+
+```php title="app/Mesh/Slots/Card.php"
+class Card extends Component
+{
+    public string $variant = 'default';
+
+    public function props(): array
+    {
+        return ['variant' => $this->variant];
+    }
+}
+```
+
+Attributes are read once. If the parent re-renders with a different value,
+the child keeps the one it mounted with. To keep following the parent, mark
+the property `#[Reactive]`: Livewire then re-renders the child when the
+value changes, `props()` runs again, and the island receives the new props
+in place. This is how the demo's kanban cards follow the board:
+
+```php title="app/Mesh/Kanban/Card.php"
+use Livewire\Attributes\Reactive;
+
+class Card extends Component
+{
+    #[Reactive]
+    public array $card;
+
+    #[Reactive]
+    public string $columnId;
+
+    #[Reactive]
+    public int $position;
+
+    public function props(): array
+    {
+        return [
+            'card' => $this->card,
+            'columnId' => $this->columnId,
+            'position' => $this->position,
+        ];
+    }
+}
+```
+
+A reactive property belongs to the parent. Livewire throws if the child
+changes it, so don't entangle one.
+
+## Keys and wire:model
+
+Give every Mesh tag rendered in a loop a `wire:key`, as you would any
+Livewire child. Livewire uses the key to match each child to its island
+across re-renders. Without one, a reordered list can hand an island another
+row's data or remount it:
+
+```blade title="resources/views/livewire/kanban/board.blade.php"
+@foreach ($column['cards'] as $i => $card)
+    <mesh:kanban.card
+        :card="$card"
+        :column-id="$column['id']"
+        :position="$i"
+        wire:key="card-{{ $card['id'] }}"
+    />
+@endforeach
+```
+
+To bind a parent property to the component, mark the child's property
+`#[Modelable]` and use `wire:model` on the tag:
+
+```php title="app/Mesh/Counter.php"
+use Livewire\Attributes\Modelable;
+
+class Counter extends Component
+{
+    #[Modelable]
+    public int $count = 0;
+}
+```
+
+```blade
+<mesh:counter wire:model="count" />
+```
+
+Inside the island, the property is ordinary component state: entangle
+`count` and writes flow up to the parent's `$count`. The
+[demo home page](https://mesh-demo-react.ebarlow.dev/) binds a plain
+Livewire counter, an Alpine counter, and this Mesh counter to one parent
+property. On the [state page](https://mesh-demo-react.ebarlow.dev/state), a
+Blade `<select wire:model.live="theme">` drives
+`<mesh:state.props-in-place wire:model="theme" />` from outside.
+
+<Cards>
+  <Card title="Props" href="/docs/guides/props">
+    What the island receives from `props()`, and when it changes.
+  </Card>
+  <Card title="Two-way state" href="/docs/guides/state">
+    Bind island state to a Livewire property with `useEntangle`.
+  </Card>
+  <Card title="Blade tags" href="/docs/reference/blade">
+    Every tag form and attribute, in reference form.
+  </Card>
+  <Card title="make:mesh and config" href="/docs/reference/artisan">
+    The generator's arguments, options, and config.
+  </Card>
+</Cards>

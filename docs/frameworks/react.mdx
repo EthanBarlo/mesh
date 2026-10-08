@@ -1,0 +1,389 @@
+---
+title: React
+description: Everything specific to React islands, from the Vite plugin to StrictMode, hooks, slots and the gotchas that come from one root per island.
+---
+
+The React renderer ships in `@mesh/react`. Any component whose entry file is `index.tsx` or `index.jsx`
+is mounted with React's `createRoot`, one root per `<mesh:…>` tag on the page.
+
+| | React |
+| --- | --- |
+| Entry file | `resources/js/mesh/<Id>/index.tsx` or `index.jsx` |
+| Renderer | `import reactRenderer from '@mesh/react'` |
+| Peer dependencies | `react` and `react-dom`, version 18 or newer |
+| Two-way state | `useEntangle` returns a `[value, setValue]` pair |
+| Default slot | the `children` prop |
+| Named slots | the `slots` prop, keyed by slot name |
+| Example app | [`apps/demo-react`](https://github.com/EthanBarlo/mesh/tree/main/apps/demo-react), live at [mesh-demo-react.ebarlow.dev](https://mesh-demo-react.ebarlow.dev) |
+
+## Install
+
+Mesh itself comes from Composer and is imported through the `@mesh` Vite alias (see
+[Installation](/docs/installation)). For React you add the framework and its Vite plugin.
+
+<Steps>
+<Step>
+
+### Install React and the Vite plugin
+
+```bash
+npm install react react-dom
+npm install -D @vitejs/plugin-react
+npm install -D @types/react @types/react-dom
+```
+
+The type packages are only needed for TypeScript. The demo app runs React 19.
+
+</Step>
+<Step>
+
+### Add the plugin to Vite
+
+```ts title="vite.config.ts"
+import { defineConfig } from 'vite';
+import laravel from 'laravel-vite-plugin';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+    plugins: [
+        laravel({
+            input: ['resources/css/app.css', 'resources/js/app.ts'],
+            refresh: true,
+        }),
+        react(),
+    ],
+    resolve: {
+        alias: {
+            '@mesh': '/vendor/ethanbarlo/mesh/resources/js',
+        },
+    },
+});
+```
+
+</Step>
+<Step>
+
+### Point TypeScript at the alias
+
+The runtime is TypeScript source inside `vendor/`, so TypeScript needs the same alias as Vite.
+This is the demo app's setup:
+
+```json title="tsconfig.json"
+{
+    "compilerOptions": {
+        "jsx": "react-jsx",
+        "moduleResolution": "bundler",
+        "strict": true,
+        "baseUrl": ".",
+        "paths": {
+            "@mesh": [
+                "vendor/ethanbarlo/mesh/resources/js/index.ts"
+            ],
+            "@mesh/*": ["vendor/ethanbarlo/mesh/resources/js/*"]
+        }
+    },
+    "include": [
+        "resources/js/**/*.ts",
+        "resources/js/**/*.tsx",
+        "vendor/ethanbarlo/mesh/resources/js/**/*.ts",
+        "vendor/ethanbarlo/mesh/resources/js/**/*.tsx"
+    ]
+}
+```
+
+If your `include` globs cover the whole vendored runtime, add the Vue and Svelte renderer folders
+to `exclude` unless you have those frameworks installed, or `tsc` will try to type-check them.
+
+</Step>
+</Steps>
+
+## Register the renderer
+
+Pass the renderer to `initMesh` before `Livewire.start()`:
+
+```ts title="resources/js/app.ts"
+import { Livewire } from
+    '../../vendor/livewire/livewire/dist/livewire.esm';
+import { initMesh } from '@mesh';
+import reactRenderer from '@mesh/react';
+
+initMesh(Livewire, {
+    renderers: [reactRenderer],
+});
+
+Livewire.start();
+```
+
+`reactRenderer` is also available as a named export. To mix frameworks, list every renderer you use:
+`renderers: [reactRenderer, vueRenderer]`. Each component picks its renderer from its file extension.
+
+Importing the renderer imports `react` and `react-dom`, so React is part of your main bundle on every
+page that loads `app.ts`. What is lazy is each component: its own code, and the libraries only it
+imports, become a separate chunk that loads the first time the component renders.
+
+## Write a component
+
+`php artisan make:mesh Counter` writes both halves. React is the default renderer, so the frontend
+half is `resources/js/mesh/Counter/index.tsx`. Here is the demo's counter with the UI kit removed:
+
+```php title="app/Mesh/Counter.php"
+<?php
+
+namespace App\Mesh;
+
+use EthanBarlo\Mesh\Component;
+use Livewire\Attributes\Modelable;
+
+class Counter extends Component
+{
+    #[Modelable]
+    public int $count = 0;
+
+    public int $initialCount = 0;
+
+    public function mount(): void
+    {
+        $this->initialCount = $this->count;
+    }
+
+    public function props(): array
+    {
+        return ['initialCount' => $this->initialCount];
+    }
+}
+```
+
+```tsx title="resources/js/mesh/Counter/index.tsx"
+import { useEntangle } from '@mesh/react';
+
+interface CounterProps {
+    initialCount: number;
+}
+
+export default function Counter({ initialCount }: CounterProps) {
+    const [count, setCount] = useEntangle<number>('count');
+
+    return (
+        <div className="counter">
+            <output>{count}</output>
+            <button onClick={() => setCount((c) => c - 1)}>-</button>
+            <button onClick={() => setCount(initialCount)}>
+                Reset
+            </button>
+            <button onClick={() => setCount((c) => c + 1)}>+</button>
+        </div>
+    );
+}
+```
+
+The file format rules:
+
+- The entry must be named `index.tsx` or `index.jsx` and must **default-export** the component.
+  A module without a default export logs `Mesh: component "Counter" module has no default export.`
+- Other files in the same folder (subcomponents, hooks, types) are ignored by discovery. Import them
+  from `index.tsx` as usual.
+- The keys of the array returned by `props()` arrive as React props. Mesh does not generate types,
+  so write an interface that matches `props()` and keep the two in step.
+
+### Typing props
+
+Props are decoded from the JSON that `props()` produced, so type them as JSON: PHP ints and floats
+are `number`, lists are arrays, associative arrays are objects, and dates are strings. An **empty**
+PHP array is always encoded as `[]`, even where you meant an empty object, so type such props as
+`Record<string, T> | []` or send `null` instead.
+
+## Hooks
+
+All four hooks come from `@mesh/react` and only work inside a component that Mesh mounted (they read
+the Livewire component from React context). Full signatures are in
+[Hooks and composables](/docs/reference/hooks).
+
+| Hook | Returns | Use it for |
+| --- | --- | --- |
+| `useEntangle<T>(key, live?)` | `[T, Dispatch<SetStateAction<T>>]` | Two-way binding to a public property |
+| `useWire<T>()` | `Wire & T` | Calling actions, events, uploads, `$watch` |
+| `useErrorBag()` | `Record<string, string[]>` | Validation messages after each request |
+| `useLivewireComponent()` | `LivewireComponent` | The raw Livewire component instance |
+
+A form shows three of them working together. This is the demo's project form, trimmed:
+
+```tsx title="resources/js/mesh/Forms/ProjectForm/index.tsx"
+import { useState, type FormEvent } from 'react';
+import { useEntangle, useErrorBag, useWire } from '@mesh/react';
+
+export default function ProjectForm() {
+    // Deferred: sent with the next request (the submit).
+    const [name, setName] = useEntangle<string>('name');
+    // Live: every change is its own request.
+    const [slug, setSlug] = useEntangle<string>('slug', true);
+
+    const errors = useErrorBag();
+    const wire = useWire();
+    const [saving, setSaving] = useState(false);
+
+    const submit = async (event: FormEvent) => {
+        event.preventDefault();
+        setSaving(true);
+        try {
+            // Resolves with null when validation fails.
+            const result = await wire.$call('save');
+            if (result?.ok) {
+                // saved
+            }
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <form onSubmit={submit} noValidate>
+            <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+            />
+            {errors.name && <p role="alert">{errors.name[0]}</p>}
+
+            <input
+                value={slug}
+                onChange={(e) => setSlug(e.target.value)}
+            />
+            {errors.slug && <p role="alert">{errors.slug[0]}</p>}
+
+            <button disabled={saving}>Save</button>
+        </form>
+    );
+}
+```
+
+`setValue` from `useEntangle` accepts a value or an updater function, exactly like `useState`.
+`useWire` takes a type argument for your component's own members, for example
+`useWire<{ flagOrder: (id: number) => Promise<void> }>()`. See the [`$wire` API](/docs/reference/wire)
+for everything on the returned object.
+
+## Slots
+
+Blade content between the opening and closing tag arrives as `children`. Content wrapped in
+`<livewire:slot name="…">` arrives on a `slots` prop, keyed by name:
+
+```blade title="resources/views/livewire/pages/slots.blade.php"
+<mesh:slots.card variant="cyan">
+    <livewire:slot name="title">Release notes</livewire:slot>
+
+    <p>Hello <strong>{{ $name }}</strong></p>
+
+    <livewire:slot name="footer">Rendered by the server.</livewire:slot>
+</mesh:slots.card>
+```
+
+```tsx title="resources/js/mesh/Slots/Card/index.tsx"
+import type { ReactNode } from 'react';
+
+interface CardProps {
+    variant: string;
+    children?: ReactNode;
+    slots?: { title?: ReactNode; footer?: ReactNode };
+}
+
+export default function Card({ variant, children, slots }: CardProps) {
+    return (
+        <section className={`card card-${variant}`}>
+            {slots?.title && <h3>{slots.title}</h3>}
+            <div>{children}</div>
+            {slots?.footer && <footer>{slots.footer}</footer>}
+        </section>
+    );
+}
+```
+
+Each slot is a `MeshSlot` element: a `<div style="display: contents">` holding the server HTML via
+`dangerouslySetInnerHTML`. The wrapper does not create a layout box, so it does not disturb flex or
+grid parents. The HTML is static: it updates when the server re-renders it, but nested Livewire
+components or Alpine behaviour inside it will not work. The [Slots guide](/docs/guides/slots) covers
+the details.
+
+`children` is `undefined` when the default slot is empty, and the `slots` prop is only passed when
+the tag has at least one named slot. Type both as optional.
+
+## Gotchas
+
+### StrictMode is always on
+
+The renderer wraps every island in `<React.StrictMode>`. In development React mounts each component,
+runs its effects, tears them down and runs them again. Any effect that subscribes to something must
+return its cleanup, or you get two subscriptions in development.
+
+`$watch` and `$hook` return their unsubscribe function, so an arrow body is enough:
+
+```tsx
+// Correct: the effect returns the unwatch function.
+useEffect(
+    () =>
+        wire.$watch('price', (price: number) => {
+            setHistory((prev) => [...prev, price]);
+        }),
+    [wire],
+);
+```
+
+`$on` returns nothing. Its listener sits on the component's root element (`wire.$el`), which is
+where an event dispatched by your PHP class with `$this->dispatch('saved')` lands. When you need
+cleanup, listen there yourself:
+
+```tsx
+useEffect(() => {
+    const el = wire.$el;
+    const onSaved = (e: Event) => {
+        setSaved((e as CustomEvent).detail);
+    };
+    el.addEventListener('saved', onSaved);
+    return () => el.removeEventListener('saved', onSaved);
+}, [wire]);
+```
+
+There is no option to turn StrictMode off. A [custom renderer](/docs/advanced/custom-renderers) can.
+
+### Each island is its own root
+
+Two `<mesh:…>` tags create two React roots, even when they render the same component. A context
+provider inside one island never reaches another, and there is no app-level wrapper to put providers
+in. Put providers inside the component, or replace the built-in renderer with
+[one that wraps every island](/docs/advanced/custom-renderers#example-shared-providers).
+
+Module-level state is shared, because every island imports the same module instance. A store
+created at module scope (or a plain `EventTarget`) is visible to all islands on the page. For state
+the server should know about, share it through Livewire instead. See
+[Composing islands](/docs/guides/composition).
+
+### `useEntangle` writes its value back
+
+The React hook pushes its value to Livewire with `$set` from an effect: once after mount, and again
+after every change, including changes that arrived from the server.
+
+- **Deferred** (the default) this costs nothing. Livewire only sends properties that differ from
+  the server's copy.
+- **Live** (`useEntangle(key, true)`) each `$set` is a request, so a live binding sends one request
+  when the island mounts and one more after each server-driven change.
+
+The Vue and Svelte composables skip both writes. In React, use live mode only for fields where the
+server must react to every change.
+
+### Keep the key and mode fixed
+
+`useEntangle` seeds its state from `$get(key)` once. Changing `key` after mount does not reseed the
+value, and a changed `live` flag only applies from the next change. Pass literals.
+
+### Replace, don't mutate
+
+Entangled objects and arrays follow React's rules: pass a new value to `setValue`. Mutating the
+current value in place changes nothing on either side.
+
+```tsx
+setColumns(columns.map((c) => (c.id === id ? { ...c, title } : c)));
+```
+
+### Reserved prop names
+
+When a tag has slots, `children` and `slots` carry them. Returning a `children` key from `props()`
+while any slot is present, or a `slots` key while named slots are present, throws:
+``Mesh: `children` is reserved for slot content — rename the prop from props().``
+React also consumes `key` itself, so a `key` prop never reaches your component.

@@ -1,0 +1,185 @@
+---
+title: Slots
+description: Pass Blade markup into an island as a default slot and named slots, and render it from React, Vue, or Svelte.
+---
+
+Markup written between a Mesh component's opening and closing tags is
+forwarded to the island. The PHP class needs nothing extra. Slots let a page
+keep authoring content in Blade while a framework component supplies the
+structure around it. See them on the
+[slots demo](https://mesh-demo-react.ebarlow.dev/slots).
+
+## Default and named slots
+
+Everything inside the tag is the default slot, except blocks wrapped in
+`<livewire:slot name="…">`, which become named slots:
+
+```blade title="resources/views/livewire/pages/slots.blade.php"
+<mesh:slots.card variant="cyan">
+    <livewire:slot name="title">{{ strtoupper($name) }}</livewire:slot>
+
+    <p>Hello <strong>{{ $name }}</strong></p>
+
+    <livewire:slot name="footer">
+        Rendered for {{ $name }} by the server.
+    </livewire:slot>
+</mesh:slots.card>
+```
+
+Write named slots with the `name="…"` attribute form. A self-closing tag has
+no slots at all.
+
+## Render them
+
+Each framework receives slots in its own idiom. React and Svelte get the
+default slot as `children` and the named slots together in a `slots` prop.
+Vue gets native slots:
+
+<Frameworks>
+<Tab value="React">
+
+```tsx title="resources/js/mesh/Slots/Card/index.tsx"
+import type { ReactNode } from "react";
+
+interface CardProps {
+    variant: string;
+    children?: ReactNode;
+    slots?: { title?: ReactNode; footer?: ReactNode };
+}
+
+export default function Card({ children, slots }: CardProps) {
+    return (
+        <section>
+            {slots?.title && <h3>{slots.title}</h3>}
+            <div>{children}</div>
+            {slots?.footer && <footer>{slots.footer}</footer>}
+        </section>
+    );
+}
+```
+
+</Tab>
+<Tab value="Vue">
+
+```vue title="resources/js/mesh/Slots/Card/index.vue"
+<script setup lang="ts">
+defineProps<{ variant?: string }>();
+</script>
+
+<template>
+    <section>
+        <h3 v-if="$slots.title"><slot name="title" /></h3>
+        <div><slot /></div>
+        <footer v-if="$slots.footer"><slot name="footer" /></footer>
+    </section>
+</template>
+```
+
+</Tab>
+<Tab value="Svelte">
+
+```svelte title="resources/js/mesh/Slots/Card/index.svelte"
+<script lang="ts">
+    import type { Snippet } from "svelte";
+
+    interface Props {
+        variant?: string;
+        children?: Snippet;
+        slots?: Record<string, Snippet | undefined>;
+    }
+
+    let { children, slots = {} }: Props = $props();
+</script>
+
+<section>
+    {#if slots.title}
+        <h3>{@render slots.title?.()}</h3>
+    {/if}
+    <div>{@render children?.()}</div>
+    {#if slots.footer}
+        <footer>{@render slots.footer?.()}</footer>
+    {/if}
+</section>
+```
+
+</Tab>
+</Frameworks>
+
+Type every slot as optional. The default slot is left out when it is empty,
+the `slots` prop only exists when the tag has named slots, and a named slot
+is only there if the tag contains it. Each slot is wrapped in a
+`<div style="display: contents">`, so the wrapper adds no box to your layout.
+
+## Slots follow the server
+
+Slot content belongs to the Blade view that wrote it, usually the page.
+When that view re-renders with different slot content, Mesh swaps the new
+HTML into the island in place. The island does not remount, and its local
+state survives.
+
+On the demo page, an input bound with `wire:model.live="name"` re-renders the
+page on each keystroke, and the card's title, body, and footer follow along.
+Under the hood, the Blade wrapper renders each slot into a hidden holder that
+Livewire keeps current, and Mesh watches the holders and copies their HTML
+into the island when it changes. Prop-only updates leave the slot nodes
+untouched.
+
+## Static HTML only
+
+Slots are mirrored as HTML. The island receives markup, not live components,
+so:
+
+- **Interactive Livewire components and Alpine directives inside a slot do
+  not work.** They run in the hidden holder, and the copy in the island
+  renders without any behaviour.
+- **The framework can't attach handlers** to elements inside a slot. Plain
+  HTML behaviour, such as links, still works.
+
+Pass interactive pieces another way: as their own Mesh component placed next
+to the island, or as data in `props()` that the framework renders itself. The
+[kanban demo](https://mesh-demo-react.ebarlow.dev/kanban) renders its card
+islands as Blade siblings of the column island for exactly this reason; see
+[Composing islands](/docs/guides/composition).
+
+## Reserved prop names
+
+In React and Svelte, slot content travels in the `children` and `slots`
+props, so `props()` can't use those names while the tag has slots. Rather
+than let one silently replace the other, Mesh stops with an error in the
+console:
+
+- returning `children` while the tag has any slot throws
+  ``Mesh: `children` is reserved for slot content — rename the prop from props().``
+- returning `slots` while the tag has named slots throws the same error for
+  `slots`.
+
+A `slots` prop is allowed when the tag only has a default slot. The check
+runs on every update too, so a key that only appears in `props()` later is
+caught on that update.
+Vue keeps native slots apart from props, so both names are ordinary props
+there.
+
+```php
+public function props(): array
+{
+    // Throws when the tag has a default slot: rename to 'items'.
+    return ['children' => $this->items];
+}
+```
+
+<Callout type="warn" title="Unescaped output in slots is raw HTML">
+Each renderer injects slot HTML as-is: React with `dangerouslySetInnerHTML`,
+Vue with `innerHTML`, Svelte with a raw snippet. Blade's `{{ }}` escapes its
+output, so slots built from `{{ … }}` are safe. Anything written with
+`{!! … !!}`, or other unescaped output, reaches the page unchanged. Never put
+unsanitised user input in a slot.
+</Callout>
+
+<Cards>
+  <Card title="Composing islands" href="/docs/guides/composition">
+    What to do when the slot content needs to be interactive.
+  </Card>
+  <Card title="Blade tags" href="/docs/reference/blade">
+    Tag forms, attributes, and slot syntax in reference form.
+  </Card>
+</Cards>

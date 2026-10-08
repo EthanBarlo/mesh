@@ -1,28 +1,44 @@
 ---
 title: Why Mesh
-description: The problems Mesh solves, and when to reach for it.
+description: The gap Mesh fills in a Livewire app, how it compares with the alternatives, and when not to use it.
 ---
 
-# Why Mesh
+Most interactions in a Livewire app don't need a JavaScript framework.
+Livewire handles the server round-trips, Alpine handles the client-side
+details, and together they cover forms, modals, tabs, filtering, and live
+updates.
 
-The vast majority of interactions in a Livewire app don't need a JavaScript framework. Livewire handles the server round-trips, Alpine handles the client-side sprinkles, and that combination comfortably covers most of what an app does — forms, modals, tabs, filtering, live updates.
+## The edge cases
 
-But every app has a few edge cases where reaching for a JS framework is simply the easier path:
+Every app has a few places where a JavaScript framework is simply the
+easier path:
 
-- **The component already exists.** A virtualized table (TanStack Table), a drag-and-drop board (dnd-kit), a rich text editor (TipTap), a live chart (ECharts) — these are mature, battle-tested packages. Rebuilding even a fraction of one in Alpine is slow to write and worse to maintain.
-- **The interaction is genuinely complex.** Heavy client-side state, coordinated drag interactions, canvas rendering — the kind of logic component frameworks were built for.
-- **You already have the component.** A React/Vue/Svelte component from another project (or a component library) that you'd rather reuse than translate.
+- **The component already exists.** A data grid (TanStack Table), a
+  drag-and-drop board (dnd-kit), a rich text editor (TipTap), a chart
+  (ECharts). These are mature packages. Rebuilding even part of one in
+  Alpine is slow to write and harder to maintain.
+- **The interaction is genuinely complex.** Heavy client-side state,
+  coordinated drag interactions, canvas rendering: the work component
+  frameworks were built for.
+- **You already have the component.** A React, Vue, or Svelte component
+  from another project or a component library that you'd rather reuse than
+  translate.
 
-The usual answers to those edge cases are bad trades: rebuild the widget by hand in Alpine, switch the whole app to Inertia for the sake of one page, or bolt a one-off React mount onto the page — and then own the bundling, the prop plumbing, the state syncing, and the teardown yourself, for every widget, forever.
+The usual answers are poor trades. You rebuild the widget in Alpine, move
+the whole app to Inertia for the sake of one page, or bolt a one-off React
+mount onto the page and then own the bundling, the prop plumbing, the state
+syncing, and the teardown yourself, for every widget.
 
-Mesh exists so the edge case stays small: keep Livewire as the backbone, and drop a framework component **exactly where you need it** — as an island inside the Livewire view. Mesh bridges the gap and manages the complexity — props, two-way state, server actions, bundling, lifecycle — so you can just focus on building.
+Mesh keeps the edge case small. Livewire stays the backbone, and a
+framework component goes exactly where you need it, as an island inside the
+Livewire view:
 
-```blade
+```blade title="resources/views/livewire/project.blade.php"
 <div>
     <h2>{{ $project->name }}</h2>
 
-    {{-- A React island, receiving live props from this Livewire component --}}
-    <mesh:kanban.board :columns="$columns" wire:key="board" />
+    {{-- A React island, mounted with this page's data --}}
+    <mesh:board.kanban :columns="$columns" wire:key="board" />
 </div>
 ```
 
@@ -30,26 +46,93 @@ Mesh exists so the edge case stays small: keep Livewire as the backbone, and dro
 
 ### Use the ecosystem instead of rebuilding it
 
-dnd-kit, ECharts, TanStack Table, TipTap, headless UI libraries — anything that runs in a React (or Vue/Svelte) component runs in an island. The [React demo](https://mesh-demo-react.ebarlow.dev) shows a sortable [data table](https://mesh-demo-react.ebarlow.dev/table), [live charts](https://mesh-demo-react.ebarlow.dev/charts), and a [drag-and-drop board](https://mesh-demo-react.ebarlow.dev/board) all driven by Livewire state.
+Anything that runs in a React, Vue, or Svelte component runs in an island.
+The [React demo](https://mesh-demo-react.ebarlow.dev) drives a sortable
+TanStack [data table](https://mesh-demo-react.ebarlow.dev/table), ECharts
+[live charts](https://mesh-demo-react.ebarlow.dev/charts), and a dnd-kit
+[drag-and-drop board](https://mesh-demo-react.ebarlow.dev/board) from
+Livewire state.
 
-### Adopt incrementally — no rewrite
+### Adopt it one island at a time
 
-An island is one Blade tag. You can add the first one to an existing Livewire app this afternoon, and the rest of the page doesn't change. There is no "migration"; pages without islands ship no framework code at all, because every component is auto-discovered and code-split into its own lazy chunk.
+An island is one Blade tag. You can add the first one to an existing
+Livewire app without changing the rest of the page, and there is no
+migration. Each component's code is its own lazy chunk, fetched only on
+pages that render it. The framework runtime itself (React DOM, Vue, or
+Svelte) is imported by the renderer in `app.ts`, so it is part of your main
+bundle on every page that loads it.
 
 ### The server stays the source of truth
 
-Props flow from the PHP class's `props()` method; two-way state goes through [`useEntangle`](api/hooks.mdx); actions, events, and uploads go through [`useWire`](api/hooks.mdx). Validation, authorization, and persistence stay in PHP, where they already live. The island is a view of server state, not a second copy of it.
+Props come from the PHP class's `props()` method. Two-way state goes
+through [`useEntangle`](/docs/reference/hooks#useentangle). Actions,
+events, and uploads go through [`$wire`](/docs/reference/wire). Validation,
+authorization, and persistence stay in PHP, where they already live; the
+[forms demo](https://mesh-demo-react.ebarlow.dev/forms) shows Laravel
+validation errors landing in a React form. The island is a view of server
+state, not a second copy of it.
 
 ### No glue code to maintain
 
-Mesh owns the lifecycle: mounting, prop updates on re-render, morph survival, and teardown when Livewire removes the element. You write a PHP class and a component folder; there is no per-component registration, bundler config, or bridge code.
+Mesh owns the lifecycle: mounting, prop updates after each Livewire
+request without remounting, surviving Livewire's DOM morphing, and teardown
+when Livewire removes the element, including a component removed while its
+chunk is still loading. You write a PHP class and a component file. There is
+no per-component registration, bundler config, or bridge code.
+[How it works](/docs/how-it-works) walks through each stage.
 
-## When *not* to use Mesh
+## Compared with the alternatives
 
-- **Alpine and Livewire already cover it.** Most interactions don't need an island — a dropdown, a tab switcher, an inline edit. Reach for Mesh when the JS-framework version is genuinely the simpler path, not by default.
-- **The whole app is client-driven.** If every page is a React app, Inertia (or a plain SPA) is the better fit — Mesh is for apps where Livewire owns the page.
-- **You need React context to span multiple islands.** Each island is its own React root in v1 — see [Troubleshooting](advanced/troubleshooting.mdx) for the boundaries.
+| Approach | What renders the page | State and actions | Glue you maintain | Good fit |
+| --- | --- | --- | --- | --- |
+| Livewire + Alpine | Livewire, with Alpine for client-side behavior | Livewire properties and actions | None | Most of a Livewire app |
+| Mesh islands | Livewire; each island renders one element with React, Vue, or Svelte | The same Livewire component, through `props()`, `useEntangle`, and `$wire` | None per island | A few rich widgets in a Livewire app |
+| Inertia or an SPA | The JavaScript framework | Controller props, form submissions, or an API | Page props and routes per page, or an API | Apps where most pages are client-driven |
+| Hand-rolled mount | Livewire, plus your own `createRoot` call | Whatever you build: data attributes, events, endpoints | Mounting, prop sync, morph survival, teardown, per widget | One widget you will never touch again |
+
+The difference with a hand-rolled mount is mostly in the parts you only
+meet later: Livewire morphing the DOM under your component, props that need
+to follow server changes without a remount, and components that are removed
+before they finish loading.
+
+## When not to use Mesh
+
+- **Alpine and Livewire already cover it.** A dropdown, a tab switcher, or
+  an inline edit doesn't need an island. Reach for Mesh when the framework
+  version is genuinely the simpler path, not by default.
+- **The whole app is client-driven.** If every page is a React app, Inertia
+  or a plain SPA is a better fit. Mesh is for apps where Livewire owns the
+  page.
+- **The content must be in the initial HTML.** The server sends an empty
+  mount point; the island renders in the browser once its chunk loads. That
+  rules it out for content that has to work without JavaScript or be indexed
+  from the first response.
+- **You need one framework tree across islands.** Each island is its own
+  React root, Vue app, or Svelte mount, so React context and Vue
+  `provide`/`inject` stop at the island's edge. Share state through Livewire
+  (entangled properties, events) instead; see
+  [Composing islands](/docs/guides/composition).
+- **You need interactive Livewire or Alpine inside a slot.** Slot content is
+  passed to the island as static server HTML. Nested Livewire components and
+  Alpine directives inside a slot don't run. Pass interactive pieces as
+  their own islands, or as props.
+- **You are moving large data through props.** `props()` is serialized into
+  the HTML on every render of the component. For big or fast-changing
+  datasets, load them with an action (`$wire.$call`) instead.
 
 ## See it running
 
-The [React demo](https://mesh-demo-react.ebarlow.dev) is a full showcase app — every page pairs a working example with the exact PHP, Blade, and TSX files behind it, from a [first counter](https://mesh-demo-react.ebarlow.dev) to a [Blade-composed Kanban board](https://mesh-demo-react.ebarlow.dev/kanban) where Livewire owns the board and React handles only the drag-and-drop.
+The [React demo](https://mesh-demo-react.ebarlow.dev) pairs every working
+example with the PHP, Blade, and TSX behind it:
+[two-way state](https://mesh-demo-react.ebarlow.dev/state),
+[the `$wire` bridge](https://mesh-demo-react.ebarlow.dev/wire),
+[forms](https://mesh-demo-react.ebarlow.dev/forms),
+[slots](https://mesh-demo-react.ebarlow.dev/slots),
+[uploads](https://mesh-demo-react.ebarlow.dev/uploads), and a
+[Blade-composed Kanban board](https://mesh-demo-react.ebarlow.dev/kanban)
+where Livewire owns the board and React handles only the drag and drop.
+[Auto-discovery and code splitting](https://mesh-demo-react.ebarlow.dev/architecture)
+are shown on their own page. The same demo exists for
+[Vue](https://github.com/EthanBarlo/mesh/tree/main/apps/demo-vue) and
+[Svelte](https://github.com/EthanBarlo/mesh/tree/main/apps/demo-svelte) in
+the repository.

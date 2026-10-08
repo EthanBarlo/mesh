@@ -1,0 +1,350 @@
+---
+title: $wire API
+description: Every member of the $wire object an island gets from useWire(), what it does, and which members cost a network request.
+---
+
+`useWire()` returns Livewire's `$wire` object for the island's PHP component. It is the same object
+Alpine sees as `$wire`, typed by Mesh's `Wire` type. Get it the same way in every framework:
+
+<Frameworks>
+<Tab value="React">
+
+```tsx
+import { useWire } from '@mesh/react';
+
+const wire = useWire();
+```
+
+</Tab>
+<Tab value="Vue">
+
+```ts
+import { useWire } from '@mesh/vue';
+
+const wire = useWire();
+```
+
+</Tab>
+<Tab value="Svelte">
+
+```ts
+import { useWire } from '@mesh/svelte';
+
+const wire = useWire(); // not `$wire`: the prefix is reserved
+```
+
+</Tab>
+</Frameworks>
+
+Besides the `$`-prefixed members below, `$wire` forwards plain names to the component: reading
+`wire.count` returns the `count` property, assigning `wire.count = 5` sets it locally (deferred),
+and calling `wire.save(id)` calls the `save` action, like `wire.$call('save', id)`. Pass a type
+argument to `useWire<T>()` to type those (see [useWire](/docs/reference/hooks#usewire)).
+
+## Network or local
+
+Knowing which members start a request saves you from accidental round trips.
+
+| Sends a request | Stays in the browser |
+| --- | --- |
+| `$call`, `wire.someAction()` | `$get` |
+| `$refresh`, `$commit` | `$set(key, value, false)`, `$toggle(key, false)` |
+| `$set(key, value, true)`, `$toggle(key, true)` | `wire.someProperty = value` |
+| `$upload`, `$uploadMultiple`, `$removeUpload` | `$watch`, `$on`, `$hook` |
+
+`$dispatch`, `$dispatchTo` and `$dispatchSelf` fire a browser event straight away. A request only
+follows if a component has a PHP `#[On]` listener for it.
+
+A request carries every deferred change made since the last one. Livewire applies those property
+updates **before** it runs the action, so `await wire.$call('save')` always sees the latest
+entangled values. You never need `$commit()` before a `$call()`.
+
+## State
+
+<TypeTable
+  type={{
+    '$get(key)': {
+      type: '(key: string) => any',
+      description:
+        "The property's current value in the browser, including deferred changes.",
+    },
+    '$set(key, value, live)': {
+      type: '(key: string, value: any, live: boolean) => void',
+      description:
+        'Sets a property. live true sends it now; false defers it to the next request.',
+    },
+    '$toggle(key, live)': {
+      type: '(key: string, live: boolean) => void',
+      description: 'Flips a boolean property. Same live semantics as $set.',
+    },
+    '$watch(key, callback)': {
+      type: '(key, callback) => () => void',
+      description:
+        'Calls callback with the new value whenever the property changes, including changes made by the server. Returns an unwatch function.',
+    },
+  }}
+/>
+
+- Mesh's type makes `live` required. Livewire itself defaults it to `true`, so `$set(key, value)`
+  without the third argument would send a request.
+- At runtime `$set` and `$toggle` return a promise; the type says `void`.
+- `useEntangle` is built on `$get`, `$set` and `$watch`. Use them directly when you only need one
+  direction, such as reacting to a server-owned value without ever writing it:
+
+<Frameworks>
+<Tab value="React">
+
+```tsx
+// The server owns `price`; the island only listens.
+useEffect(
+    () =>
+        wire.$watch('price', (price: number) => {
+            setHistory((prev) => [...prev, price].slice(-40));
+        }),
+    [wire],
+);
+```
+
+</Tab>
+<Tab value="Vue">
+
+```ts
+// The server owns `price`; the island only listens.
+const unwatch = wire.$watch('price', (price: number) => {
+    history.value = [...history.value, price].slice(-40);
+});
+onUnmounted(unwatch);
+```
+
+</Tab>
+<Tab value="Svelte">
+
+```ts
+// The server owns `price`; the island only listens.
+const unwatch = wire.$watch('price', (price: number) => {
+    history = [...history, price].slice(-40);
+});
+onDestroy(unwatch);
+```
+
+</Tab>
+</Frameworks>
+
+Livewire also removes every watcher when the component is torn down.
+
+## Actions
+
+<TypeTable
+  type={{
+    '$call(method, ...args)': {
+      type: '(method: string, ...args: any[]) => Promise<any>',
+      description:
+        'Calls a public PHP method. Resolves with its return value.',
+    },
+    '$refresh()': {
+      type: '() => Promise<void>',
+      description:
+        'Re-renders the component on the server. props() runs again; the island updates in place.',
+    },
+    '$commit()': {
+      type: '() => void',
+      description:
+        'Sends all deferred property changes now, without calling an action. Returns a promise at runtime.',
+    },
+  }}
+/>
+
+```php title="app/Mesh/Wire/ServerActions.php"
+public function analyze(string $text): array
+{
+    return [
+        'words' => str_word_count($text),
+        'analyzedAt' => now()->format('H:i:s'),
+    ];
+}
+```
+
+```ts
+const result = await wire.$call('analyze', text);
+// { words: 6, analyzedAt: "14:02:11" }
+```
+
+How the promise settles:
+
+| Outcome on the server | The promise |
+| --- | --- |
+| The method returns | Resolves with the return value (JSON-decoded) |
+| `$this->validate()` throws | **Resolves** with `null`. The messages reach `useErrorBag()`. |
+| The server answers with an error (a 500, say) | Rejects with `{ status, body, json, errors }`, where `status` is the HTTP code |
+| The request never completes, or is cancelled | Rejects with the same object and `status: null` |
+
+Livewire 4 actions marked `#[Json]` are the exception: they skip the render, and a validation
+failure rejects with `status: 422` and the messages in `errors`.
+
+So branch on the resolved value to detect a failed validation, and keep a `try`/`finally` to reset
+loading state when the request itself fails:
+
+```ts
+setSaving(true);
+try {
+    const result = await wire.$call('save');
+    if (result?.ok) {
+        // saved
+    }
+} finally {
+    setSaving(false);
+}
+```
+
+Actions are public endpoints: any public method can be called from the browser with any arguments.
+Authorize and validate inside them. See [Server actions](/docs/guides/server-actions).
+
+## Events
+
+<TypeTable
+  type={{
+    '$dispatch(event, params)': {
+      type: '(event: string, params: object) => void',
+      description:
+        'Dispatches a Livewire event that bubbles from this component to the window. Any #[On] listener hears it.',
+    },
+    '$dispatchTo(component, event, params)': {
+      type: '(component, event, params) => void',
+      description: 'Dispatches only to components with that Livewire name.',
+    },
+    '$dispatchSelf(event, params)': {
+      type: '(event: string, params: object) => void',
+      description: "Dispatches only to this island's own component.",
+    },
+    '$on(event, callback)': {
+      type: '(event, callback) => void',
+      description:
+        "Listens on this component's root element. callback receives the params.",
+    },
+  }}
+/>
+
+```ts
+// Island → any component with #[On('mesh.ping')]
+wire.$dispatch('mesh.ping', { message });
+```
+
+```php title="app/Livewire/EventToast.php"
+#[On('mesh.ping')]
+public function onMeshPing(string $message = ''): void
+{
+    $this->count++;
+    $this->message = $message;
+}
+```
+
+The params object maps onto the listener's named parameters.
+
+`$on` only hears events that reach this component's element: events your own PHP class dispatches
+(`$this->dispatch('saved')`), `$dispatchSelf`, `$dispatchTo` aimed at this component, and events
+bubbling up from components nested inside it. It does not hear events from sibling or parent
+components. To react to those, add an `#[On]` method to the PHP class and pass the result through
+`props()` or an entangled property, as the demo's `Wire/EventBridge` does. `$on` returns nothing, so
+in React add the listener to `wire.$el` yourself when you need cleanup (see
+[React gotchas](/docs/frameworks/react#strictmode-is-always-on)).
+
+## Uploads
+
+The PHP class needs Livewire's `WithFileUploads` trait and a public property to receive the file.
+
+<TypeTable
+  type={{
+    '$upload(name, file, finish, error, progress)': {
+      type: '(…) => Promise<void>',
+      description:
+        'Uploads one File to the property name. finish receives the temporary filename.',
+    },
+    '$uploadMultiple(name, files, finish, error, progress)': {
+      type: '(…) => Promise<void>',
+      description:
+        'Uploads several files to an array property. finish receives an array of temporary filenames.',
+    },
+    '$removeUpload(name, tmpFilename, finish, error)': {
+      type: '(…) => Promise<void>',
+      description:
+        'Removes one temporary upload from the property.',
+    },
+  }}
+/>
+
+```ts
+wire.$upload(
+    'photo',
+    file,
+    async () => {
+        // The temporary upload has landed. Ask PHP for details.
+        setMeta(await wire.$call('inspect'));
+    },
+    () => setStatus('error'),
+    (event) => setProgress(event.detail.progress), // 0–100
+);
+```
+
+- **Use the callbacks, not the promise.** The type says `Promise<void>`, but Livewire returns
+  nothing, so `await wire.$upload(…)` does not wait for the upload.
+- `error` runs when the upload request fails, including when Livewire rejects the file. Validation
+  messages for the property also land in `useErrorBag()`.
+- `progress` receives an event whose `detail.progress` is a whole percentage.
+- Livewire accepts a sixth argument, a `cancelled` callback, which the `Wire` type does not list.
+  Livewire 4 does not call `$removeUpload`'s `error` callback.
+
+See [File uploads](/docs/guides/uploads) for the full drop zone from the demo.
+
+## Instance and lifecycle
+
+<TypeTable
+  type={{
+    $el: {
+      type: 'HTMLElement',
+      description:
+        'The component root: the wrapper div with display: contents.',
+    },
+    $id: {
+      type: 'string',
+      description: 'The Livewire component id.',
+    },
+    $parent: {
+      type: 'Wire | null',
+      description:
+        "The $wire of the closest Livewire component around this one. undefined at runtime when there is none.",
+    },
+    '$hook(event, callback)': {
+      type: '(event, callback) => () => void',
+      description:
+        "Subscribes to a Livewire JS hook, filtered to this component. Returns an unhook function.",
+    },
+    __instance: {
+      type: 'LivewireComponent',
+      description:
+        'The raw component. Same as useLivewireComponent().',
+    },
+  }}
+/>
+
+`$parent` lets an island reach the page component it sits in, for example
+`await wire.$parent?.$call('refreshTotals')`. Prefer events or `wire:model` with `#[Modelable]` when
+the two should stay loosely coupled.
+
+`$hook` is how `useErrorBag` works. It listens to the `commit` hook and reads the new error bag when
+the request succeeds:
+
+```ts
+const unhook = wire.$hook('commit', ({ succeed }) => {
+    succeed(() => {
+        const errors = wire.__instance.snapshot.memo.errors;
+    });
+});
+```
+
+## Beyond the Wire type
+
+Livewire 4's `$wire` has more members than Mesh's `Wire` type lists, among them `$refs`, `$js`,
+`$dirty`, `$errors`, `$entangle`, `$effect`, `$intercept`, `$island`, `$dispatchEl`,
+`$dispatchRef` and `$cancelUpload`. They exist at runtime, and you can type the ones you use
+through `useWire<T>()`. Mesh does not use them, and most are aimed at Alpine and Blade, so check
+Livewire's documentation before relying on one in an island.

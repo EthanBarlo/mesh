@@ -1,0 +1,239 @@
+---
+title: How it works
+description: What happens between a <mesh:…> tag in Blade and a mounted React, Vue, or Svelte component, and how Mesh keeps the two in step.
+---
+
+Mesh is a small amount of code on each side of Livewire. On the server, it
+compiles the tag and renders a wrapper element. In the browser, it listens
+to two Livewire hooks and drives a renderer. Everything else is Livewire
+doing what it already does.
+
+## The lifecycle at a glance
+
+<Figure caption="The render lifecycle of one island, from Blade tag to teardown. Use the steps, or the arrow keys once a step is focused.">
+  <RenderLifecycle />
+</Figure>
+
+The whole design rests on one split. Livewire morphs the outer wrapper,
+which is where the props live. It never touches the inside of
+`.mesh-root`, which is where the framework renders. Props can change on
+every request while the component instance, and its local state, stays
+put.
+
+## On the server
+
+### The tag
+
+Blade runs `MeshTagPrecompiler` before compiling a view. It rewrites
+`<mesh:` and `<mesh-` to `<livewire:mesh::`, in opening and closing tags,
+then hands the result to Livewire's own tag precompiler. So these are the
+same:
+
+```blade
+<mesh:counter :count="5" />
+<livewire:mesh::counter :count="5" />
+```
+
+`mesh::` is a Livewire namespace the service provider registers, pointing
+at `App\Mesh` in `app/Mesh`. Livewire resolves the name like any other:
+dots become namespace segments and kebab-case becomes StudlyCase, so
+`<mesh:wire.server-actions />` is `App\Mesh\Wire\ServerActions`. Because
+it really is a Livewire tag, attributes fill public properties, and
+`wire:model` and `wire:key` behave as usual.
+
+The rewrite matches any tag that starts with `<mesh-` or `<mesh:`, so
+don't give your own custom elements a `mesh-` prefix.
+
+### The wrapper
+
+`Mesh\Component::render()` always returns one package view,
+`mesh::component`. For the Counter mounted with `:count="5"`, it renders:
+
+```html
+<div
+    data-mesh-component="Counter"
+    data-mesh-props="{&quot;initialCount&quot;:5}"
+    style="display: contents"
+>
+    <div wire:ignore class="mesh-root" style="display: contents"></div>
+</div>
+```
+
+Livewire adds its own `wire:` attributes to that outer element, since it is
+the component's root. Each part has one job:
+
+- `data-mesh-component` is the id from `component()`. It is how the
+  runtime recognises a Mesh element and which frontend entry it needs.
+- `data-mesh-props` is `json_encode($this->props())`. It is written on
+  every render of the component, so it always reflects the latest server
+  state.
+- `.mesh-root` is the mount point. `wire:ignore` tells Livewire's morph to
+  leave its contents alone, so the DOM your framework builds there is never
+  overwritten.
+- `display: contents` on both elements removes their boxes from layout. In
+  a flex or grid parent, the island's own elements behave as direct
+  children.
+
+When the tag has slot content, the wrapper also holds it in hidden holders,
+before `.mesh-root`:
+
+```html
+<div data-mesh-slots hidden>
+    <div data-mesh-slot="default" wire:key="mesh-slot-default">
+        …slot HTML…
+    </div>
+</div>
+```
+
+These holders are not `wire:ignore`d. Livewire morphs them like any other
+markup, which is how new slot content reaches the browser (see
+[Slots](/docs/guides/slots)).
+
+Since the wrapper is the contract between the two halves, a Mesh component
+should not override `render()`. Without the wrapper, the frontend has
+nothing to mount into.
+
+## In the browser
+
+`initMesh()` does three things, synchronously:
+
+1. Builds the **registry**, a map from id to `{ renderer, load }`, from an
+   `import.meta.glob` of `resources/js/mesh` (see
+   [Ids and discovery](#ids-and-discovery)).
+2. Stores it, with the renderers, on `window.Mesh`.
+3. Registers two Livewire hooks: `component.init` and `morph.updated`.
+
+`component.init` fires for every Livewire component. For each one, Mesh:
+
+1. **Reads `data-mesh-component`.** Elements without it are not Mesh
+   components and are skipped.
+2. **Registers cleanup first.** Before any async work, so a component
+   removed while it loads is still handled (see [Teardown](#teardown)).
+3. **Loads the chunk.** `load()` is a dynamic `import()` of the entry. The
+   promise is cached per id, so ten counters on a page fetch one chunk. A
+   failed load is dropped from the cache, so the next mount retries.
+4. **Mounts.** The registry entry names the renderer, and the renderer
+   mounts the default export into `.mesh-root` with the parsed props and
+   slots.
+
+Each renderer mounts its own way, and each island is a separate tree:
+
+| Renderer | Mounts with | Hooks reach `$wire` through |
+| --- | --- | --- |
+| React | `createRoot()`, inside `<React.StrictMode>` | A context provider around the component |
+| Vue | `createApp()`, one app per island | `app.provide()` |
+| Svelte | `mount()`, with props held in `$state` | The `context` option of `mount()` |
+
+React islands render in Strict Mode, so in development React runs effects
+twice. The [Renderer API](/docs/reference/renderer) covers the interface
+the three share.
+
+## Updates without remounting
+
+After every Livewire request that re-renders the component, Livewire
+morphs the wrapper and fires `morph.updated`. Mesh then:
+
+1. Reads `data-mesh-props` again.
+2. Compares the JSON with the props it last rendered. If they match, it
+   stops. Most morphs don't change the props, so they cost almost nothing.
+3. Otherwise calls the renderer's `update()` with the new props. React
+   re-renders the root, Vue and Svelte assign into reactive state.
+
+Nothing is remounted, so `useState`, refs, focus, and scroll position all
+survive. If an update throws, Mesh logs `Mesh: failed to update props` and
+keeps the old props as its baseline, so the next morph tries again.
+
+Slot content takes a parallel path. A `MutationObserver` watches the hidden
+slot holders; when Livewire morphs new HTML into them, Mesh reads the
+slots, compares them with the last set, and calls `update()` with the new
+ones.
+
+Entangled state doesn't travel through either path. `useEntangle` reads
+and writes Livewire's own client-side state with `$wire.$get`, `$set`, and
+`$watch`, so a change to an entangled property updates the island without
+a props update. [Two-way state](/docs/guides/state) covers the timing.
+
+## Teardown
+
+When Livewire removes a component, it runs the cleanup callbacks
+registered for it. Mesh registers one that unmounts the island through the
+renderer and, when the island has slots, one that disconnects the slot
+observer.
+
+The first callback is registered before the chunk starts loading, and it
+sets a `disposed` flag. When the chunk arrives, Mesh checks that flag and
+doesn't mount if the component is already gone. A fast navigation or a
+conditional `@if` that removes an island mid-load leaves no orphaned root
+behind.
+
+## Ids and discovery
+
+The id is the only thing linking the two halves, and both sides derive it
+from names you already have.
+
+<Figure caption="One id from two names. Livewire turns the tag into a class; PHP and JavaScript each strip their own prefix and arrive at the same id. The extension picks the renderer.">
+  <IdDerivation />
+</Figure>
+
+- **PHP** (`Component::component()`): the class name without `App\Mesh\`,
+  with backslashes turned into slashes. `App\Mesh\Counter` is `Counter`.
+- **JavaScript** (`deriveId()`): the entry's path after
+  `resources/js/mesh/`, without the extension and the trailing `/index`.
+  `resources/js/mesh/Counter/index.tsx` is `Counter`.
+- **Renderer**: `.tsx` and `.jsx` are React, `.vue` is Vue, `.svelte` is
+  Svelte.
+
+The runtime discovers entries with one glob:
+
+```ts
+import.meta.glob("/resources/js/mesh/**/index.{tsx,jsx,vue,svelte}")
+```
+
+The pattern is root-relative, so Vite resolves it against your app, even
+though the runtime file lives in `vendor/`. Without `eager`, every match
+becomes a lazy `() => import()`, and Vite gives each one its own chunk.
+
+Some consequences:
+
+- **Only `index.*` files are entries.** Hooks, types, and child components
+  next to the entry are ignored, so you can keep them in the folder.
+- **Nesting is unlimited.** `resources/js/mesh/Admin/Reports/Chart/index.tsx`
+  is `Admin/Reports/Chart`, and its class is `App\Mesh\Admin\Reports\Chart`.
+- **An `index.*` in a subfolder is a component.** `Counter/parts/index.tsx`
+  registers `Counter/parts`. Name helper files anything else.
+- **Case must match exactly.** `counter/` and `Counter.php` match on macOS,
+  whose filesystem ignores case, and fail on Linux. `make:mesh` StudlyCases
+  both sides, so scaffolded components always agree.
+- **Classes outside `App\Mesh` must name their id.** Override
+  `component()` to return it; otherwise it throws a `LogicException` that
+  says so. This is the case for
+  [components in Composer packages](/docs/guides/packages), which reach the
+  registry through the `sources` option of `initMesh`.
+
+Two problems are caught when the registry is built: two entries with the
+same id (such as `Counter/index.tsx` and `Counter/index.vue`), and, for
+`sources` globs, an entry with an extension Mesh can't map to a renderer.
+Both throw inside `initMesh()`, so the console shows an uncaught promise
+rejection and no island on the page mounts.
+
+## Debugging
+
+Pass `debug: true` to `initMesh()` and Mesh logs `Initialized Mesh` with
+its config, then `component.init | <id>` for each component it sees. In the
+console, `Object.keys(window.Mesh.registry)` lists every id that was
+discovered.
+
+Problems during mounting and updates are logged rather than thrown, so
+one broken island doesn't stop the rest of the page:
+
+| Console message | What it means |
+| --- | --- |
+| `no components found under resources/js/mesh` | The glob matched nothing. Check the folder and the `index.*` name. |
+| `component "X" is not registered` | The PHP id has no frontend entry. The message lists the ids that do exist; compare them, including case. |
+| `module has no default export` | The entry exports the component by name only. |
+| `Mesh renderer for "vue" not found` | A component needs a renderer that isn't in `renderers`. |
+| `duplicate component id` | Two entries derive the same id, so `initMesh()` failed and nothing mounts. Keep one entry per folder. |
+| `` `children` is reserved for slot content `` | `props()` returns `children` (or `slots`) while the tag has slots. Rename the prop. |
+
+[Troubleshooting](/docs/advanced/troubleshooting) covers the symptoms
+behind these, including the silent ones.

@@ -1,0 +1,175 @@
+---
+title: Limitations and FAQ
+description: What Mesh deliberately does not do in this version, what follows from mounting islands in the browser, and answers to common questions.
+---
+
+Mesh is at version 0.2. These are the boundaries of the current design: some are deliberate, some
+are simply not built yet. Knowing them up front saves you from designing around a feature that is
+not there.
+
+## Slots are static HTML
+
+Blade content passed in a slot reaches the island as an HTML string, copied from a hidden holder
+into the framework's tree (`dangerouslySetInnerHTML` in React, `innerHTML` in Vue, a raw snippet in
+Svelte).
+
+- **It updates.** When the parent re-renders and the slot HTML changes, Mesh swaps the new HTML in
+  place without remounting the island.
+- **It is not live.** Nested Livewire components and Alpine behaviour inside a slot are not
+  supported in this version. They render, but not as working components.
+- **It is trusted.** `{{ }}` output in a slot is escaped by Blade. `{!! !!}` output is injected as raw
+  HTML, so never use it with user input.
+
+Anything interactive inside an island belongs in the island: make it its own Mesh component, or pass
+the data through `props()` and render it with the framework. See the [Slots guide](/docs/guides/slots).
+
+## Every island is a separate app
+
+Each `<mesh:…>` tag is mounted on its own: its own React root, Vue app or Svelte component tree, and
+its own Livewire component on the server.
+
+- **Context does not cross islands.** A React context provider, a Vue `provide` or a Svelte
+  `setContext` in one island is invisible to another, even another instance of the same component.
+- **There is no app-level setup.** Mesh creates the root or app, so you cannot wrap all islands in a
+  provider or call Vue's `app.use()` from your own code. A
+  [custom renderer](/docs/advanced/custom-renderers#example-shared-providers) can.
+- **Module state is shared.** Every island imports the same module instances, so a store or client
+  created at module scope is shared by all islands on the page.
+- **Each island costs a Livewire component.** It has its own snapshot and its own requests. A page
+  of a hundred islands is a hundred Livewire components.
+
+Islands that need to agree on state should share it through Livewire: a parent property bound with
+`wire:model` and `#[Modelable]`, `#[Reactive]` props, or events. See
+[Composing islands](/docs/guides/composition).
+
+## Props are JSON snapshots
+
+`props()` runs on every render and its result is JSON-encoded into the page.
+
+- **JSON only.** No functions, no class instances, no `undefined`. Dates arrive as strings, and an
+  empty PHP array arrives as `[]` even if you meant an object.
+- **One way.** Changing a prop in the browser never reaches PHP. Use `useEntangle` or `$call`.
+- **Public.** The JSON is in the HTML, like Livewire's snapshot. Never put secrets in it.
+- **Re-sent on every render.** The whole array is re-encoded each time the component re-renders. Keep
+  large datasets paginated rather than sending everything on each request.
+
+## Reserved prop names
+
+Some prop names never reach your component as ordinary props:
+
+| Name | Framework | Why |
+| --- | --- | --- |
+| `children` | React, Svelte | Carries the default slot. Throws if `props()` returns it while the tag has any slot. |
+| `slots` | React, Svelte | Carries named slots. Throws if `props()` returns it while the tag has named slots. |
+| `key` | React, Vue | Consumed by the framework itself. |
+| `ref` | React, Vue | Treated specially by the framework. Avoid it. |
+
+In Vue, `children` and `slots` are ordinary props, because Vue islands receive slots through Vue's
+own slot system.
+
+## No server-side rendering
+
+Mesh does not render your React, Vue or Svelte component on the server. The page arrives with the
+island's wrapper and an **empty** `.mesh-root` element. The component appears once the browser has
+loaded the bundle, Livewire has initialised the component, and the island's code-split chunk has
+loaded.
+
+What that means in practice:
+
+- **Content inside an island is not in the initial HTML.** Visitors without JavaScript, and crawlers
+  that do not run it, see nothing there (slot HTML sits in a hidden holder). Keep content that
+  matters for search in Blade, around the islands.
+- **There is a moment before the island appears.** On a fast connection it is short, but it is
+  there. If layout shift matters, reserve space in the surrounding Blade markup.
+- **The first render of a component type costs a request for its chunk.** Later instances of the
+  same component reuse it.
+
+This fits the islands model Mesh is built on: Blade renders the page, Livewire owns the state, and
+islands add interactivity where it is needed.
+
+## Fixed conventions
+
+| Convention | Why it is fixed |
+| --- | --- |
+| Components live in `resources/js/mesh` | By design. The generator, the Blade tag and browser discovery all rely on one known location, which is what lets ids match with no registration. Package components are added with [`sources`](/docs/reference/init-mesh#meshsource). |
+| `<mesh:…>` resolves classes in `App\Mesh` only | The tag is shorthand for a Livewire namespace registered for `App\Mesh`. Other classes use `<livewire:…>`. |
+| The entry is `index.tsx`, `index.jsx`, `index.vue` or `index.svelte` | Discovery globs exactly these names, and the extension picks the renderer. |
+| One entry per component folder | Two entries in one folder derive the same id, which throws. |
+| Renderers exist for React, Vue and Svelte only | The extension-to-renderer mapping is built in. A custom renderer can replace one of the three but not add a fourth. See [Custom renderers](/docs/advanced/custom-renderers#what-you-can-build-today). |
+
+## FAQ
+
+<Accordions type="multiple">
+<Accordion title="Which versions does Mesh support?" id="versions">
+
+PHP 8.3 or newer, Laravel 11 or 12, and Livewire 4. In the browser, React 18 or newer, Vue 3.3 or
+newer, or Svelte 5, built with Vite. You only install the frameworks you use.
+
+</Accordion>
+<Accordion title="Can I use React, Vue and Svelte on the same page?" id="mixing-frameworks">
+
+Yes. Pass every renderer to `initMesh`, and each component uses the one its file extension maps to.
+Each framework you register adds its runtime to the main bundle on every page (see the next
+question), so mixing is a bundle-size decision as much as anything.
+
+</Accordion>
+<Accordion title="Is the framework loaded lazily?" id="lazy-framework">
+
+No, only your components are. `app.ts` imports the renderers statically, and each renderer imports
+its framework (`react-dom`, `vue` or Svelte's runtime), so every registered framework is in the main
+bundle and loads on every page, islands or not. Each component's entry, together with the libraries
+only it imports (a chart library, a table library), is a separate chunk that loads the first time
+that component renders. If most pages have no islands, keep heavy dependencies inside components
+rather than in shared modules.
+
+</Accordion>
+<Accordion title="Can a Mesh component render another Mesh component?" id="nesting">
+
+Not from inside the frontend: a `<mesh:…>` tag is Blade, and slots cannot hold live Livewire
+components. Either import the child as an ordinary framework component inside the island, or place
+both islands in Blade and connect them through Livewire, as the demo's kanban board does with
+separate column and card islands. See [Composing islands](/docs/guides/composition).
+
+</Accordion>
+<Accordion title="How do two islands share state?" id="sharing-state">
+
+Through the server, ideally: bind both to the same parent property (`wire:model` with
+`#[Modelable]`, or `#[Reactive]` props), or dispatch Livewire events. For purely visual state the
+server does not need, such as "a drag is in progress", browser events or a module-level store work,
+because every island imports the same modules. The demo's Svelte kanban uses window events for this.
+
+</Accordion>
+<Accordion title="Can I pass a callback or a component as a prop?" id="function-props">
+
+No. Props are JSON from PHP. To let the frontend trigger server work, call an action with
+`wire.$call()`. To configure behaviour, pass data (a string, an enum value) and map it to code in
+the frontend.
+
+</Accordion>
+<Accordion title="Can I change the component directory?" id="component-directory">
+
+No, and that is deliberate. `resources/js/mesh` is hardcoded in the generator, the browser
+discovery and the id derivation, so a component never needs registering and the two halves can
+always find each other. Components from Composer packages are added through `sources`.
+
+</Accordion>
+<Accordion title="Does Mesh work without Livewire, or with Inertia?" id="without-livewire">
+
+No. Mesh is a Livewire feature: every island is a Livewire component, and all data moves through
+Livewire's requests.
+
+</Accordion>
+<Accordion title="Are TypeScript types generated from props()?" id="generated-types">
+
+No. Write an interface for each component's props that matches what `props()` returns, and type the
+`$wire` members you use with `useWire<T>()`.
+
+</Accordion>
+<Accordion title="Does the island remount when Livewire re-renders?" id="remounting">
+
+No. After a Livewire request the island receives new props and slot content in place. Local state
+in the component (React `useState`, Vue refs, Svelte `$state`) survives. The island only mounts again
+if Livewire removes the component and adds a new one, for example when a `wire:key` changes.
+
+</Accordion>
+</Accordions>

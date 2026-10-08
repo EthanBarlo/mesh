@@ -1,0 +1,430 @@
+---
+title: Using JavaScript libraries
+description: Integrate tables, charts, and drag and drop the way the demos do. The server owns the data, the island renders it, and cleanup runs when the island unmounts.
+---
+
+An island is an ordinary React, Vue, or Svelte app, so any library for that
+framework works inside it. The demos integrate a table, a chart, and drag and
+drop in all three frameworks. This page pulls out the patterns they share.
+
+## The pattern
+
+- **The server owns the data.** `props()` supplies the rows or series, and
+  actions change them. After an action, the re-render sends fresh props into
+  the mounted island, and the library updates in place.
+- **The island owns UI state.** Sorting, filtering, paging, hover, and
+  zoom live in local state and never cause a request, unless the server
+  needs them.
+- **Libraries can own their DOM.** The island mounts into an element marked
+  `wire:ignore`, so Livewire's morphing never touches anything a library
+  renders or mutates.
+- **Cleanup is the framework's normal cleanup.** When Livewire removes the
+  component, Mesh unmounts the island, and your effect cleanups,
+  `onUnmounted`, and `onDestroy` run as usual.
+
+## Tables: TanStack Table
+
+The [table demo](https://mesh-demo-react.ebarlow.dev/table) receives 250
+orders as a prop and sorts, filters, and pages them in the browser. Only
+flagging an order calls the server:
+
+```php title="app/Mesh/Table/OrdersTable.php (abridged)"
+class OrdersTable extends Component
+{
+    public array $orders = [];
+
+    public function flagOrder(int $id): void
+    {
+        foreach ($this->orders as $i => $order) {
+            if ($order['id'] === $id) {
+                $this->orders[$i]['flagged'] = ! $order['flagged'];
+            }
+        }
+    }
+
+    public function props(): array
+    {
+        return ['orders' => $this->orders];
+    }
+}
+```
+
+<Frameworks>
+<Tab value="React">
+
+```tsx title="resources/js/mesh/Table/OrdersTable/index.tsx (condensed)"
+const [sorting, setSorting] = useState<SortingState>([]);
+const [globalFilter, setGlobalFilter] = useState("");
+
+const table = useReactTable({
+    data: orders, // the prop: new rows arrive after each re-render
+    columns,
+    state: { sorting, globalFilter },
+    onSortingChange: setSorting,
+    onGlobalFilterChange: setGlobalFilter,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    // Stable row identity across server re-renders.
+    getRowId: (row) => String(row.id),
+});
+```
+
+</Tab>
+<Tab value="Vue">
+
+```ts title="resources/js/mesh/Table/OrdersTable/index.vue (condensed)"
+const sorting = ref<SortingState>([]);
+const globalFilter = ref("");
+
+const table = useVueTable({
+    // Getters, so the table always reads the latest prop.
+    get data() {
+        return props.orders;
+    },
+    get columns() {
+        return columns.value;
+    },
+    state: {
+        get sorting() {
+            return sorting.value;
+        },
+        get globalFilter() {
+            return globalFilter.value;
+        },
+    },
+    onSortingChange: (updater) => {
+        sorting.value = typeof updater === "function"
+            ? updater(sorting.value)
+            : updater;
+    },
+    // …row models and getRowId as in React
+});
+```
+
+</Tab>
+<Tab value="Svelte">
+
+```ts title="resources/js/mesh/Table/OrdersTable/index.svelte (condensed)"
+import { getCoreRowModel } from "@tanstack/table-core";
+// A small adapter kept in the demo, not a published package.
+import {
+    createSvelteTable,
+} from "@/components/demo/Table/svelte-table.svelte";
+
+let { orders }: Props = $props();
+let sorting = $state<SortingState>([]);
+
+const table = createSvelteTable({
+    // Getters, so the table always reads the latest prop.
+    get data() {
+        return orders;
+    },
+    get columns() {
+        return columns;
+    },
+    state: {
+        get sorting() {
+            return sorting;
+        },
+    },
+    onSortingChange: (updater) => {
+        sorting = typeof updater === "function"
+            ? updater(sorting)
+            : updater;
+    },
+    getCoreRowModel: getCoreRowModel(),
+    // …the other row models and getRowId as in React
+});
+```
+
+</Tab>
+</Frameworks>
+
+`getRowId` matters here. Every re-render delivers new row objects, and a
+stable id keeps selection, expansion, and focus attached to the right row.
+
+The demo keeps its rows in a public property so `flagOrder()` can change them
+without a database. A public property is also serialized into Livewire's
+state on every request, so in a real app, query the rows in `props()`. With
+thousands of rows, move paging and sorting to the server as well: entangle
+the page and sort state live, and return one page from `props()`.
+
+## Charts: ECharts
+
+The [charts demo](https://mesh-demo-react.ebarlow.dev/charts) builds its
+series in `props()` from a `$range` property that the island entangles live.
+Picking a range sends a request, `props()` builds the new series, and the
+chart animates to it, because the island is updated in place rather than
+remounted.
+
+React uses `echarts-for-react`. The Vue and Svelte demos use a thin wrapper
+around the core API: create the chart on mount, pass new options as they
+arrive, follow the container's size, and dispose on unmount:
+
+<Frameworks>
+<Tab value="React">
+
+```tsx title="resources/js/mesh/Charts/RevenueChart/index.tsx (condensed)"
+import ReactECharts from "echarts-for-react";
+
+const [selectedRange, setSelectedRange] = useEntangle<Range>(
+    "range",
+    true,
+);
+
+const option = useMemo(
+    () => buildRevenueChartOption(labels, series),
+    [labels, series],
+);
+
+return (
+    <>
+        <SegmentedControl
+            options={RANGES}
+            value={selectedRange}
+            onChange={setSelectedRange}
+        />
+        <div className="h-[360px] w-full">
+            <ReactECharts
+                option={option}
+                lazyUpdate
+                style={{ height: "100%", width: "100%" }}
+            />
+        </div>
+    </>
+);
+```
+
+</Tab>
+<Tab value="Vue">
+
+```vue title="resources/js/components/demo/Charts/VChart.vue"
+<script setup lang="ts">
+import { onMounted, onUnmounted, useTemplateRef, watch } from "vue";
+import * as echarts from "echarts";
+import type { EChartsOption } from "echarts";
+
+const props = defineProps<{ option: EChartsOption }>();
+const el = useTemplateRef<HTMLDivElement>("el");
+
+let chart: echarts.ECharts | null = null;
+let observer: ResizeObserver | null = null;
+
+onMounted(() => {
+    if (!el.value) return;
+    chart = echarts.init(el.value);
+    chart.setOption(props.option, { lazyUpdate: true });
+    observer = new ResizeObserver(() => chart?.resize());
+    observer.observe(el.value);
+});
+
+watch(
+    () => props.option,
+    (option) => chart?.setOption(option, { lazyUpdate: true }),
+);
+
+onUnmounted(() => {
+    observer?.disconnect();
+    chart?.dispose();
+    chart = null;
+});
+</script>
+
+<template>
+    <div ref="el" class="h-full w-full" />
+</template>
+```
+
+</Tab>
+<Tab value="Svelte">
+
+```svelte title="resources/js/components/demo/Charts/Chart.svelte"
+<script lang="ts">
+    import { onMount } from "svelte";
+    import * as echarts from "echarts";
+    import type { EChartsOption } from "echarts";
+
+    let { option }: { option: EChartsOption } = $props();
+
+    let el: HTMLDivElement | undefined;
+    let chart: echarts.ECharts | null = null;
+
+    onMount(() => {
+        if (!el) return;
+        chart = echarts.init(el);
+        chart.setOption(option, { lazyUpdate: true });
+
+        const observer = new ResizeObserver(() => chart?.resize());
+        observer.observe(el);
+
+        return () => {
+            observer.disconnect();
+            chart?.dispose();
+            chart = null;
+        };
+    });
+
+    $effect(() => {
+        chart?.setOption(option, { lazyUpdate: true });
+    });
+</script>
+
+<div bind:this={el} class="h-full w-full"></div>
+```
+
+</Tab>
+</Frameworks>
+
+Give charts a container with a definite height. Mesh's wrapper uses
+`display: contents` and adds no box, so the island's own root element is what
+sits in your layout: a chart inside an element with no height has nothing to
+fill.
+
+## Drag and drop
+
+The [board demo](https://mesh-demo-react.ebarlow.dev/board) uses a different
+library per framework: dnd-kit in React, and `@formkit/drag-and-drop` in Vue
+and Svelte. All three follow the same flow:
+
+1. The library reorders local lists while the user drags, for instant
+   feedback.
+2. On drop, the island writes the new order into the deferred, entangled
+   `columns`.
+3. It confirms with `wire.$call("moveCard", …)`. The new order rides along
+   with the call, and the server re-applies the move and saves it.
+4. Server-driven changes, such as "reset board", flow back into the local
+   lists from props or the entangled value.
+
+<Frameworks>
+<Tab value="React">
+
+```tsx title="resources/js/mesh/Board/Kanban/index.tsx (condensed)"
+<DndContext
+    sensors={sensors}
+    collisionDetection={closestCorners}
+    {...handlers}
+>
+    {board.map((column) => (
+        <Column key={column.id} column={column} />
+    ))}
+    <DragOverlay>
+        {activeCard ? <CardFace card={activeCard} lifted /> : null}
+    </DragOverlay>
+</DndContext>
+```
+
+dnd-kit needs one `DndContext` around everything that can be dragged or
+dropped on, so the whole board is one island. See
+[Composing islands](/docs/guides/composition).
+
+</Tab>
+<Tab value="Vue">
+
+```ts title="resources/js/mesh/Board/Kanban/Column.vue (condensed)"
+import { useDragAndDrop } from "@formkit/drag-and-drop/vue";
+
+// One list per column; the shared `group` in listConfig lets cards
+// move between columns.
+const [listRef, cards] = useDragAndDrop<Card>(
+    [...props.column.cards],
+    props.drag.listConfig,
+);
+
+// Server-driven updates (reset, reseed) flow back into the list.
+watch(
+    () => props.column.cards,
+    (next) => {
+        cards.value = [...next];
+    },
+);
+```
+
+The column's `<ul ref="listRef">` becomes the drop list.
+
+</Tab>
+<Tab value="Svelte">
+
+```svelte title="resources/js/mesh/Board/Kanban/Column.svelte (condensed)"
+<script lang="ts">
+    import { dragAndDrop } from "@formkit/drag-and-drop";
+
+    let { column, drag }: Props = $props();
+    let cards = $state.raw<Card[]>([...column.cards]);
+
+    // Server-driven updates (reset, reseed) flow back into the list.
+    $effect(() => {
+        cards = [...column.cards];
+    });
+
+    // The vanilla API, wrapped as a Svelte action.
+    const dropList = (el: HTMLElement) => {
+        dragAndDrop<Card>({
+            parent: el,
+            getValues: () => cards,
+            setValues: (next) => {
+                cards = next;
+            },
+            config: drag.listConfig,
+        });
+    };
+</script>
+
+<ul use:dropList>
+    {#each cards as card (card.id)}
+        <CardItem {card} />
+    {/each}
+</ul>
+```
+
+</Tab>
+</Frameworks>
+
+## Cleanup and disposal
+
+An island unmounts when Livewire removes its component: an `@if` around the
+tag turns false, or a parent re-render drops it. Mesh then unmounts the
+island through its renderer (`root.unmount()`, `app.unmount()`, or Svelte's
+`unmount()`), so cleanup belongs where it normally would:
+
+- **React:** return a cleanup function from the effect that created the
+  instance.
+- **Vue:** `onUnmounted`.
+- **Svelte:** return a function from `onMount` or `$effect`, or use
+  `onDestroy`. An action can return `{ destroy }`.
+
+Dispose chart instances, disconnect observers, clear intervals, and cancel
+pending work there. Watchers and hooks registered through the wire (`$watch`,
+`$hook`) are also removed by Livewire along with the component. If Livewire
+removes a component while its chunk is still loading, Mesh never mounts it.
+
+The [architecture demo](https://mesh-demo-react.ebarlow.dev/architecture)
+mounts and unmounts a table and a chart with toggles, which makes it a quick
+way to check that a library cleans up after itself.
+
+## Keep heavy libraries in the island's chunk
+
+Every component entry is its own lazy chunk, and what it imports goes into
+that chunk (or into a shared chunk, when several components import the same
+library). A page that never renders the chart never downloads ECharts; the
+architecture demo shows the chart's chunk arriving only on its first render.
+
+The framework itself is not lazy. `app.ts` imports each renderer you pass to
+`initMesh`, and the renderers import React DOM, Vue, or Svelte directly, so
+every registered framework runtime is in the main bundle on every page, with
+or without islands. What stays out of that bundle is your components' code
+and the libraries they import.
+
+So import a library from the component that uses it, or from a file in its
+folder, and not from `app.ts`. Anything `app.ts` imports loads on every page,
+whether or not an island needs it.
+
+<Cards>
+  <Card title="Composing islands" href="/docs/guides/composition">
+    One island or several, and what crosses island boundaries.
+  </Card>
+  <Card title="Props" href="/docs/guides/props">
+    How fresh data reaches a mounted island.
+  </Card>
+</Cards>

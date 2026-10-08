@@ -1,0 +1,12 @@
+{
+  "title": "Reference",
+  "pages": [
+    "component",
+    "blade",
+    "init-mesh",
+    "hooks",
+    "wire",
+    "artisan",
+    "renderer"
+  ]
+}

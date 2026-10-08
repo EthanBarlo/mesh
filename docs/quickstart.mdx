@@ -1,0 +1,263 @@
+---
+title: Quickstart
+description: Build a counter island with two-way state and a server action, and watch both work, in about five minutes.
+---
+
+You will build a counter whose clicks stay in the browser until you press
+Save, which runs a PHP method and stores the count in the session. It uses
+all three channels: a prop, an entangled property, and a server action.
+
+This page assumes you have finished [Installation](/docs/installation):
+the Vite alias, your renderer in `app.ts`, and a layout with
+`@livewireScriptConfig`.
+
+## Scaffold the component
+
+<Frameworks>
+<Tab value="React">
+
+```bash
+php artisan make:mesh Counter
+```
+
+</Tab>
+<Tab value="Vue">
+
+```bash
+php artisan make:mesh Counter --renderer=vue
+```
+
+</Tab>
+<Tab value="Svelte">
+
+```bash
+php artisan make:mesh Counter --renderer=svelte
+```
+
+</Tab>
+</Frameworks>
+
+This writes both halves with matching names: `app/Mesh/Counter.php` and
+`resources/js/mesh/Counter/index.tsx` (or `index.vue`, `index.svelte`). If
+you set `make.renderer` in `config/mesh.php`, the flag is optional.
+
+## Add state and an action
+
+Replace the generated class. `$count` is a public property, so the
+frontend can entangle it. `save()` is a normal Livewire action, and its
+return value goes back to the browser.
+
+```php title="app/Mesh/Counter.php"
+<?php
+
+declare(strict_types=1);
+
+namespace App\Mesh;
+
+use EthanBarlo\Mesh\Component;
+
+class Counter extends Component
+{
+    public int $count = 0; // [!code highlight]
+
+    public function mount(): void // [!code highlight]
+    { // [!code highlight]
+        $this->count = session('counter', 0); // [!code highlight]
+    } // [!code highlight]
+
+    public function save(): string // [!code highlight]
+    { // [!code highlight]
+        session(['counter' => $this->count]); // [!code highlight]
+
+        return now()->format('H:i:s'); // [!code highlight]
+    } // [!code highlight]
+
+    public function props(): array
+    {
+        return [
+            'label' => 'Clicks', // [!code highlight]
+        ];
+    }
+}
+```
+
+There is no `render()` method and no Blade view to write. `Mesh\Component`
+renders the wrapper the frontend mounts into.
+
+## Write the frontend
+
+`useEntangle('count')` binds the island to `$count`. `useWire()` returns
+the component's `$wire`, and `$call('save')` runs the PHP method and
+resolves with what it returned.
+
+<Frameworks>
+<Tab value="React">
+
+```tsx title="resources/js/mesh/Counter/index.tsx"
+import { useState } from "react";
+import { useEntangle, useWire } from "@mesh/react";
+
+export default function Counter({ label }: { label: string }) {
+    const [count, setCount] = useEntangle<number>("count");
+    const wire = useWire();
+    const [savedAt, setSavedAt] = useState<string | null>(null);
+
+    async function save() {
+        setSavedAt(await wire.$call("save"));
+    }
+
+    return (
+        <div>
+            <p>
+                {label}: {count}
+            </p>
+            <button onClick={() => setCount(count + 1)}>+1</button>
+            <button onClick={save}>Save</button>
+            {savedAt && <p>Saved at {savedAt}</p>}
+        </div>
+    );
+}
+```
+
+</Tab>
+<Tab value="Vue">
+
+```vue title="resources/js/mesh/Counter/index.vue"
+<script setup lang="ts">
+import { ref } from "vue";
+import { useEntangle, useWire } from "@mesh/vue";
+
+defineProps<{ label: string }>();
+
+const count = useEntangle<number>("count");
+const wire = useWire();
+const savedAt = ref<string | null>(null);
+
+async function save() {
+    savedAt.value = await wire.$call("save");
+}
+</script>
+
+<template>
+    <div>
+        <p>{{ label }}: {{ count }}</p>
+        <button @click="count++">+1</button>
+        <button @click="save">Save</button>
+        <p v-if="savedAt">Saved at {{ savedAt }}</p>
+    </div>
+</template>
+```
+
+</Tab>
+<Tab value="Svelte">
+
+```svelte title="resources/js/mesh/Counter/index.svelte"
+<script lang="ts">
+    import { useEntangle, useWire } from "@mesh/svelte";
+
+    let { label }: { label: string } = $props();
+
+    const count = useEntangle<number>("count");
+    const wire = useWire();
+    let savedAt = $state<string | null>(null);
+
+    async function save() {
+        savedAt = await wire.$call("save");
+    }
+</script>
+
+<div>
+    <p>{label}: {count.value}</p>
+    <button onclick={() => count.value++}>+1</button>
+    <button onclick={save}>Save</button>
+    {#if savedAt}
+        <p>Saved at {savedAt}</p>
+    {/if}
+</div>
+```
+
+</Tab>
+</Frameworks>
+
+`label` arrives as an ordinary prop, from `props()`. The entangled count
+is a `[value, setter]` pair in React, a writable ref in Vue, and a
+`{ value }` box in Svelte; the [hooks reference](/docs/reference/hooks)
+covers each.
+
+## Render it
+
+Add a route and a view that uses the layout from Installation:
+
+```php title="routes/web.php"
+Route::view('/counter', 'counter');
+```
+
+```blade title="resources/views/counter.blade.php"
+<x-layouts.app>
+    <mesh:counter />
+</x-layouts.app>
+```
+
+The tag works in any Blade view, including inside a Livewire component's
+view. Nested components use dots: `App\Mesh\Forms\Input` is
+`<mesh:forms.input />`.
+
+## Run it
+
+```bash
+npm run dev
+php artisan serve
+```
+
+Open `/counter`, with the browser's network panel open, and try three
+things:
+
+1. **Click +1 a few times.** The number changes at once, and no request is
+   sent. `useEntangle` is deferred by default: the new value waits for the
+   next Livewire request.
+2. **Click Save.** One request carries the pending `count` and calls
+   `save()`. The time it returns appears under the buttons.
+3. **Reload the page.** The count comes back, read from the session by
+   `mount()`.
+
+With `debug` on, the console also logs `component.init | Counter` when the
+island mounts. If nothing appears, start with
+[Troubleshooting](/docs/advanced/troubleshooting).
+
+## What just happened
+
+1. Blade compiled `<mesh:counter />` into a Livewire tag. Livewire resolved
+   it to `App\Mesh\Counter` and ran `mount()`.
+2. The component rendered a wrapper element carrying its id, `Counter`, and
+   the output of `props()` as JSON.
+3. In the browser, Mesh looked up `Counter` in its registry, loaded that
+   component's chunk, and mounted it with the renderer its file extension
+   names.
+4. `useEntangle` kept the island and `$count` in step, and `$call` ran
+   `save()` in the same request that delivered the new count.
+
+[How it works](/docs/how-it-works) follows each of these steps through the
+source. From here, the guides go deeper:
+
+<Cards>
+  <Card
+    title="Props"
+    href="/docs/guides/props"
+    description="What props() sends, and when it is re-sent."
+  />
+  <Card
+    title="Two-way state"
+    href="/docs/guides/state"
+    description="Deferred and live entangling, and watching the server."
+  />
+  <Card
+    title="Server actions"
+    href="/docs/guides/server-actions"
+    description="$call with arguments, return values, and loading states."
+  />
+  <Card
+    title="Forms and validation"
+    href="/docs/guides/forms"
+    description="Laravel validation errors in your frontend form."
+  />
+</Cards>

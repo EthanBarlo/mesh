@@ -1,0 +1,373 @@
+---
+title: Svelte
+description: Everything specific to Svelte 5 islands, from the Vite plugin to runes, value boxes, snippet slots and .svelte.ts modules.
+---
+
+The Svelte renderer ships in `@mesh/svelte` and targets Svelte 5. Any component whose entry file is
+`index.svelte` is mounted with Svelte's `mount()`, one component tree per `<mesh:…>` tag on the page.
+
+| | Svelte |
+| --- | --- |
+| Entry file | `resources/js/mesh/<Id>/index.svelte` |
+| Renderer | `import svelteRenderer from '@mesh/svelte'` |
+| Peer dependency | `svelte`, version 5 or newer |
+| Two-way state | `useEntangle` returns a writable `{ value }` box |
+| Default slot | the `children` snippet prop |
+| Named slots | the `slots` prop, a record of snippets |
+| Example app | [`apps/demo-svelte`](https://github.com/EthanBarlo/mesh/tree/main/apps/demo-svelte) (in the repo, not deployed) |
+
+## Install
+
+Mesh itself comes from Composer and is imported through the `@mesh` Vite alias (see
+[Installation](/docs/installation)). For Svelte you add the compiler and its Vite plugin.
+
+<Steps>
+<Step>
+
+### Install Svelte and the Vite plugin
+
+```bash
+npm install svelte
+npm install -D @sveltejs/vite-plugin-svelte
+```
+
+</Step>
+<Step>
+
+### Add the plugin to Vite
+
+```ts title="vite.config.ts"
+import { defineConfig } from 'vite';
+import laravel from 'laravel-vite-plugin';
+import { svelte } from '@sveltejs/vite-plugin-svelte';
+
+export default defineConfig({
+    plugins: [
+        laravel({
+            input: ['resources/css/app.css', 'resources/js/app.ts'],
+            refresh: true,
+        }),
+        svelte(),
+    ],
+    resolve: {
+        alias: {
+            '@mesh': '/vendor/ethanbarlo/mesh/resources/js',
+        },
+        dedupe: ['svelte'],
+    },
+});
+```
+
+The plugin compiles your `.svelte` files and Mesh's own `.svelte.ts` modules, which use runes.
+`dedupe` makes Vite resolve `svelte` to one copy. You need it when `vendor/ethanbarlo/mesh` is a
+symlink to a checkout with its own `node_modules/svelte` (a Composer path repository, as in the demo
+apps). Two copies of Svelte break reactivity between the renderer and your components.
+
+</Step>
+<Step>
+
+### Configure TypeScript
+
+The demo enables full TypeScript in `<script lang="ts">` with `vitePreprocess`:
+
+```js title="svelte.config.js"
+import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
+
+export default {
+    preprocess: vitePreprocess(),
+};
+```
+
+```ts title="resources/js/env.d.ts"
+/// <reference types="vite/client" />
+/// <reference types="svelte" />
+```
+
+```json title="tsconfig.json"
+{
+    "compilerOptions": {
+        "moduleResolution": "bundler",
+        "strict": true,
+        "baseUrl": ".",
+        "paths": {
+            "@mesh": [
+                "vendor/ethanbarlo/mesh/resources/js/index.ts"
+            ],
+            "@mesh/*": ["vendor/ethanbarlo/mesh/resources/js/*"]
+        }
+    },
+    "include": [
+        "resources/js/**/*.ts",
+        "resources/js/**/*.svelte",
+        "vendor/ethanbarlo/mesh/resources/js/**/*.ts"
+    ],
+    "exclude": [
+        "node_modules",
+        "vendor/ethanbarlo/mesh/resources/js/react",
+        "vendor/ethanbarlo/mesh/resources/js/vue"
+    ]
+}
+```
+
+The `exclude` keeps `tsc` away from the React and Vue renderers, which need those frameworks
+installed.
+
+</Step>
+</Steps>
+
+## Register the renderer
+
+```ts title="resources/js/app.ts"
+import { Livewire } from
+    '../../vendor/livewire/livewire/dist/livewire.esm';
+import { initMesh } from '@mesh';
+import svelteRenderer from '@mesh/svelte';
+
+initMesh(Livewire, {
+    renderers: [svelteRenderer],
+});
+
+Livewire.start();
+```
+
+`svelteRenderer` is also a named export. Importing it imports Svelte's runtime, so that is part of
+your main bundle on every page that loads `app.ts`. Each component's own code (and the libraries only
+it imports) is a separate chunk, loaded the first time the component renders.
+
+Generate Svelte components with
+`php artisan make:mesh Counter --renderer=svelte`, or make Svelte the default in
+[`config/mesh.php`](/docs/reference/artisan#configuration).
+
+## Write a component
+
+A Mesh component in Svelte is a Svelte 5 component named `index.svelte`. Read the keys of `props()`
+with `$props()`:
+
+```php title="app/Mesh/Counter.php"
+<?php
+
+namespace App\Mesh;
+
+use EthanBarlo\Mesh\Component;
+use Livewire\Attributes\Modelable;
+
+class Counter extends Component
+{
+    #[Modelable]
+    public int $count = 0;
+
+    public int $initialCount = 0;
+
+    public function mount(): void
+    {
+        $this->initialCount = $this->count;
+    }
+
+    public function props(): array
+    {
+        return ['initialCount' => $this->initialCount];
+    }
+}
+```
+
+```svelte title="resources/js/mesh/Counter/index.svelte"
+<script lang="ts">
+    import { useEntangle } from '@mesh/svelte';
+
+    interface Props {
+        initialCount: number;
+    }
+
+    let { initialCount }: Props = $props();
+
+    const count = useEntangle<number>('count');
+</script>
+
+<div class="counter">
+    <output>{count.value}</output>
+    <button onclick={() => count.value--}>-</button>
+    <button onclick={() => (count.value = initialCount)}>Reset</button>
+    <button onclick={() => count.value++}>+</button>
+</div>
+```
+
+Other files in the folder (child components, helpers, types) are ignored by discovery. Import them
+from `index.svelte`. Props are decoded from JSON, so type them as JSON: numbers, strings, arrays,
+objects. An empty PHP array always arrives as `[]`.
+
+Props stay reactive. The renderer keeps them in a `$state` object and assigns new values into it
+when the server re-renders, so `initialCount` above always holds the latest value and the component
+is never remounted.
+
+## Composables
+
+All four composables come from `@mesh/svelte`. Call them while the component initialises (top level
+of `<script>`), because they use `getContext` and `onDestroy`. Full signatures are in
+[Hooks and composables](/docs/reference/hooks).
+
+| Composable | Returns | Notes |
+| --- | --- | --- |
+| `useEntangle<T>(key, live?)` | `{ value: T }` | Writable box, bind with `bind:value={x.value}` |
+| `useWire<T>()` | `Wire & T` | Same object as in React and Vue |
+| `useErrorBag()` | `{ readonly value: Record<string, string[]> }` | Read-only box |
+| `useLivewireComponent()` | `LivewireComponent` | From mount-level context |
+
+The same form as in the React guide, in Svelte:
+
+```svelte title="resources/js/mesh/Forms/ProjectForm/index.svelte"
+<script lang="ts">
+    import { useEntangle, useErrorBag, useWire } from '@mesh/svelte';
+
+    // Deferred: sent with the next request (the submit).
+    const name = useEntangle<string>('name');
+    // Live: every change is its own request.
+    const slug = useEntangle<string>('slug', true);
+
+    const errors = useErrorBag();
+    const wire = useWire();
+    let saving = $state(false);
+
+    async function submit(event: SubmitEvent) {
+        event.preventDefault();
+        saving = true;
+        try {
+            // Resolves with null when validation fails.
+            const result = await wire.$call('save');
+            if (result?.ok) {
+                // saved
+            }
+        } finally {
+            saving = false;
+        }
+    }
+</script>
+
+<form novalidate onsubmit={submit}>
+    <input bind:value={name.value} />
+    {#if errors.value.name}
+        <p role="alert">{errors.value.name[0]}</p>
+    {/if}
+
+    <input bind:value={slug.value} />
+    {#if errors.value.slug}
+        <p role="alert">{errors.value.slug[0]}</p>
+    {/if}
+
+    <button disabled={saving}>Save</button>
+</form>
+```
+
+`useEntangle` in Svelte does not write anything on mount, and it does not echo a server-driven value
+back to Livewire. A live binding sends a request only when your code writes `.value`.
+
+## Slots
+
+Svelte islands receive slots the way Svelte 5 components receive content: as **snippets**. The
+default slot is the `children` snippet. Named `<livewire:slot>` blocks arrive together on a `slots`
+prop, keyed by name:
+
+```blade title="resources/views/livewire/pages/slots.blade.php"
+<mesh:slots.card>
+    <livewire:slot name="title">Release notes</livewire:slot>
+
+    <p>Hello <strong>{{ $name }}</strong></p>
+
+    <livewire:slot name="footer">Rendered by the server.</livewire:slot>
+</mesh:slots.card>
+```
+
+```svelte title="resources/js/mesh/Slots/Card/index.svelte"
+<script lang="ts">
+    import type { Snippet } from 'svelte';
+
+    interface Props {
+        variant?: string;
+        children?: Snippet;
+        slots?: Record<string, Snippet | undefined>;
+    }
+
+    let { children, slots = {} }: Props = $props();
+</script>
+
+<section class="card">
+    {#if slots.title}
+        <h3>{@render slots.title()}</h3>
+    {/if}
+    <div>{@render children?.()}</div>
+    {#if slots.footer}
+        <footer>{@render slots.footer()}</footer>
+    {/if}
+</section>
+```
+
+Each slot is a raw snippet that renders `<div style="display: contents">` around the server HTML.
+The wrapper creates no layout box. `SvelteSlot` (exported from `@mesh/svelte`) is an alias for
+`Snippet` if you prefer to name the type. `children` is absent when the default slot is empty, and
+`slots` is only passed when the tag has a named slot, so default `slots` to `{}` as above.
+
+The HTML is static: it updates when the server re-renders it, but Livewire components or Alpine
+behaviour inside it will not work. See the [Slots guide](/docs/guides/slots).
+
+## Gotchas
+
+### Read `.value`, don't destructure
+
+The boxes returned by `useEntangle` and `useErrorBag` are reactive through their `value` getter.
+Copying the value out breaks the link:
+
+```ts
+const count = useEntangle<number>('count');
+
+let snapshot = count.value; // a one-off copy, never updates
+const { value } = count; // same problem
+```
+
+Read `count.value` where you need it (in markup, `$derived`, `$effect`), and write `count.value = …`
+or `bind:value={count.value}` to change it.
+
+### Entangled values are shallow: replace objects
+
+`useEntangle` holds its value in `$state.raw`, which is not deeply reactive. Writing `.value` syncs.
+Mutating something inside `.value` does not, and Livewire never hears about it:
+
+```ts
+const columns = useEntangle<Column[]>('columns');
+
+// Does not sync: mutates the existing array.
+columns.value.push(column);
+
+// Syncs: assigns a new array.
+columns.value = [...columns.value, column];
+```
+
+### Name it `wire`, not `$wire`
+
+The `$` prefix is reserved in Svelte components and `.svelte.ts` modules, so
+`const $wire = useWire()` does not compile. Mesh's own composables and the demo app use `wire`.
+
+### Runes outside components need `.svelte.ts`
+
+`$state`, `$derived` and `$effect` only work in files the Svelte compiler processes: components and
+modules named `*.svelte.ts` (or `*.svelte.js`). If you write your own composable on top of
+`useEntangle` that uses runes, give it that suffix. Mesh does the same: `useEntangle.svelte.ts`,
+`useErrorBag.svelte.ts` and `renderer.svelte.ts`. The demo's shared drag state lives in
+`dnd.svelte.ts` for the same reason.
+
+### Call composables during initialisation
+
+The composables read Mesh's context with `getContext` and register `onDestroy` handlers, which Svelte
+only allows while a component initialises. Calling `useWire()` inside an event handler or after an
+`await` throws. Call it once at the top of `<script>` and keep the result.
+
+### Each island is its own component tree
+
+Mesh calls `mount()` once per island and passes the Livewire component through `mount`'s `context`
+option. `setContext` in one island does not reach another. Module-level state (a `$state` exported
+from a `.svelte.ts` module) is shared, because every island imports the same module instance. The
+demo's kanban board coordinates drags across islands with window events instead.
+
+### Reserved prop names
+
+When a tag has slots, `children` and `slots` carry them. Returning a `children` key from `props()`
+while any slot is present, or a `slots` key while named slots are present, throws:
+``Mesh: `children` is reserved for slot content — rename the prop from props().``

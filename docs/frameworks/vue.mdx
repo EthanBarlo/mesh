@@ -1,0 +1,351 @@
+---
+title: Vue
+description: Everything specific to Vue islands, from the Vite plugin to single-file components, composables, native slots and shallow refs.
+---
+
+The Vue renderer ships in `@mesh/vue`. Any component whose entry file is `index.vue` is mounted as
+its own Vue app with `createApp`, one app per `<mesh:…>` tag on the page.
+
+| | Vue |
+| --- | --- |
+| Entry file | `resources/js/mesh/<Id>/index.vue` |
+| Renderer | `import vueRenderer from '@mesh/vue'` |
+| Peer dependency | `vue`, version 3.3 or newer |
+| Two-way state | `useEntangle` returns a writable `Ref` |
+| Default slot | the native default slot, `<slot />` |
+| Named slots | native named slots, `<slot name="…" />` |
+| Example app | [`apps/demo-vue`](https://github.com/EthanBarlo/mesh/tree/main/apps/demo-vue) (in the repo, not deployed) |
+
+## Install
+
+Mesh itself comes from Composer and is imported through the `@mesh` Vite alias (see
+[Installation](/docs/installation)). For Vue you add the framework and its Vite plugin.
+
+<Steps>
+<Step>
+
+### Install Vue and the Vite plugin
+
+```bash
+npm install vue
+npm install -D @vitejs/plugin-vue
+```
+
+</Step>
+<Step>
+
+### Add the plugin to Vite
+
+```ts title="vite.config.ts"
+import { defineConfig } from 'vite';
+import laravel from 'laravel-vite-plugin';
+import vue from '@vitejs/plugin-vue';
+
+export default defineConfig({
+    plugins: [
+        laravel({
+            input: ['resources/css/app.css', 'resources/js/app.ts'],
+            refresh: true,
+        }),
+        vue(),
+    ],
+    resolve: {
+        alias: {
+            '@mesh': '/vendor/ethanbarlo/mesh/resources/js',
+        },
+        dedupe: ['vue'],
+    },
+});
+```
+
+`dedupe` makes Vite resolve `vue` to one copy. You need it when `vendor/ethanbarlo/mesh` is a
+symlink to a checkout that has its own `node_modules/vue` (a Composer path repository, as in the
+demo apps). Two copies of Vue break reactivity between the renderer and your components. It is
+harmless otherwise.
+
+</Step>
+<Step>
+
+### Point TypeScript at the alias
+
+```json title="tsconfig.json"
+{
+    "compilerOptions": {
+        "moduleResolution": "bundler",
+        "strict": true,
+        "baseUrl": ".",
+        "paths": {
+            "@mesh": [
+                "vendor/ethanbarlo/mesh/resources/js/index.ts"
+            ],
+            "@mesh/*": ["vendor/ethanbarlo/mesh/resources/js/*"]
+        }
+    },
+    "include": [
+        "resources/js/**/*.ts",
+        "resources/js/**/*.vue",
+        "vendor/ethanbarlo/mesh/resources/js/**/*.ts"
+    ],
+    "exclude": [
+        "node_modules",
+        "vendor/ethanbarlo/mesh/resources/js/react"
+    ]
+}
+```
+
+The `exclude` keeps `tsc` away from the React renderer, which needs `react` installed. Add a shim so
+`.vue` imports type-check:
+
+```ts title="resources/js/env.d.ts"
+declare module '*.vue' {
+    import type { DefineComponent } from 'vue';
+    const component: DefineComponent<{}, {}, any>;
+    export default component;
+}
+```
+
+</Step>
+</Steps>
+
+## Register the renderer
+
+```ts title="resources/js/app.ts"
+import { Livewire } from
+    '../../vendor/livewire/livewire/dist/livewire.esm';
+import { initMesh } from '@mesh';
+import vueRenderer from '@mesh/vue';
+
+initMesh(Livewire, {
+    renderers: [vueRenderer],
+});
+
+Livewire.start();
+```
+
+`vueRenderer` is also a named export. Importing it imports `vue`, so Vue is part of your main bundle
+on every page that loads `app.ts`. Each component's own code (and the libraries only it imports) is a
+separate chunk, loaded the first time the component renders.
+
+Generate Vue components with
+`php artisan make:mesh Counter --renderer=vue`, or make Vue the default in
+[`config/mesh.php`](/docs/reference/artisan#configuration).
+
+## Write a component
+
+A Mesh component in Vue is a single-file component named `index.vue` that default-exports the
+component (an SFC always does). Declare the keys of `props()` with `defineProps`:
+
+```php title="app/Mesh/Counter.php"
+<?php
+
+namespace App\Mesh;
+
+use EthanBarlo\Mesh\Component;
+use Livewire\Attributes\Modelable;
+
+class Counter extends Component
+{
+    #[Modelable]
+    public int $count = 0;
+
+    public int $initialCount = 0;
+
+    public function mount(): void
+    {
+        $this->initialCount = $this->count;
+    }
+
+    public function props(): array
+    {
+        return ['initialCount' => $this->initialCount];
+    }
+}
+```
+
+```vue title="resources/js/mesh/Counter/index.vue"
+<script setup lang="ts">
+import { useEntangle } from '@mesh/vue';
+
+const props = defineProps<{
+    initialCount: number;
+}>();
+
+const count = useEntangle<number>('count');
+</script>
+
+<template>
+    <div class="counter">
+        <output>{{ count }}</output>
+        <button @click="count--">-</button>
+        <button @click="count = props.initialCount">Reset</button>
+        <button @click="count++">+</button>
+    </div>
+</template>
+```
+
+Other files in the folder (child components, composables, types) are ignored by discovery. Import
+them from `index.vue`.
+
+### Declare every prop
+
+The renderer passes everything from `props()` as Vue props. Keys you do not declare with
+`defineProps` become fallthrough attributes and land on your root element as HTML attributes, which
+is rarely what you want. Props are decoded from JSON, so type them as JSON: numbers, strings, arrays,
+objects. An empty PHP array always arrives as `[]`.
+
+## Composables
+
+All four composables come from `@mesh/vue`. Call them in `<script setup>` (or `setup()`), because
+they use `inject` and `onScopeDispose`. Full signatures are in
+[Hooks and composables](/docs/reference/hooks).
+
+| Composable | Returns | Notes |
+| --- | --- | --- |
+| `useEntangle<T>(key, live?)` | `Ref<T>` (a `shallowRef`) | Works with `v-model` |
+| `useWire<T>()` | `Wire & T` | Same object as in React |
+| `useErrorBag()` | `ShallowRef<Record<string, string[]>>` | Read-only in practice |
+| `useLivewireComponent()` | `LivewireComponent` | Provided once per island |
+
+The same form as in the React guide, in Vue:
+
+```vue title="resources/js/mesh/Forms/ProjectForm/index.vue"
+<script setup lang="ts">
+import { ref } from 'vue';
+import { useEntangle, useErrorBag, useWire } from '@mesh/vue';
+
+// Deferred: sent with the next request (the submit).
+const name = useEntangle<string>('name');
+// Live: every change is its own request.
+const slug = useEntangle<string>('slug', true);
+
+const errors = useErrorBag();
+const wire = useWire();
+const saving = ref(false);
+
+async function submit() {
+    saving.value = true;
+    try {
+        // Resolves with null when validation fails.
+        const result = await wire.$call('save');
+        if (result?.ok) {
+            // saved
+        }
+    } finally {
+        saving.value = false;
+    }
+}
+</script>
+
+<template>
+    <form novalidate @submit.prevent="submit">
+        <input v-model="name" />
+        <p v-if="errors.name" role="alert">{{ errors.name[0] }}</p>
+
+        <input v-model="slug" />
+        <p v-if="errors.slug" role="alert">{{ errors.slug[0] }}</p>
+
+        <button :disabled="saving">Save</button>
+    </form>
+</template>
+```
+
+Templates unwrap refs, so `count`, `name` and `errors` read directly there. In script, use `.value`:
+`count.value++`, `errors.value.name`.
+
+`useEntangle` in Vue does not write anything on mount, and it does not echo a server-driven value
+back to Livewire. A live binding sends a request only when your code changes the ref.
+
+## Slots
+
+Vue islands receive Blade slots as **native Vue slots**. The default slot is `<slot />` and a
+`<livewire:slot name="title">` block is `<slot name="title" />`:
+
+```blade title="resources/views/livewire/pages/slots.blade.php"
+<mesh:slots.card>
+    <livewire:slot name="title">Release notes</livewire:slot>
+
+    <p>Hello <strong>{{ $name }}</strong></p>
+
+    <livewire:slot name="footer">Rendered by the server.</livewire:slot>
+</mesh:slots.card>
+```
+
+```vue title="resources/js/mesh/Slots/Card/index.vue"
+<script setup lang="ts">
+defineProps<{ variant?: string }>();
+</script>
+
+<template>
+    <section class="card">
+        <h3 v-if="$slots.title"><slot name="title" /></h3>
+        <div><slot /></div>
+        <footer v-if="$slots.footer"><slot name="footer" /></footer>
+    </section>
+</template>
+```
+
+Each slot renders as a `<div style="display: contents">` with the server HTML set through
+`innerHTML`. The wrapper creates no layout box. Use `$slots.name` to test whether a slot was given.
+
+Because slots never travel as props, `children` and `slots` are ordinary prop names in Vue. The
+reserved-prop check that React and Svelte need does not run for Vue (the renderer sets
+`nativeSlots: true`). The HTML is static: it updates when the server re-renders it, but Livewire
+components or Alpine behaviour inside it will not work. See the [Slots guide](/docs/guides/slots).
+
+## Gotchas
+
+### Entangled refs are shallow: replace objects
+
+`useEntangle` returns a `shallowRef` and watches it shallowly. Assigning `.value` syncs. Mutating
+something inside `.value` does not, and Livewire never hears about it:
+
+```ts
+const columns = useEntangle<Column[]>('columns');
+
+// Does not sync: mutates the existing array.
+columns.value.push(column);
+
+// Syncs: assigns a new array.
+columns.value = [...columns.value, column];
+```
+
+The demo's kanban board follows this rule: its drag handler builds the next board and assigns
+`columns.value = next`.
+
+### Each island is its own Vue app
+
+Mesh calls `createApp` once per island and mounts it into the island's `.mesh-root`. Things that
+live on an app do not cross islands:
+
+- `provide` at the root of one island does not reach another island.
+- Plugins installed with `app.use()` are not installed. Mesh creates the app for you, and the
+  built-in renderer has no hook to configure it, so register components locally instead of globally.
+- `app.config` settings (error handlers, global properties) are not set.
+
+If every island needs the same plugin, replace the built-in renderer with
+[one that installs it](/docs/advanced/custom-renderers#example-shared-providers). Module-level state
+(a `ref` exported from a `.ts` module) is shared, because every island imports the same module
+instance.
+
+### Clean up your own subscriptions
+
+The composables clean up after themselves. Subscriptions you open with `useWire()` are yours to
+close. `$watch` returns its unwatch function:
+
+```ts
+import { onUnmounted } from 'vue';
+import { useWire } from '@mesh/vue';
+
+const wire = useWire();
+const unwatch = wire.$watch('price', (price: number) => {
+    history.value = [...history.value, price];
+});
+onUnmounted(unwatch);
+```
+
+Livewire also removes watchers when the Livewire component itself is torn down.
+
+### Reserved prop names
+
+`children` and `slots` are free in Vue. Vue itself consumes `key` and `ref`, so props with those
+names never reach your component. Rename them in `props()`.

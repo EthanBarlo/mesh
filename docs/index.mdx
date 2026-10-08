@@ -1,76 +1,215 @@
 ---
-title: Mesh
-description: React, Vue, and Svelte islands inside Livewire 4.
+title: Introduction
+description: Mesh renders React, Vue, and Svelte components as islands inside Livewire 4 views, with Livewire still owning the state.
 ---
 
-# Mesh
+Mesh lets a Livewire 4 app use a React, Vue, or Svelte component exactly
+where it needs one. You write a Livewire component in PHP and a frontend
+component beside it, and one Blade tag mounts the pair. Livewire keeps
+owning state, validation, and actions. The frontend component renders and
+talks back through a few small hooks. The rest of the page stays plain
+Livewire and Blade, and there is no API layer to build.
 
-Mesh renders React, Vue, and Svelte components as islands inside Livewire 4 views. Livewire owns server state; Mesh carries props across the boundary and mounts the component.
+## The mental model
 
-## How it fits together
+A Mesh component is one component with two halves:
 
-- **PHP component** (`App\Mesh\*`) declares props and a component **id**.
-- **JS component** is a folder under `resources/js/mesh` whose `index.{tsx,jsx,vue,svelte}` default-exports it.
-- **app.ts** registers the renderers; Mesh auto-discovers every component from `resources/js/mesh`.
-- **Blade** renders `<mesh:counter />`.
-- **Runtime** (`@mesh`) maps the id to a lazy chunk and mounts it.
+- **A PHP class** in `app/Mesh/` that extends `EthanBarlo\Mesh\Component`.
+  That class extends `Livewire\Component`, so it *is* a Livewire component:
+  public properties, actions, validation, `#[On]` listeners, and lifecycle
+  hooks all work as usual.
+- **A frontend component** at `resources/js/mesh/<Name>/index.tsx` (or
+  `.jsx`, `.vue`, `.svelte`). Its default export is what gets rendered.
 
-## Quick links
+`<mesh:counter />` in any Blade view mounts both halves. Data crosses
+between them on three channels.
 
-- [Why Mesh](why.mdx)
-- [Installation](installation.mdx)
-- [Building components](guides/building-components.mdx)
-- [`Mesh\Component` API](api/mesh-component.mdx)
-- [Renderers](advanced/renderers.mdx)
-- [Troubleshooting](advanced/troubleshooting.mdx)
-- [Live React demo](https://mesh-demo-react.ebarlow.dev) — every concept as a working page
+<Figure caption="One component, two halves, one tag. Both halves derive the same id, and three channels carry data between them.">
+  <MeshAnatomy />
+</Figure>
 
-## Minimal example
+| Channel | Direction | Use it for |
+| --- | --- | --- |
+| `props()` | server → frontend | Read-only data computed in PHP. A fresh snapshot on every render of the component. |
+| `useEntangle(key)` | both ways | A public property both sides read and write: a form field, a counter, a selection. |
+| `$wire`, via `useWire()` | frontend → server | Calling actions with `$call`, dispatching events, uploading files, watching properties. |
 
-```php
-// app/Mesh/Counter.php
-class Counter extends \EthanBarlo\Mesh\Component
+## A complete example
+
+This is the `Counter` from the demo apps, minus the styling. The PHP half
+owns `$count`. It captures the starting value once and sends it to the
+frontend as a prop for the Reset button.
+
+```php title="app/Mesh/Counter.php"
+<?php
+
+namespace App\Mesh;
+
+use EthanBarlo\Mesh\Component;
+use Livewire\Attributes\Modelable;
+
+class Counter extends Component
 {
+    #[Modelable]
+    public int $count = 0;
+
+    public int $initialCount = 0;
+
+    public function mount(): void
+    {
+        // Captured once: props() runs on every render.
+        $this->initialCount = $this->count;
+    }
+
     public function props(): array
     {
-        return ['start' => 0];
+        return [
+            'initialCount' => $this->initialCount,
+        ];
     }
 }
 ```
 
-```tsx
-// resources/js/mesh/Counter/index.tsx
-export default function Counter({ start }: { start: number }) {
-  return <div>{start}</div>
+The frontend half entangles `count` and renders the buttons:
+
+<Frameworks>
+<Tab value="React">
+
+```tsx title="resources/js/mesh/Counter/index.tsx"
+import { useEntangle } from "@mesh/react";
+
+export default function Counter({
+    initialCount,
+}: {
+    initialCount: number;
+}) {
+    const [count, setCount] = useEntangle<number>("count");
+
+    return (
+        <div>
+            <output>{count}</output>
+            <button onClick={() => setCount(count - 1)}>-</button>
+            <button onClick={() => setCount(initialCount)}>
+                Reset
+            </button>
+            <button onClick={() => setCount(count + 1)}>+</button>
+        </div>
+    );
 }
 ```
 
-```ts
-// resources/js/app.ts — register renderers; components are auto-discovered
-initMesh(Livewire, {
-  renderers: [reactRenderer],
-  debug: true,
-})
+</Tab>
+<Tab value="Vue">
+
+```vue title="resources/js/mesh/Counter/index.vue"
+<script setup lang="ts">
+import { useEntangle } from "@mesh/vue";
+
+const props = defineProps<{ initialCount: number }>();
+
+const count = useEntangle<number>("count");
+</script>
+
+<template>
+    <div>
+        <output>{{ count }}</output>
+        <button @click="count = count - 1">-</button>
+        <button @click="count = props.initialCount">Reset</button>
+        <button @click="count = count + 1">+</button>
+    </div>
+</template>
 ```
 
-```blade
-<mesh:counter />
+</Tab>
+<Tab value="Svelte">
+
+```svelte title="resources/js/mesh/Counter/index.svelte"
+<script lang="ts">
+    import { useEntangle } from "@mesh/svelte";
+
+    let { initialCount }: { initialCount: number } = $props();
+
+    const count = useEntangle<number>("count");
+</script>
+
+<div>
+    <output>{count.value}</output>
+    <button onclick={() => (count.value = count.value - 1)}>-</button>
+    <button onclick={() => (count.value = initialCount)}>Reset</button>
+    <button onclick={() => (count.value = count.value + 1)}>+</button>
+</div>
 ```
+
+</Tab>
+</Frameworks>
+
+Then render it from any Blade view:
+
+```blade title="resources/views/dashboard.blade.php"
+<mesh:counter :count="5" />
+
+{{-- Or bind it to a property on the parent Livewire component --}}
+<mesh:counter wire:model="count" />
+```
+
+`:count="5"` sets the public `$count` property, as it would on any
+Livewire tag. Clicks update the island immediately. `useEntangle` is
+deferred by default, so the new value reaches the server with the next
+Livewire request rather than on every click (see
+[Two-way state](/docs/guides/state)). `wire:model` works because `$count`
+is marked `#[Modelable]`.
 
 ## Key ideas
 
-- **Alias, not npm.** The frontend ships in the Composer package; the `@mesh` Vite alias points at it.
-- **A simple id, derived identically on both sides.** PHP derives the id from the class name
-  (`App\Mesh\Forms\Input` → `Forms/Input`); JS derives the same id from the folder path under
-  `resources/js/mesh`.
-- **Renderer from the file extension.** `tsx`/`jsx` → React, `vue` → Vue, `svelte` → Svelte.
-- **Zero-config discovery.** Mesh finds every component under `resources/js/mesh` and code-splits each into its own chunk.
-- **Livewire 4.** Requires `@livewireScriptConfig` and `Livewire.start()`.
+- **An alias, not an npm package.** The JavaScript runtime ships inside the
+  Composer package. A Vite alias, `@mesh`, points at
+  `vendor/ethanbarlo/mesh/resources/js`, so the PHP and JavaScript halves of
+  Mesh are always the same version. See
+  [Installation](/docs/installation#the-mesh-alias).
+- **One id, derived the same way on both sides.** PHP strips `App\Mesh\`
+  from the class name (`App\Mesh\Forms\Input` becomes `Forms/Input`).
+  JavaScript keeps the entry's path after `resources/js/mesh/`, minus the
+  extension and `/index` (`Forms/Input/index.tsx` becomes `Forms/Input`).
+  You never write the id by hand, and `php artisan make:mesh` creates both
+  halves with matching names.
+- **The file extension picks the renderer.** `.tsx` and `.jsx` mount with
+  React, `.vue` with Vue, `.svelte` with Svelte. One app can use all three.
+- **Zero-config discovery, one chunk per component.** `initMesh()` finds
+  every `index.*` entry under `resources/js/mesh` with `import.meta.glob`.
+  Each component becomes its own lazy chunk, fetched the first time a page
+  renders it. There is nothing to register.
 
-## Component model at a glance
+## Where to go next
 
-A component is a folder under the fixed `resources/js/mesh` directory containing an
-`index.{tsx,jsx,vue,svelte}` whose default export is the component. The folder name is the component id segment
-and must match the StudlyCase PHP class name (case-sensitive on Linux). Frontend entries shipped by
-Composer packages use the `sources` option of `initMesh`; their PHP classes also need Livewire
-registration.
+<Cards>
+  <Card
+    title="Why Mesh"
+    href="/docs/why"
+    description="The problem it solves, the alternatives, and when not to use it."
+  />
+  <Card
+    title="Installation"
+    href="/docs/installation"
+    description="Composer, the Vite alias, and your renderer, step by step."
+  />
+  <Card
+    title="Quickstart"
+    href="/docs/quickstart"
+    description="Build an island with state and a server action in five minutes."
+  />
+  <Card
+    title="How it works"
+    href="/docs/how-it-works"
+    description="From a Blade tag to a mounted component, and how updates flow."
+  />
+  <Card
+    title="Two-way state"
+    href="/docs/guides/state"
+    description="useEntangle in depth: deferred and live sync, and $watch."
+  />
+  <Card
+    title="Live React demo"
+    href="https://mesh-demo-react.ebarlow.dev"
+    description="Every concept as a working page, with its source alongside."
+  />
+</Cards>

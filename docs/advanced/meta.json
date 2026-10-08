@@ -1,4 +1,9 @@
 {
   "title": "Advanced",
-  "pages": ["renderers", "troubleshooting"]
+  "pages": [
+    "custom-renderers",
+    "laravel-boost",
+    "troubleshooting",
+    "limitations"
+  ]
 }

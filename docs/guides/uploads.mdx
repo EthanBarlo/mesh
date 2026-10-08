@@ -1,0 +1,272 @@
+---
+title: File uploads
+description: Send files from the island into a Livewire property with $upload, show progress, validate on the server, and preview or remove the result.
+---
+
+Uploads use Livewire's own file upload machinery. The island chooses the file
+however it likes (an input, a drop zone, a paste handler) and hands it to
+`wire.$upload`; Livewire streams it to temporary storage and sets a property
+to the uploaded file. The
+[uploads demo](https://mesh-demo-react.ebarlow.dev/uploads) is a drop zone
+with progress, previews, and server-side rules.
+
+## Prepare the property
+
+Add Livewire's `WithFileUploads` trait and a property to receive the file.
+Rules go on the property as usual:
+
+```php title="app/Mesh/Uploads/Dropzone.php"
+use Livewire\Attributes\Validate;
+use Livewire\WithFileUploads;
+
+class Dropzone extends Component
+{
+    use WithFileUploads;
+
+    #[Validate('image|max:2048')]
+    public $photo = null;
+
+    public function props(): array
+    {
+        return ['maxKilobytes' => 2048, 'accept' => 'image/*'];
+    }
+}
+```
+
+## Upload with $upload
+
+`wire.$upload(property, file, finish, error, progress)` takes a `File` and
+three callbacks:
+
+<Frameworks>
+<Tab value="React">
+
+```tsx
+const wire = useWire();
+const [status, setStatus] = useState<Status>("idle");
+const [progress, setProgress] = useState(0);
+
+const startUpload = (file: File) => {
+    setStatus("uploading");
+    wire.$upload(
+        "photo",
+        file,
+        // finish: the temporary file is stored and $photo is set.
+        () => setStatus("done"),
+        // error: the upload request itself failed.
+        () => setStatus("error"),
+        // progress: event.detail.progress runs from 0 to 100.
+        (event) => setProgress(event.detail.progress),
+    );
+};
+
+return (
+    <input
+        type="file"
+        accept={accept}
+        onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) startUpload(file);
+        }}
+    />
+);
+```
+
+</Tab>
+<Tab value="Vue">
+
+```vue
+<script setup lang="ts">
+const wire = useWire();
+const status = ref<Status>("idle");
+const progress = ref(0);
+
+const startUpload = (file: File) => {
+    status.value = "uploading";
+    wire.$upload(
+        "photo",
+        file,
+        // finish: the temporary file is stored and $photo is set.
+        () => (status.value = "done"),
+        // error: the upload request itself failed.
+        () => (status.value = "error"),
+        // progress: event.detail.progress runs from 0 to 100.
+        (event) => (progress.value = event.detail.progress),
+    );
+};
+
+const onChange = (event: Event) => {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (file) startUpload(file);
+};
+</script>
+
+<template>
+    <input type="file" :accept="accept" @change="onChange" />
+</template>
+```
+
+</Tab>
+<Tab value="Svelte">
+
+```svelte
+<script lang="ts">
+    const wire = useWire();
+    let status = $state<Status>("idle");
+    let progress = $state(0);
+
+    const startUpload = (file: File) => {
+        status = "uploading";
+        wire.$upload(
+            "photo",
+            file,
+            // finish: the temporary file is stored and $photo is set.
+            () => (status = "done"),
+            // error: the upload request itself failed.
+            () => (status = "error"),
+            // progress: event.detail.progress runs from 0 to 100.
+            (event) => (progress = event.detail.progress),
+        );
+    };
+
+    const onChange = (event: Event) => {
+        const file = (event.target as HTMLInputElement).files?.[0];
+        if (file) startUpload(file);
+    };
+</script>
+
+<input type="file" {accept} onchange={onChange} />
+```
+
+</Tab>
+</Frameworks>
+
+Behind the call, Livewire makes a request to start the upload, streams the
+file to its temporary upload endpoint (that is what `progress` reports), and
+then makes a second request that sets `$photo` to the temporary file. Nothing
+is stored permanently until your code stores it.
+
+## What the callbacks mean
+
+| Callback | Runs when | Receives |
+| --- | --- | --- |
+| `finish` | The file is in temporary storage and the property has been set. | The temporary filename (a list of them for `$uploadMultiple`). |
+| `error` | The upload request failed: a network error, an error response, or Livewire's own temporary-upload rules rejected the file. | Nothing. A rejection's message also lands in the error bag. |
+| `progress` | While the file streams. | An event; `event.detail.progress` is a whole number from 0 to 100. |
+
+<Callout type="warn" title="finish does not mean valid">
+Your `#[Validate]` rules run when the property is set, in the same request
+that triggers `finish`. A file that breaks them still calls `finish`, and the
+message lands in the error bag under the property's name. Check the bag, or
+validate again in the next action you call, before using the file.
+</Callout>
+
+## Validate, inspect, and preview
+
+The demo calls an `inspect()` action from `finish`. It validates first, so a
+rejected file never gets further, then returns what the island needs to show
+the file:
+
+```php title="app/Mesh/Uploads/Dropzone.php"
+public function inspect(): ?array
+{
+    if (! $this->photo) {
+        return null;
+    }
+
+    // The upload lands before you see it: check it first.
+    $this->validate();
+
+    return [
+        'name' => $this->photo->getClientOriginalName(),
+        'size' => $this->photo->getSize(),
+        'previewUrl' => $this->photo->isPreviewable()
+            ? $this->photo->temporaryUrl()
+            : null,
+        'tmpFilename' => $this->photo->getFilename(),
+    ];
+}
+```
+
+```tsx
+// finish:
+async () => {
+    const info = (await wire.$call("inspect")) as FileMeta | null;
+    if (info) {
+        setMeta(info);
+        setStatus("done");
+    } else {
+        setStatus("error"); // errors.photo explains why
+    }
+},
+```
+
+If validation fails, `inspect()` resolves with `null` and `useErrorBag()`
+has the reason under `photo`:
+
+```tsx
+const errors = useErrorBag();
+const message = errors.photo?.[0];
+```
+
+`temporaryUrl()` is a short-lived signed URL that Livewire serves for
+previewable files such as images, so it can go straight into an `<img src>`.
+To keep the file, store it from an action, for example
+`$this->photo->store('photos')`.
+
+## Remove or reset
+
+`wire.$removeUpload(property, tmpFilename, finish, error)` deletes the
+temporary file on the server and clears the property:
+
+```tsx
+wire.$removeUpload("photo", meta.tmpFilename, () => {}, () => {});
+```
+
+Mesh's types ask for both callbacks; Livewire only calls `finish`.
+
+To recover from a rejected file, clear the property and its errors on the
+server. The demo's "Try again" button calls this action, then resets its
+local state:
+
+```php
+public function clear(): void
+{
+    $this->photo = null;
+    $this->resetValidation();
+}
+```
+
+## Multiple files
+
+Use an array property, rules for its items, and `$uploadMultiple`:
+
+```php
+use WithFileUploads;
+
+#[Validate(['photos.*' => 'image|max:2048'])]
+public $photos = [];
+```
+
+```ts
+wire.$uploadMultiple(
+    "photos",
+    Array.from(files),
+    // finish receives the list of temporary filenames.
+    () => setStatus("done"),
+    () => setStatus("error"),
+    (event) => setProgress(event.detail.progress),
+);
+```
+
+Each batch is added to the files already in the array. `$removeUpload` with
+one temporary filename removes just that file.
+
+<Cards>
+  <Card title="Forms and validation" href="/docs/guides/forms">
+    How the error bag fills and clears.
+  </Card>
+  <Card title="The $wire API" href="/docs/reference/wire">
+    `$upload`, `$uploadMultiple`, and `$removeUpload` signatures.
+  </Card>
+</Cards>

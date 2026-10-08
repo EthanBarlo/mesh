@@ -1,0 +1,125 @@
+---
+title: Laravel Boost and AI agents
+description: The guidelines and skill Mesh ships for Laravel Boost, how to install them, what they teach a coding agent, and the Markdown endpoints of this site.
+---
+
+Mesh has strict conventions that fail quietly when an agent guesses: ids that must match
+character for character, a hardcoded component folder, props that are not reactive, slots that are
+static HTML. So the package ships its own instructions for AI coding agents, in the format
+[Laravel Boost](https://github.com/laravel/boost) installs.
+
+## What ships
+
+Everything lives in the package's `resources/boost` directory:
+
+<Files>
+  <Folder name="resources/boost" defaultOpen>
+    <Folder name="guidelines" defaultOpen>
+      <File name="core.blade.php" />
+    </Folder>
+    <Folder name="skills" defaultOpen>
+      <Folder name="mesh-development" defaultOpen>
+        <File name="SKILL.md" />
+        <Folder name="references" defaultOpen>
+          <File name="state.md" />
+          <File name="wire-api.md" />
+          <File name="forms-and-validation.md" />
+          <File name="slots.md" />
+          <File name="setup-and-troubleshooting.md" />
+        </Folder>
+      </Folder>
+    </Folder>
+  </Folder>
+</Files>
+
+- **The guideline** (`core.blade.php`) is a few lines that Boost adds to your agent's always-loaded
+  instructions. It says the project uses Mesh, and tells the agent to activate the
+  `mesh-development` skill before touching `app/Mesh/`, `resources/js/mesh/`, `<mesh:*>` tags or
+  the hooks.
+- **The skill** (`mesh-development`) is loaded on demand. `SKILL.md` holds the mental model and the
+  common pitfalls; the `references/` files go deeper and are read only when a task needs them.
+
+## Install it with Boost
+
+Boost discovers guidelines and skills in any installed Composer package that has a
+`resources/boost` directory.
+
+<Steps>
+<Step>
+
+### Install Boost, if the app does not have it
+
+```bash
+composer require laravel/boost --dev
+```
+
+</Step>
+<Step>
+
+### Run the installer and pick Mesh
+
+```bash
+php artisan boost:install
+```
+
+When it asks **Which third-party AI guidelines/skills would you like to install?**, select
+`ethanbarlo/mesh`. Boost records the choice in `boost.json`.
+
+</Step>
+<Step>
+
+### Picking it up later
+
+If Boost was installed before Mesh, run:
+
+```bash
+php artisan boost:update --discover
+```
+
+`--discover` looks for newly available package guidelines and skills and prompts you to add them.
+A plain `php artisan boost:update` refreshes what is already installed, for example after you
+update Mesh.
+
+</Step>
+</Steps>
+
+Where the files land depends on the agents you chose in `boost:install`. The guideline is merged
+into the agent's instruction file (`CLAUDE.md`, `AGENTS.md` and so on) under a
+`=== ethanbarlo/mesh rules ===` heading. The skill is copied into the agent's skills folder:
+`.claude/skills/mesh-development/` for Claude Code, `.cursor/skills/` for Cursor, `.agents/skills/`
+for some others. The demo apps in the repository are set up this way; see
+[`apps/demo-react/boost.json`](https://github.com/EthanBarlo/mesh/blob/main/apps/demo-react/boost.json).
+
+## What an agent learns
+
+| File | What it teaches |
+| --- | --- |
+| `SKILL.md` | The two halves of a component and the three channels (`props()`, `useEntangle`, `$wire`). Scaffold with `make:mesh`. Exact, case-sensitive id matching. Props are snapshots. Entangle is deferred by default. Slots are static HTML and `children`/`slots` are reserved. A pre-flight checklist and a map of the demo components. |
+| `references/state.md` | `useEntangle` semantics, deferred versus live, `$commit`, `$watch`, the props lifecycle, and which server hooks fire when. |
+| `references/wire-api.md` | Every `$wire` member with examples, and which ones cost a request. |
+| `references/forms-and-validation.md` | The complete form pattern: entangled fields, live per-field validation, `useErrorBag`, and why `$call` resolves with `null` when validation fails. |
+| `references/slots.md` | Default and named slots, how they stay in sync, the security note, and the reserved prop names. |
+| `references/setup-and-troubleshooting.md` | Host-app installation, the `initMesh` options, package components through `sources`, and a symptom → cause → fix table. |
+
+The skill is written for React, Vue and Svelte projects alike: examples are in React, with the Vue
+and Svelte differences (refs, value boxes, native slots, snippets) spelled out.
+
+<Callout type="idea" title="Keep it current">
+  The guideline and skill change with the package. After updating Mesh, run `php artisan
+  boost:update` so the agent is not working from old instructions.
+</Callout>
+
+## This site, for agents
+
+Every page of these docs is also available as Markdown, which is easier for an agent (or you) to
+paste into a prompt than HTML.
+
+| URL | What you get |
+| --- | --- |
+| [`/llms.txt`](https://mesh.ebarlow.dev/llms.txt) | An index of every page with its title, description and link |
+| [`/llms-full.txt`](https://mesh.ebarlow.dev/llms-full.txt) | Every page's content in one plain-text file |
+| `/docs/<page>.md` | One page as Markdown, for example [`/docs/reference/wire.md`](https://mesh.ebarlow.dev/docs/reference/wire.md) |
+
+A request for a docs URL whose `Accept` header prefers `text/markdown` also gets the Markdown version.
+On each page, **Copy Markdown** copies the page, and the menu next to it opens the page in ChatGPT,
+Claude, Cursor or other tools, or as raw Markdown.

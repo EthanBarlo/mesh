@@ -1,0 +1,285 @@
+---
+title: Server actions
+description: Call public PHP methods from the island with wire.$call, use their return values, and handle loading and failure.
+---
+
+Any public method on the component's PHP class can be called from the island.
+There is no route, controller, or `fetch` to write: `wire.$call` sends a
+Livewire request and resolves with whatever the method returns. The
+[wire demo](https://mesh-demo-react.ebarlow.dev/wire) has the examples on this
+page running.
+
+## Call a method
+
+```php title="app/Mesh/Wire/ServerActions.php (abridged)"
+class ServerActions extends Component
+{
+    public function rollDice(): array
+    {
+        $dice = [random_int(1, 6), random_int(1, 6), random_int(1, 6)];
+
+        return ['dice' => $dice, 'total' => array_sum($dice)];
+    }
+
+    public function analyze(string $text): array
+    {
+        $words = str_word_count($text);
+
+        return [
+            'words' => $words,
+            'characters' => mb_strlen($text),
+            'analyzedAt' => now()->format('H:i:s.v'),
+        ];
+    }
+}
+```
+
+Get the wire with `useWire()` and pass arguments after the method name. They
+arrive as ordinary PHP parameters:
+
+<Frameworks>
+<Tab value="React">
+
+```tsx
+import { useWire } from "@mesh/react";
+
+const wire = useWire();
+
+const result = (await wire.$call("analyze", text)) as AnalysisResult;
+```
+
+</Tab>
+<Tab value="Vue">
+
+```ts
+import { useWire } from "@mesh/vue";
+
+const wire = useWire();
+
+const result = (await wire.$call(
+    "analyze",
+    text.value,
+)) as AnalysisResult;
+```
+
+</Tab>
+<Tab value="Svelte">
+
+```ts
+import { useWire } from "@mesh/svelte";
+
+const wire = useWire();
+
+const result = (await wire.$call("analyze", text)) as AnalysisResult;
+```
+
+</Tab>
+</Frameworks>
+
+Arguments and return values cross as JSON. A method that returns nothing
+resolves with `null`.
+
+Each `$call` is a full Livewire request for the component. Dirty
+[deferred properties](/docs/guides/state) travel with it and are applied
+first, then the method runs, then the component re-renders. `props()` runs
+again, so the island gets fresh props as well as the return value. For a
+method that only computes a result, add Livewire's `#[Renderless]` attribute
+to skip the re-render.
+
+<Callout type="warn" title="Public methods are endpoints">
+Anyone can call any public method on the class, with any arguments, by
+crafting a request. Authorize and validate inside the method, exactly as you
+would in a controller. Keep helpers `protected`.
+</Callout>
+
+## Loading and disabled state
+
+The island owns its loading state. Keep a flag, ignore clicks while it is
+set, and clear it in `finally` so a failed call can't leave the button stuck:
+
+<Frameworks>
+<Tab value="React">
+
+```tsx title="resources/js/mesh/Wire/ServerActions/index.tsx (condensed)"
+const [rolling, setRolling] = useState(false);
+const [roll, setRoll] = useState<DiceResult | null>(null);
+
+const handleRoll = async () => {
+    if (rolling) return;
+    setRolling(true);
+    try {
+        setRoll((await wire.$call("rollDice")) as DiceResult);
+    } finally {
+        setRolling(false);
+    }
+};
+
+return (
+    <button onClick={handleRoll} disabled={rolling}>
+        {rolling ? "Rolling…" : "Roll dice"}
+    </button>
+);
+```
+
+</Tab>
+<Tab value="Vue">
+
+```vue title="resources/js/mesh/Wire/ServerActions/index.vue (condensed)"
+<script setup lang="ts">
+const rolling = ref(false);
+const roll = ref<DiceResult | null>(null);
+
+const handleRoll = async () => {
+    if (rolling.value) return;
+    rolling.value = true;
+    try {
+        roll.value = (await wire.$call("rollDice")) as DiceResult;
+    } finally {
+        rolling.value = false;
+    }
+};
+</script>
+
+<template>
+    <button :disabled="rolling" @click="handleRoll">
+        {{ rolling ? "Rolling…" : "Roll dice" }}
+    </button>
+</template>
+```
+
+</Tab>
+<Tab value="Svelte">
+
+```svelte title="resources/js/mesh/Wire/ServerActions/index.svelte (condensed)"
+<script lang="ts">
+    let rolling = $state(false);
+    let roll = $state<DiceResult | null>(null);
+
+    const handleRoll = async () => {
+        if (rolling) return;
+        rolling = true;
+        try {
+            roll = (await wire.$call("rollDice")) as DiceResult;
+        } finally {
+            rolling = false;
+        }
+    };
+</script>
+
+<button disabled={rolling} onclick={handleRoll}>
+    {rolling ? "Rolling…" : "Roll dice"}
+</button>
+```
+
+</Tab>
+</Frameworks>
+
+For row actions, track pending ids instead of one flag. The
+[orders table demo](https://mesh-demo-react.ebarlow.dev/table) disables only
+the row being flagged:
+
+```tsx title="resources/js/mesh/Table/OrdersTable/index.tsx"
+const handleFlag = async (id: number) => {
+    setPendingIds((prev) => new Set(prev).add(id));
+    try {
+        await wire.$call("flagOrder", id);
+    } finally {
+        setPendingIds((prev) => {
+            const next = new Set(prev);
+            next.delete(id);
+            return next;
+        });
+    }
+};
+```
+
+`flagOrder()` returns nothing. It changes the `$orders` property, and the
+re-render sends the updated rows back through `props()`.
+
+## When a call fails
+
+A call can end three ways, and only one of them rejects:
+
+| Outcome | The promise | Where the details are |
+| --- | --- | --- |
+| The method returns | resolves with the return value | the value |
+| The method throws a `ValidationException` | resolves with `null` | [`useErrorBag()`](/docs/guides/forms) |
+| Network failure, or an error response | rejects | the rejection: `{ status, body, json, errors }` |
+
+Validation failure is not an error to Livewire: it catches the exception,
+fills the error bag, and finishes the request normally. So branch on the
+resolved value, and keep a `catch` for real failures:
+
+```tsx
+try {
+    const res = (await wire.$call("save")) as SaveResult | null;
+
+    if (res === null) {
+        return; // Validation failed: messages are in useErrorBag().
+    }
+
+    // Success: use res.
+} catch (error) {
+    // Network failure or server error. error.status is the HTTP
+    // status, or null when no response arrived.
+} finally {
+    setSaving(false);
+}
+```
+
+A method that returns nothing also resolves with `null`, so return an explicit
+payload, such as `['ok' => true, …]`, when you need to tell success from a
+validation failure.
+
+Livewire 4's `#[Json]` method attribute changes this contract. A `#[Json]`
+method skips the re-render, and a validation failure _rejects_ with
+`status: 422` and the messages in `errors`, without touching the error bag.
+
+## Refresh
+
+`wire.$refresh()` asks the server to re-render the component without calling
+anything. `props()` runs again and the island receives the result in place,
+with no remount:
+
+```tsx
+await wire.$refresh();
+```
+
+Use it when data changed outside the component, for example after a
+broadcast event, or on a timer. To have the server run code on each tick,
+call a method instead. The price watcher demo calls `tick()` every two
+seconds from an interval it clears on unmount.
+
+## Typing useWire
+
+`useWire<T>()` returns the wire typed as `Wire & T`. Describe your public
+methods and properties in `T`, and you can call methods directly on the wire,
+fully typed. Livewire's `$wire` turns any unknown name into a method call:
+
+```tsx
+interface DiceResult {
+    dice: number[];
+    total: number;
+}
+
+interface ServerActionsWire {
+    rollDice: () => Promise<DiceResult>;
+}
+
+const wire = useWire<ServerActionsWire>();
+
+const roll = await wire.rollDice(); // DiceResult
+const same = await wire.$call("rollDice"); // any
+```
+
+`useWire` takes the same type parameter in Vue and Svelte. `T` is a type
+assertion only: nothing checks it against the PHP class.
+
+<Cards>
+  <Card title="Forms and validation" href="/docs/guides/forms">
+    Submitting with `$call` and showing server-side errors.
+  </Card>
+  <Card title="The $wire API" href="/docs/reference/wire">
+    Every method on the wire, in reference form.
+  </Card>
+</Cards>
