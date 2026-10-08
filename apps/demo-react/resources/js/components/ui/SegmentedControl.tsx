@@ -9,7 +9,10 @@ interface SegmentedControlProps<T extends string> {
     className?: string;
 }
 
-/** Pill-shaped exclusive choice group with a solid white active segment. */
+/**
+ * An exclusive choice drawn like the docs' renderer switch: an ink frame of
+ * equal mono cells, with a solid ink block that slides to the active one.
+ */
 function SegmentedControl<T extends string>({
     options,
     value,
@@ -17,17 +20,30 @@ function SegmentedControl<T extends string>({
     className,
     "aria-label": ariaLabel,
 }: SegmentedControlProps<T>) {
+    const active = options.findIndex((option) => option.value === value);
+
     return (
         <div
             className={cn(
-                "inline-flex items-center gap-1 p-1 rounded-lg bg-white/[0.02] border border-white/10",
+                "relative isolate inline-grid auto-cols-fr grid-flow-col border border-ink bg-paper",
                 className,
             )}
             role="group"
             aria-label={ariaLabel}
         >
-            {options.map((option) => {
-                const isActive = option.value === value;
+            <span
+                aria-hidden="true"
+                className={cn(
+                    "absolute inset-y-0 left-0 -z-10 bg-ink transition-transform duration-320 ease-(--ease-spring) motion-reduce:transition-none",
+                    active < 0 && "opacity-0",
+                )}
+                style={{
+                    width: `${100 / Math.max(options.length, 1)}%`,
+                    transform: `translateX(${Math.max(active, 0) * 100}%)`,
+                }}
+            />
+            {options.map((option, index) => {
+                const isActive = index === active;
                 return (
                     <button
                         key={option.value}
@@ -35,10 +51,8 @@ function SegmentedControl<T extends string>({
                         onClick={() => onChange(option.value)}
                         aria-pressed={isActive}
                         className={cn(
-                            "px-4 py-1.5 rounded-md text-sm font-medium transition-colors duration-150 active:scale-95 focus:outline-none focus:ring-2 focus:ring-white/20 focus:ring-offset-2 focus:ring-offset-zinc-950",
-                            isActive
-                                ? "bg-white text-zinc-950"
-                                : "text-zinc-400 hover:text-white hover:bg-white/5",
+                            "min-h-10 whitespace-nowrap px-3 font-mono text-[11px] uppercase tracking-[0.06em] transition-colors duration-240 focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-accent motion-reduce:transition-none sm:min-h-8",
+                            isActive ? "text-paper" : "text-ink-2 hover:text-ink",
                         )}
                     >
                         {option.label}

@@ -1,25 +1,36 @@
 import React from "react";
 import { cn } from "./cn";
 
+/**
+ * A line-drawn square with a short stroke tracing its edge. Inherits the
+ * text color; size it with `w-*`/`h-*`.
+ */
 const Spinner: React.FC<{ className?: string }> = ({ className }) => (
     <svg
-        className={cn("w-4 h-4 animate-spin", className)}
-        viewBox="0 0 24 24"
+        className={cn("ui-spinner w-4 h-4 shrink-0", className)}
+        viewBox="0 0 16 16"
         fill="none"
         aria-hidden="true"
     >
-        <circle
-            className="opacity-25"
-            cx="12"
-            cy="12"
-            r="10"
+        <rect
+            x="1.5"
+            y="1.5"
+            width="13"
+            height="13"
             stroke="currentColor"
-            strokeWidth="4"
+            strokeOpacity="0.28"
         />
-        <path
-            className="opacity-90"
-            fill="currentColor"
-            d="M12 2a10 10 0 0110 10h-4a6 6 0 00-6-6V2z"
+        <rect
+            className="ui-spinner__run"
+            x="1.5"
+            y="1.5"
+            width="13"
+            height="13"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="square"
+            pathLength={100}
+            strokeDasharray="24 76"
         />
     </svg>
 );

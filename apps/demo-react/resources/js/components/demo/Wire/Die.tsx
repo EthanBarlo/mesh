@@ -16,11 +16,11 @@ export interface DieProps {
     className?: string;
 }
 
-/** A single die face rendered as pips on a 3x3 grid. */
+/** A single die face: a square drawn in ink with pips on a 3x3 grid. */
 const Die: React.FC<DieProps> = ({ value, className }) => (
     <div
         className={cn(
-            "w-14 h-14 rounded-xl bg-white/5 border border-white/10 grid grid-cols-3 grid-rows-3 p-2.5",
+            "grid size-14 grid-cols-3 grid-rows-3 border border-ink bg-paper p-2.5",
             className,
         )}
         role="img"
@@ -29,7 +29,7 @@ const Die: React.FC<DieProps> = ({ value, className }) => (
         {Array.from({ length: 9 }, (_, i) => (
             <span key={i} className="flex items-center justify-center">
                 {(PIPS[value] ?? []).includes(i) && (
-                    <span className="w-2 h-2 rounded-full bg-white" />
+                    <span className="size-2 rounded-full bg-ink" />
                 )}
             </span>
         ))}

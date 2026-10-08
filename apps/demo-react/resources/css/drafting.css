@@ -1,0 +1,613 @@
+/* ==========================================================================
+   Drafting primitives — ported from the docs (apps/docs/src/app/drafting.css)
+   The annotation voice, brand, buttons, links, sheet heads, figures, title
+   blocks, notes, line drawings. Keep this file identical across the three
+   demo apps; it reads only tokens, so the framework accent flows through.
+   ========================================================================== */
+
+/* ---------- Annotation voice ---------- */
+.k {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  line-height: 1.5;
+}
+.k--caps {
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.tag {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 5px;
+  border: 1px solid currentColor;
+  color: var(--accent-ink);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.balloon {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1;
+}
+
+/* ---------- Brand mark ---------- */
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+.brand__mark {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--ink);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  transition:
+    background-color var(--t-fast) ease,
+    color var(--t-fast) ease;
+}
+.brand__mark::after {
+  content: '';
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+  transition: transform var(--t-med) var(--ease-spring);
+}
+.brand__name {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.brand__rev {
+  padding-left: 10px;
+  border-left: 1px solid var(--line-2);
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+}
+@media (hover: hover) and (pointer: fine) {
+  .brand:hover .brand__mark {
+    background: var(--ink);
+    color: var(--paper);
+  }
+  .brand:hover .brand__mark::after {
+    transform: translate(2px, 2px);
+  }
+}
+
+/* ---------- Buttons & links ---------- */
+.btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background-color var(--t-fast) ease,
+    color var(--t-fast) ease,
+    transform var(--t-fast) var(--ease-out);
+}
+.btn:active {
+  transform: scale(0.97);
+}
+.btn--solid {
+  background: var(--ink);
+  color: var(--paper);
+}
+.btn--solid::after {
+  content: '';
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  width: 8px;
+  height: 8px;
+  background: var(--accent);
+  transition: transform var(--t-med) var(--ease-spring);
+}
+.btn--sm {
+  min-height: 36px;
+  padding: 0 12px;
+  gap: 6px;
+  font-size: 13px;
+}
+.btn__icon {
+  transition: transform var(--t-med) var(--ease-spring);
+}
+@media (hover: hover) and (pointer: fine) {
+  .btn--solid:hover {
+    background: color-mix(in srgb, var(--ink) 85%, var(--accent));
+  }
+  .btn--solid:hover::after {
+    transform: translate(2px, 2px);
+  }
+  .btn--line:hover {
+    background: var(--ink);
+    color: var(--paper);
+  }
+  .btn:hover .btn__icon--right {
+    transform: translateX(3px);
+  }
+  .btn:hover .btn__icon--ext {
+    transform: translate(2px, -2px);
+  }
+}
+
+.link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--line-3);
+  text-underline-offset: 3px;
+  transition:
+    color var(--t-fast) ease,
+    text-decoration-color var(--t-fast) ease;
+}
+.link--mono {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.link__ext {
+  display: inline-block;
+  transition: transform var(--t-med) var(--ease-spring);
+}
+@media (hover: hover) and (pointer: fine) {
+  .link:hover {
+    color: var(--accent-ink);
+    text-decoration-color: var(--accent);
+  }
+  .link:hover .link__ext {
+    transform: translate(2px, -2px);
+  }
+}
+
+/* ---------- Sheet heads ---------- */
+.sheet-head {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px 24px;
+  padding-bottom: 16px;
+}
+.sheet-head__no {
+  grid-column: 1;
+  color: var(--accent-ink);
+}
+.sheet-head__title {
+  grid-column: 1;
+  font-size: clamp(1.875rem, 1.4rem + 2vw, 2.75rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  text-wrap: balance;
+}
+.sheet-head__meta {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  color: var(--ink-3);
+  text-align: right;
+}
+.sheet-head__rule {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: var(--ink);
+  transform-origin: left center;
+  animation: rule-draw 900ms var(--ease-out) both;
+}
+.sheet-head__rule::before,
+.sheet-head__rule::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  width: 1px;
+  height: 9px;
+  background: var(--ink);
+}
+.sheet-head__rule::before {
+  left: 0;
+}
+.sheet-head__rule::after {
+  right: 0;
+}
+@keyframes rule-draw {
+  from {
+    transform: scaleX(0);
+  }
+}
+@media (max-width: 599px) {
+  .sheet-head {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sheet-head__meta {
+    grid-column: 1;
+    grid-row: auto;
+    text-align: left;
+  }
+}
+
+.fig-cap {
+  margin-top: 12px;
+  color: var(--ink-3);
+}
+
+/* ---------- General notes ---------- */
+.notes__k {
+  margin-bottom: 12px;
+  color: var(--ink-3);
+}
+.notes__list {
+  display: grid;
+  gap: 6px;
+  counter-reset: note;
+  color: var(--ink-2);
+  font-size: 0.875rem;
+}
+.notes__list li {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  counter-increment: note;
+}
+.notes__list li::before {
+  content: counter(note) '.';
+  padding-top: 2px;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+}
+
+/* ---------- Title block ---------- */
+.tblock {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 1px;
+  margin: 4px;
+  background: var(--ink);
+  border: 1px solid var(--ink);
+  outline: 1px solid var(--ink);
+  outline-offset: 3px;
+}
+.tb {
+  min-width: 0;
+  padding: 8px 10px 10px;
+  background: var(--paper);
+}
+.tb dt {
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.tb dd {
+  margin: 2px 0 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.tb a {
+  text-decoration: underline;
+  text-decoration-color: var(--line-3);
+  text-underline-offset: 3px;
+}
+.tb a:hover {
+  color: var(--accent-ink);
+  text-decoration-color: var(--accent);
+}
+.tb--title {
+  position: relative;
+  grid-column: span 6;
+}
+.tb--title::after {
+  content: '';
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 10px;
+  height: 10px;
+  background: var(--accent);
+}
+.tb--title dd {
+  padding-right: 24px;
+  font-size: clamp(1.125rem, 1rem + 0.5vw, 1.375rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.tb--half {
+  grid-column: span 3;
+}
+.tb--third {
+  grid-column: span 2;
+}
+.tb--sm dd {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 400;
+}
+@media (max-width: 559px) {
+  .tblock {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .tb--title,
+  .tb--half {
+    grid-column: span 2;
+  }
+  .tb--third {
+    grid-column: span 1;
+  }
+}
+
+/* ---------- Line drawings ---------- */
+[data-draw] .ln {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  stroke-linejoin: round;
+}
+[data-draw] .ln--fine {
+  stroke: var(--line-3);
+}
+[data-draw] .ln--accent {
+  stroke: var(--accent);
+}
+[data-draw] .ln--blue {
+  stroke: var(--blueline);
+}
+[data-draw] .ln--dash {
+  stroke: var(--ink-2);
+  stroke-dasharray: 4 3;
+}
+[data-draw] .ln--center {
+  stroke-dasharray: 10 3 2 3;
+}
+[data-draw] .ln--wall {
+  stroke-width: 2;
+}
+[data-draw] .fill-paper {
+  fill: var(--paper);
+}
+[data-draw] .fill-paper-2 {
+  fill: var(--paper-2);
+}
+[data-draw] .fill-paper-3 {
+  fill: var(--paper-3);
+}
+[data-draw] .fill-ink {
+  fill: var(--ink);
+}
+[data-draw] .fill-accent {
+  fill: var(--accent);
+}
+.svg-k {
+  fill: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+}
+.svg-k--dim {
+  fill: var(--ink-3);
+}
+.svg-k--accent {
+  fill: var(--accent-ink);
+}
+
+/* ---------- Figure frame (MDX <Figure>) ---------- */
+.fig {
+  margin: 2rem 0;
+}
+.fig__stage {
+  position: relative;
+  padding: clamp(16px, 3vw, 28px);
+  border: 1px solid var(--line-2);
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-position: -1px -1px;
+}
+/* Registration marks on the four corners */
+.fig__stage::before,
+.fig__stage::after {
+  content: '';
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  pointer-events: none;
+}
+.fig__stage::before {
+  top: -5px;
+  left: -5px;
+  border-top: 1px solid var(--ink);
+  border-left: 1px solid var(--ink);
+}
+.fig__stage::after {
+  right: -5px;
+  bottom: -5px;
+  border-right: 1px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+}
+
+/* Figures number themselves per sheet. */
+.sheet {
+  counter-reset: sheet-h2 fig;
+}
+.sheet .fig {
+  counter-increment: fig;
+}
+.sheet .fig .fig-cap::before {
+  content: 'Fig. ' counter(fig) ' · ';
+  color: var(--ink-2);
+}
+
+/* ---------- Notes (MDX <Callout>) ---------- */
+.note {
+  --note-tone: var(--ink);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px;
+  margin: 1.5rem 0;
+  padding: 14px 16px 14px 14px;
+  border: 1px solid var(--line-2);
+  border-left: 2px solid var(--note-tone);
+  background: var(--paper);
+}
+.note[data-tone='accent'] {
+  --note-tone: var(--accent);
+  background: var(--accent-wash);
+}
+.note[data-tone='blue'] {
+  --note-tone: var(--blueline);
+}
+.note__mark {
+  padding-top: 1px;
+  color: var(--note-tone);
+}
+.note[data-tone='accent'] .note__mark {
+  color: var(--accent-ink);
+}
+.note__k {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin-bottom: 4px;
+  color: var(--ink-3);
+}
+.note[data-tone='accent'] .note__k {
+  color: var(--accent-ink);
+}
+.note__title {
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  text-transform: none;
+}
+.note__content {
+  color: var(--ink-2);
+  font-size: 0.9375rem;
+  line-height: 1.65;
+}
+.note__content > :first-child {
+  margin-top: 0;
+}
+.note__content > :last-child {
+  margin-bottom: 0;
+}
+
+/* ---------- Renderer switch (sidebar) ---------- */
+.fw-switch {
+  margin-top: 4px;
+}
+.fw-switch__k {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  color: var(--ink-3);
+}
+.fw-switch__ext {
+  color: var(--accent-ink);
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+.fw-switch__track {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 1px solid var(--ink);
+}
+.fw-switch__track::before {
+  content: '';
+  position: absolute;
+  inset: 0 66.666% 0 0;
+  z-index: -1;
+  background: var(--ink);
+  transition: transform 320ms var(--ease-spring);
+}
+.fw-switch__track[data-active='1']::before {
+  transform: translateX(100%);
+}
+.fw-switch__track[data-active='2']::before {
+  transform: translateX(200%);
+}
+.fw-switch__opt {
+  min-height: 32px;
+  padding: 0 6px;
+  color: var(--ink-2);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: color var(--t-med) ease;
+}
+.fw-switch__opt[data-state='active'] {
+  color: var(--paper);
+}
+.fw-switch__opt:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -4px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fw-switch__track::before {
+    transition: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet-head__rule,
+  .brand__mark::after,
+  .btn--solid::after,
+  .btn__icon,
+  .link__ext {
+    animation: none !important;
+    transition: none !important;
+  }
+}

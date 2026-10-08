@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { useWire } from "@mesh/react";
-import { cn } from "@/components/ui";
 import {
     announceDragEnd,
     readPayload,
@@ -12,12 +11,6 @@ interface ColumnProps {
     title: string;
     count: number;
 }
-
-const ACCENTS: Record<string, string> = {
-    backlog: "bg-zinc-500",
-    "in-progress": "bg-amber-400",
-    done: "bg-emerald-400",
-};
 
 /**
  * One island per column. Mesh wrappers are display:contents, so this
@@ -61,15 +54,12 @@ const Column: React.FC<ColumnProps> = ({ columnId, title, count }) => {
 
     return (
         <>
-            <header className="flex items-center gap-2.5 px-4 py-3 border-b border-white/5">
-                <span
-                    className={cn("h-2 w-2 rounded-full", ACCENTS[columnId] ?? "bg-zinc-500")}
-                    aria-hidden="true"
-                />
-                <h3 className="text-sm font-semibold text-white">{title}</h3>
-                {/* Live count — a reactive prop straight from the Board. */}
-                <span className="ml-auto px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-xs font-medium tabular-nums text-zinc-400">
-                    {count}
+            <header className="lane__head">
+                <span className="lane__mark" data-lane={columnId} aria-hidden="true" />
+                <h3 className="lane__title">{title}</h3>
+                {/* Live count: a reactive prop straight from the Board. */}
+                <span className="lane__count" title={`${count} cards`}>
+                    {String(count).padStart(2, "0")}
                 </span>
             </header>
 
@@ -80,15 +70,13 @@ const Column: React.FC<ColumnProps> = ({ columnId, title, count }) => {
                 onDragOver={handleDragOver}
                 onDragLeave={() => setOver(false)}
                 onDrop={handleDrop}
-                className={cn(
-                    "order-1 flex-1 m-3 min-h-14 rounded-lg flex items-center justify-center transition-colors duration-150",
-                    (drag || count === 0) && "border border-dashed border-white/10",
-                    over && "border-solid border-white/30 bg-white/[0.06]",
-                )}
+                className="lane__tail"
+                data-armed={drag || count === 0 ? "" : undefined}
+                data-over={over ? "" : undefined}
             >
                 {(drag || count === 0) && (
-                    <span className="text-xs text-zinc-500 pointer-events-none">
-                        {drag ? "Drop here" : "No cards — drag one in"}
+                    <span className="k k--caps pointer-events-none">
+                        {drag ? "Drop here" : "No cards. Drag one in."}
                     </span>
                 )}
             </div>

@@ -8,7 +8,7 @@ export interface TablePaginationProps<TData> {
     className?: string;
 }
 
-/** Rows-per-page select, "Page x of y" readout, and Previous/Next controls. */
+/** Rows-per-page select, "Page x / y" readout, and Previous/Next controls. */
 function TablePagination<TData>({
     table,
     pageSizes,
@@ -16,6 +16,7 @@ function TablePagination<TData>({
 }: TablePaginationProps<TData>) {
     const { pageIndex, pageSize } = table.getState().pagination;
     const pageCount = Math.max(table.getPageCount(), 1);
+    const pad = (n: number) => String(n).padStart(2, "0");
 
     return (
         <div
@@ -24,8 +25,8 @@ function TablePagination<TData>({
                 className,
             )}
         >
-            <label className="flex items-center gap-2 text-xs text-zinc-500">
-                Rows per page
+            <label className="k k--caps flex items-center gap-2.5 text-ink-3">
+                Rows
                 <Select
                     value={pageSize}
                     onChange={(event) => table.setPageSize(Number(event.target.value))}
@@ -40,25 +41,23 @@ function TablePagination<TData>({
             </label>
 
             <div className="flex items-center gap-3">
-                <span className="text-xs text-zinc-500 tabular-nums">
-                    Page {pageIndex + 1} of {pageCount}
+                <span className="k k--caps text-ink-3 tabular-nums" aria-live="polite">
+                    Page <span className="text-ink">{pad(pageIndex + 1)}</span> / {pad(pageCount)}
                 </span>
                 <div className="flex items-center gap-2">
                     <Button
                         variant="secondary"
-                        size="xs"
+                        size="sm"
                         onClick={() => table.previousPage()}
                         disabled={!table.getCanPreviousPage()}
-                        className="font-normal disabled:opacity-40"
                     >
                         Previous
                     </Button>
                     <Button
-                        variant="primary"
-                        size="xs"
+                        variant="secondary"
+                        size="sm"
                         onClick={() => table.nextPage()}
                         disabled={!table.getCanNextPage()}
-                        className="font-medium disabled:opacity-40"
                     >
                         Next
                     </Button>

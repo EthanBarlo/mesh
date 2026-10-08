@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useWire } from "@mesh/react";
-import { Button, Eyebrow, Panel } from "@/components/ui";
+import { BigNumber, Button, Panel } from "@/components/ui";
 import Sparkline from "@/components/demo/Wire/Sparkline";
 
 interface PriceWatcherProps {
@@ -39,64 +39,73 @@ const PriceWatcher: React.FC<PriceWatcherProps> = ({ symbol, initialPrice }) => 
     const direction = previous === null ? null : price >= previous ? "up" : "down";
     const delta = previous === null ? 0 : price - previous;
 
-    const min = Math.min(...history);
-    const max = Math.max(...history);
-
-    const priceColor =
-        direction === "up" ? "text-emerald-400" : direction === "down" ? "text-rose-400" : "text-white";
-
     return (
         <Panel>
             <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                    <Eyebrow>{symbol} · server-side random walk</Eyebrow>
+                    <p className="k k--caps text-ink-3">
+                        {symbol} · server-side random walk
+                    </p>
                     <div className="mt-1 flex items-baseline gap-3">
                         {/* Key by history length so each server tick re-renders a fresh node */}
-                        <span
-                            key={history.length}
-                            className={`text-4xl font-semibold tracking-tight tabular-nums transition-colors duration-300 ${priceColor}`}
-                        >
+                        <BigNumber key={history.length} className="text-4xl">
                             ${price.toFixed(2)}
-                        </span>
+                        </BigNumber>
                         {direction !== null && (
-                            <span
-                                className={`text-sm font-semibold tabular-nums ${
-                                    direction === "up" ? "text-emerald-400" : "text-rose-400"
-                                }`}
-                            >
-                                {direction === "up" ? "▲" : "▼"} {Math.abs(delta).toFixed(2)}
+                            <span className="font-mono text-sm tabular-nums text-ink-2">
+                                <span aria-hidden="true">
+                                    {direction === "up" ? "▲" : "▼"}
+                                </span>
+                                <span className="sr-only">
+                                    {direction === "up" ? "Up" : "Down"}
+                                </span>{" "}
+                                {Math.abs(delta).toFixed(2)}
                             </span>
                         )}
                     </div>
                 </div>
 
-                <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setPaused((p) => !p)}
-                    aria-pressed={paused}
-                >
-                    {paused ? "Resume ticks" : "Pause ticks"}
-                </Button>
+                <div className="flex items-center gap-4">
+                    <span className="core-status">
+                        <span
+                            className="core-dot"
+                            data-state={paused ? "off" : "live"}
+                            aria-hidden="true"
+                        />
+                        {paused ? "Paused" : "Every 2s"}
+                    </span>
+                    <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setPaused((p) => !p)}
+                        aria-pressed={paused}
+                    >
+                        {paused ? "Resume ticks" : "Pause ticks"}
+                    </Button>
+                </div>
             </div>
 
             <Sparkline
-                className="mt-4"
+                className="mt-6"
                 values={history}
                 direction={direction}
                 ariaLabel={`Sparkline of the last ${history.length} prices for ${symbol}`}
             />
 
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-500">
-                <span>
-                    Low <span className="text-zinc-300 tabular-nums">${min.toFixed(2)}</span> · High{" "}
-                    <span className="text-zinc-300 tabular-nums">${max.toFixed(2)}</span> · {history.length} points
-                </span>
-                <span>
-                    <code className="font-mono text-zinc-400">wire.$call("tick")</code> every 2s ·{" "}
-                    <code className="font-mono text-zinc-400">wire.$watch("price", …)</code> streams it back
-                </span>
+            {/* Dimension line spanning the plot: how many ticks it holds. */}
+            <div className="mt-2 pl-14">
+                <div className="core-dim">
+                    <span>
+                        {history.length} of {MAX_POINTS} points
+                    </span>
+                </div>
             </div>
+
+            <p className="mt-4 text-xs leading-relaxed text-ink-3">
+                <code className="core-code">wire.$call("tick")</code> every 2s.{" "}
+                <code className="core-code">wire.$watch("price", …)</code>{" "}
+                streams each change back.
+            </p>
         </Panel>
     );
 };

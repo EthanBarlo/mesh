@@ -1,0 +1,1042 @@
+/* Shell: masthead, sidebar, framework switch, theme toggle, sheet layout, section/figure frame, code viewer, title block.
+   Identical across the three demo apps: read tokens only, never raw colours. */
+
+:root {
+  --shell-mast-h: 56px;
+  --shell-side-w: 264px;
+  --shell-gutter: 16px;
+  --livewire-progress-bar-color: var(--accent);
+}
+@media (min-width: 640px) {
+  :root {
+    --shell-gutter: 24px;
+  }
+}
+@media (min-width: 1280px) {
+  :root {
+    --shell-gutter: 40px;
+  }
+}
+
+/* Theme swaps land in one frame; nothing eases along. */
+.theme-switching,
+.theme-switching *,
+.theme-switching *::before,
+.theme-switching *::after {
+  transition: none !important;
+}
+
+/* ==========================================================================
+   Frame
+   ========================================================================== */
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: clip;
+}
+/* A default focus ring; in the base layer so component utilities still win. */
+@layer base {
+  .shell :focus-visible {
+    outline: 2px solid var(--accent-ink);
+    outline-offset: 2px;
+  }
+}
+
+.skip {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 60;
+  padding: 10px 14px;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-decoration: none;
+  transform: translateY(-300%);
+}
+.skip:focus {
+  transform: none;
+}
+
+/* Home: masthead, the page, the end-of-set strip. */
+.shell__main {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Home drawing frame: when the home page draws a fixed sheet border
+   (.home__frame), the shell insets everything by --shell-frame so the
+   masthead, page and footer sit inside it. home.css sizes its rails from
+   the same variable. Sizes follow the docs home (28 / 20 / 10px). */
+.shell--home:has(.home__frame) {
+  --shell-frame: 28px;
+  padding: var(--shell-frame);
+}
+@media (max-width: 899px) {
+  .shell--home:has(.home__frame) {
+    --shell-frame: 20px;
+  }
+}
+@media (max-width: 599px) {
+  .shell--home:has(.home__frame) {
+    --shell-frame: 10px;
+  }
+}
+.shell--home .mast {
+  top: var(--shell-frame, 0px);
+}
+.shell--home .side {
+  top: calc(var(--shell-frame, 0px) + var(--shell-mast-h));
+  bottom: var(--shell-frame, 0px);
+  left: var(--shell-frame, 0px);
+}
+.shell--home .side-scrim {
+  top: calc(var(--shell-frame, 0px) + var(--shell-mast-h));
+}
+
+/* Demo pages: register on the left, the sheet on the right. */
+.shell__frame {
+  flex: 1;
+  min-width: 0;
+}
+@media (min-width: 1024px) {
+  .shell__frame {
+    display: grid;
+    grid-template-columns: var(--shell-side-w) minmax(0, 1fr);
+  }
+}
+
+.shell__page {
+  min-width: 0;
+}
+.shell__sheet {
+  max-width: calc(54rem + 2 * var(--shell-gutter));
+  margin-inline: auto;
+  padding: 32px var(--shell-gutter) 64px;
+}
+@media (min-width: 1024px) {
+  .shell__sheet {
+    padding-top: 48px;
+    padding-bottom: 80px;
+  }
+}
+
+/* ==========================================================================
+   Masthead
+   ========================================================================== */
+.mast {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: var(--paper);
+  border-bottom: 1px solid var(--ink);
+}
+.mast__inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: var(--shell-mast-h);
+  padding-inline: var(--shell-gutter);
+}
+
+.mast__menu {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin-left: -4px;
+  border: 1px solid var(--line-3);
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+  transition:
+    border-color var(--t-fast) ease,
+    background-color var(--t-fast) ease,
+    color var(--t-fast) ease,
+    transform var(--t-fast) var(--ease-out);
+}
+.mast__menu:active {
+  transform: scale(0.97);
+}
+.mast__menu-close {
+  display: none;
+}
+.nav-open .mast__menu {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+}
+.nav-open .mast__menu-open {
+  display: none;
+}
+.nav-open .mast__menu-close {
+  display: inline;
+}
+@media (hover: hover) and (pointer: fine) {
+  .mast__menu:hover {
+    border-color: var(--ink);
+  }
+}
+
+.mast__brand {
+  min-width: 0;
+  min-height: 44px;
+  color: var(--ink);
+}
+.mast__brand .brand__mark {
+  width: 32px;
+  height: 32px;
+  font-size: 11px;
+}
+.mast__brand .brand__rev {
+  white-space: nowrap;
+}
+
+/* Framework switch: the docs' renderer switch, as links to the sibling demos. */
+.mast__fw {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 0 auto;
+}
+.mast__fw .fw-switch__k {
+  gap: 10px;
+  margin: 0;
+  white-space: nowrap;
+}
+.mast__fw .fw-switch__track {
+  min-width: 0;
+}
+.mast__fw .fw-switch__opt {
+  display: grid;
+  place-items: center;
+  min-width: 64px;
+  min-height: 34px;
+  padding: 0 10px;
+  text-decoration: none;
+}
+.mast__fw .fw-switch__opt:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -4px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .mast__fw .fw-switch__opt:not([data-state='active']):hover {
+    color: var(--ink);
+    background: var(--paper-2);
+  }
+}
+
+.mast__tools {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-left: 12px;
+  border-left: 1px solid var(--line-2);
+}
+.mast-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 36px;
+  padding: 0 8px;
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color var(--t-fast) ease;
+}
+.mast-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  color: var(--ink-2);
+  transition: color var(--t-fast) ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .mast-link:hover,
+  .mast-icon:hover {
+    color: var(--accent-ink);
+  }
+  .mast-link:hover .link__ext {
+    transform: translate(2px, -2px);
+  }
+}
+.mast__tools .theme-tg {
+  margin-left: 6px;
+}
+
+/* Wide: the brand sits in a cell over the register, ruled like its edge. */
+@media (min-width: 1024px) {
+  .mast__menu {
+    display: none;
+  }
+  .shell--demo .mast__brand {
+    flex: none;
+    align-self: stretch;
+    width: var(--shell-side-w);
+    margin-left: calc(-1 * var(--shell-gutter));
+    padding-left: 20px;
+    border-right: 1px solid var(--ink);
+  }
+}
+@media (max-width: 1279px) {
+  .mast__fw .fw-switch__k {
+    display: none;
+  }
+}
+@media (max-width: 699px) {
+  .mast__tools {
+    display: none;
+  }
+}
+@media (max-width: 599px) {
+  .mast__inner {
+    gap: 10px;
+  }
+  .mast__brand {
+    gap: 8px;
+  }
+  .mast__brand .brand__rev {
+    display: none;
+  }
+  .mast__fw .fw-switch__opt {
+    min-width: 0;
+    min-height: 40px;
+    padding: 0 8px;
+    font-size: 10.5px;
+    letter-spacing: 0.04em;
+  }
+}
+@media (max-width: 359px) {
+  .mast__brand .brand__name {
+    display: none;
+  }
+}
+
+/* ==========================================================================
+   Theme toggle: one button, two cells; the inked cell is the sheet colour.
+   ========================================================================== */
+.theme-tg {
+  display: inline-flex;
+  flex: none;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--line-3);
+  background: var(--paper);
+  color: var(--ink-3);
+  cursor: pointer;
+  transition:
+    border-color var(--t-fast) ease,
+    transform var(--t-fast) var(--ease-out);
+}
+.theme-tg:active {
+  transform: scale(0.97);
+}
+.theme-tg__cell {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 100%;
+  transition:
+    background-color var(--t-fast) ease,
+    color var(--t-fast) ease;
+}
+html:not(.dark) .theme-tg__cell--light,
+.dark .theme-tg__cell--dark {
+  background: var(--ink);
+  color: var(--paper);
+}
+@media (hover: hover) and (pointer: fine) {
+  .theme-tg:hover {
+    border-color: var(--ink);
+    color: var(--ink);
+  }
+}
+
+/* ==========================================================================
+   Sidebar: the drawing register (after the docs #nd-sidebar)
+   ========================================================================== */
+.side {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--paper);
+  border-right: 1px solid var(--ink);
+}
+.side__nav {
+  flex: 1;
+  min-height: 0;
+  padding: 20px 12px 24px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.side__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 0 8px 12px;
+  border-bottom: 1px solid var(--line-2);
+  color: var(--ink-3);
+}
+.side__count {
+  font-variant-numeric: tabular-nums;
+}
+.side__group + .side__group {
+  margin-top: 18px;
+}
+/* Separators read as sheet-set headings. */
+.side__sep {
+  margin-bottom: 4px;
+  padding: 0 8px;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.side__item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  padding: 6px 8px 6px 12px;
+  color: var(--ink-2);
+  font-size: 0.875rem;
+  line-height: 1.35;
+  text-decoration: none;
+  transition:
+    color var(--t-fast) ease,
+    background-color var(--t-fast) ease;
+}
+.side__no {
+  flex: none;
+  min-width: 18px;
+  padding-top: 1px;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  transition: color var(--t-fast) ease;
+}
+/* Quiet until active; active gets the accent tick. */
+.side__item[aria-current='page'] {
+  color: var(--ink);
+  font-weight: 600;
+  background: var(--accent-wash);
+}
+.side__item[aria-current='page']::before {
+  content: '';
+  position: absolute;
+  inset-block: 6px;
+  left: 0;
+  width: 2px;
+  background: var(--accent);
+}
+.side__item[aria-current='page'] .side__no {
+  color: var(--accent-ink);
+}
+@media (hover: hover) and (pointer: fine) {
+  .side__item:not([aria-current]):hover {
+    color: var(--ink);
+    background: var(--paper-2);
+  }
+  .side__item:not([aria-current]):hover .side__no {
+    color: var(--ink-2);
+  }
+}
+.side__item:focus-visible {
+  outline-offset: -2px;
+}
+
+.side__foot {
+  display: grid;
+  gap: 14px;
+  padding: 14px 20px 16px;
+  border-top: 1px solid var(--line-2);
+}
+.side__tools {
+  display: none;
+  gap: 14px;
+}
+.side__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+}
+.side__links .link--mono {
+  min-height: 40px;
+  font-size: 11px;
+}
+.side__theme {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--ink-3);
+}
+.side__theme .theme-tg {
+  height: 40px;
+}
+.side__stamp {
+  color: var(--ink-3);
+}
+
+.side-scrim {
+  display: none;
+}
+
+/* Wide: a sticky register under the masthead. */
+@media (min-width: 1024px) {
+  .side {
+    position: sticky;
+    top: var(--shell-mast-h);
+    height: calc(100vh - var(--shell-mast-h));
+    height: calc(100dvh - var(--shell-mast-h));
+  }
+  .side--drawer-only {
+    display: none;
+  }
+}
+
+/* Narrow: a drawer under the masthead, over a tracing-paper scrim. */
+@media (max-width: 1023px) {
+  .side {
+    position: fixed;
+    top: var(--shell-mast-h);
+    bottom: 0;
+    left: 0;
+    z-index: 35;
+    width: min(320px, calc(100vw - 48px));
+    visibility: hidden;
+    transform: translateX(-100%);
+    transition:
+      transform var(--t-med) var(--ease-out),
+      visibility 0s linear var(--t-med);
+  }
+  .nav-open .side {
+    visibility: visible;
+    transform: none;
+    transition: transform var(--t-med) var(--ease-out);
+  }
+  .side__item {
+    min-height: 44px;
+  }
+  .side-scrim {
+    display: block;
+    position: fixed;
+    inset: var(--shell-mast-h) 0 0;
+    z-index: 34;
+    background: color-mix(in srgb, var(--paper) 72%, transparent);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--t-med) ease;
+  }
+  .nav-open .side-scrim {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  html.nav-open {
+    overflow: hidden;
+  }
+}
+@media (max-width: 699px) {
+  .side__tools {
+    display: grid;
+  }
+}
+
+/* ==========================================================================
+   Sheet head + lead (x-demo.page-header)
+   ========================================================================== */
+.dhead__lead {
+  max-width: 44rem;
+  margin-top: 20px;
+  color: var(--ink-2);
+  font-size: 1.0625rem;
+  line-height: 1.65;
+  text-wrap: pretty;
+}
+@media (min-width: 640px) {
+  .dhead__lead {
+    font-size: 1.125rem;
+  }
+}
+
+/* Inline code in shell copy: a stamped part number. */
+:is(.dhead__lead, .dsec__desc, .note__content) code {
+  padding: 1px 5px;
+  border: 1px solid var(--line-2);
+  background: var(--paper-2);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.84em;
+  overflow-wrap: break-word;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+/* ==========================================================================
+   Sections (x-demo.section): numbered, ruled, figure, caption, source
+   ========================================================================== */
+.dsec {
+  counter-increment: sheet-h2;
+  scroll-margin-top: calc(var(--shell-mast-h) + 16px);
+}
+.dsec__title {
+  padding-top: 20px;
+  border-top: 1px solid var(--line-2);
+  font-size: 1.375rem;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+.dsec__title::before {
+  content: counter(sheet-h2, decimal-leading-zero);
+  display: block;
+  margin-bottom: 8px;
+  color: var(--accent-ink);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+}
+@media (min-width: 640px) {
+  .dsec__title {
+    font-size: 1.5rem;
+  }
+}
+.dsec__desc {
+  max-width: 44rem;
+  margin-top: 10px;
+  color: var(--ink-2);
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  text-wrap: pretty;
+}
+.dsec__fig {
+  margin: 24px 0 0;
+}
+.dsec__stage {
+  min-width: 0;
+}
+/* "Fig. N ·" (from .sheet) | caption | Live */
+.dsec__cap {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: baseline;
+  column-gap: 6px;
+}
+.dsec__cap-text {
+  min-width: 0;
+}
+.dsec__live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-self: end;
+  margin-left: 10px;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.dsec__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  animation: dsec-live 2.4s ease-in-out infinite;
+}
+@keyframes dsec-live {
+  50% {
+    opacity: 0.3;
+  }
+}
+.dsec__code {
+  margin-top: 20px;
+}
+
+/* ==========================================================================
+   Code viewer (x-code-viewer): drafting colours from the docs Shiki themes,
+   as CSS variables, so one Phiki theme follows light, dark and the accent.
+   ========================================================================== */
+:is(.cv, .phiki) {
+  --code-bg: var(--paper-2);
+  --code-fg: var(--ink);
+  --code-keyword: var(--accent-ink);
+  --code-string: var(--blueline);
+  --code-constant: color-mix(in srgb, var(--accent-ink) 78%, var(--accent));
+  --code-comment: color-mix(in srgb, var(--ink-3) 75%, var(--paper));
+  --code-punctuation: var(--ink-3);
+  --code-entity: var(--ink);
+  --code-variable: var(--ink-2);
+  --code-tag: var(--accent-ink);
+  --code-attribute: var(--ink-2);
+}
+.dark :is(.cv, .phiki) {
+  --code-constant: color-mix(in srgb, var(--accent-ink) 70%, var(--ink));
+  --code-comment: color-mix(in srgb, var(--ink-3) 85%, var(--paper));
+}
+
+.cv {
+  min-width: 0;
+  border: 1px solid var(--line-3);
+  background: var(--paper-2);
+}
+.cv__head {
+  display: flex;
+  align-items: stretch;
+  min-height: 40px;
+  border-bottom: 1px solid var(--line-2);
+  background: var(--paper);
+}
+.cv__k {
+  display: flex;
+  flex: none;
+  align-items: center;
+  padding: 0 12px 0 14px;
+  border-right: 1px solid var(--line-2);
+  color: var(--ink-3);
+}
+.cv__tabs {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.cv__tabs::-webkit-scrollbar {
+  display: none;
+}
+.cv__tab {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  transition: color var(--t-fast) ease;
+}
+.cv__tab::after {
+  content: '';
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 0;
+  height: 2px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform var(--t-med) var(--ease-out);
+}
+.cv__tab-dir {
+  color: var(--ink-3);
+}
+.cv__tab[aria-selected='true'] {
+  color: var(--ink);
+}
+.cv__tab[aria-selected='true']::after {
+  transform: scaleX(1);
+}
+.cv__tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -4px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .cv__tab:hover {
+    color: var(--ink);
+  }
+}
+
+/* Copy: a stamped mono button (the docs' copy). */
+.cv__copy {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 0;
+  border-left: 1px solid var(--line-2);
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition:
+    background-color var(--t-fast) ease,
+    color var(--t-fast) ease;
+}
+.cv__copy-icons {
+  display: grid;
+  width: 14px;
+  height: 14px;
+}
+.cv__copy-icons svg {
+  grid-area: 1 / 1;
+  transition:
+    opacity 180ms ease,
+    transform 320ms var(--ease-spring);
+}
+.cv__copy-done {
+  opacity: 0;
+  transform: scale(0.5);
+}
+.cv__copy-label {
+  min-width: 6ch;
+  text-align: left;
+}
+.cv__copy.is-done {
+  color: var(--accent-ink);
+}
+.cv__copy.is-done .cv__copy-idle {
+  opacity: 0;
+  transform: scale(0.5);
+}
+.cv__copy.is-done .cv__copy-done {
+  opacity: 1;
+  transform: none;
+}
+.cv__copy:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -4px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .cv__copy:not(.is-done):hover {
+    background: var(--ink);
+    color: var(--paper);
+  }
+}
+
+.cv__path {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px 16px;
+  padding: 7px 16px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-3);
+}
+.cv__path-file {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.cv__path-lines {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+.cv__code {
+  max-height: 600px;
+  overflow: auto;
+}
+.cv__code:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.cv pre.phiki {
+  min-width: max-content;
+  margin: 0;
+  padding: 14px 20px 16px 0;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.7;
+  tab-size: 4;
+  /* The gutter rule: a hairline between the line numbers and the code. */
+  background-image: linear-gradient(var(--line), var(--line));
+  background-position: calc(3ch + 24px) 0;
+  background-size: 1px 100%;
+  background-repeat: no-repeat;
+}
+.cv pre.phiki code {
+  font: inherit;
+}
+.cv .line-number {
+  display: inline-block;
+  width: calc(3ch + 36px);
+  padding-right: 22px;
+  color: var(--line-3);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  user-select: none;
+}
+@media (max-width: 599px) {
+  .cv__k {
+    display: none;
+  }
+  .cv__code {
+    max-height: 480px;
+  }
+  .cv pre.phiki {
+    font-size: 12px;
+  }
+  .cv__path {
+    padding-inline: 12px;
+  }
+}
+
+/* ==========================================================================
+   Notes (x-demo.note): the primitive lives in drafting.css
+   ========================================================================== */
+.note__content :where(p, ul, ol) + :where(p, ul, ol) {
+  margin-top: 0.6em;
+}
+
+/* ==========================================================================
+   Prev / next sheets
+   ========================================================================== */
+.pager {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 64px;
+}
+.pager__link {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  min-height: 72px;
+  padding: 14px 16px;
+  border: 1px solid var(--line-2);
+  background: var(--paper);
+  color: var(--ink);
+  text-decoration: none;
+  transition: border-color var(--t-fast) ease;
+}
+.pager__link--next {
+  grid-column: 2;
+  text-align: right;
+}
+.pager__k {
+  color: var(--ink-3);
+}
+.pager__title {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+.pager__link::after {
+  content: '';
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 7px;
+  height: 7px;
+  background: var(--accent);
+  opacity: 0;
+  transform: translate(-3px, -3px);
+  transition:
+    opacity var(--t-fast) ease,
+    transform var(--t-med) var(--ease-spring);
+}
+@media (hover: hover) and (pointer: fine) {
+  .pager__link:hover {
+    border-color: var(--ink);
+  }
+  .pager__link:hover::after {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (max-width: 559px) {
+  .pager {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .pager__link--next {
+    grid-column: 1;
+  }
+}
+
+/* ==========================================================================
+   Title block (x-demo.title-block): the primitive lives in drafting.css
+   ========================================================================== */
+.dtb {
+  margin-top: 40px;
+}
+.pager + .dtb {
+  margin-top: 32px;
+}
+
+/* ==========================================================================
+   Footer: the end-of-set strip (home layout)
+   ========================================================================== */
+.foot {
+  border-top: 1px solid var(--ink);
+  background: var(--paper);
+}
+.foot__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2px 24px;
+  padding: 8px var(--shell-gutter);
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.foot__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 20px;
+}
+.foot__inner .link--mono {
+  min-height: 36px;
+  font-size: 0.6875rem;
+}
+.foot__by .link {
+  color: var(--ink-2);
+}
+@media (max-width: 599px) {
+  .foot__inner {
+    padding-block: 12px;
+  }
+  .foot__inner .link--mono {
+    min-height: 40px;
+  }
+}
+
+/* ==========================================================================
+   Reduced motion: final states, no travel
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .side,
+  .nav-open .side,
+  .side-scrim,
+  .mast__menu,
+  .theme-tg,
+  .theme-tg__cell,
+  .cv__tab::after,
+  .cv__copy-icons svg,
+  .pager__link::after,
+  .mast-link .link__ext {
+    transition: none;
+  }
+  .dsec__dot {
+    animation: none;
+  }
+  .mast__menu:active,
+  .theme-tg:active {
+    transform: none;
+  }
+}

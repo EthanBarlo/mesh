@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { BigNumber, Eyebrow, GlowCard } from "@/components/ui";
+import { BigNumber, Eyebrow, Panel } from "@/components/ui";
 
 interface HelloIslandProps {
     greeting: string;
@@ -23,20 +23,19 @@ const HelloIsland: React.FC<HelloIslandProps> = ({ greeting, chunkNote }) => {
     }, []);
 
     return (
-        <GlowCard contentClassName="p-6 flex flex-col sm:flex-row sm:items-center gap-5">
-            <div className="flex-1">
+        <Panel className="flex flex-col gap-5 sm:flex-row sm:items-center">
+            <div className="min-w-0 flex-1">
                 <Eyebrow>Architecture/HelloIsland</Eyebrow>
-                <h3 className="mt-1 text-xl font-semibold tracking-tight text-white">{greeting}</h3>
-                <p className="mt-1 text-sm text-zinc-400 leading-relaxed">{chunkNote}</p>
+                <h3 className="mt-1.5 text-xl font-semibold tracking-tight text-ink">{greeting}</h3>
+                <p className="mt-1 text-sm leading-relaxed text-ink-2">{chunkNote}</p>
             </div>
 
-            <div className="shrink-0 px-5 py-4 rounded-xl bg-white/[0.02] border border-white/5 text-center">
-                <BigNumber className="text-3xl">{elapsed.toFixed(1)}s</BigNumber>
-                <div className="mt-1 text-[11px] font-medium uppercase tracking-widest text-zinc-500">
-                    since mount
-                </div>
+            {/* The ticker is the island's one accent: proof it just mounted. */}
+            <div className="shrink-0 border-t border-line-2 pt-4 sm:border-t-0 sm:border-l sm:pt-0 sm:pl-6 sm:text-right">
+                <BigNumber className="text-3xl text-accent-ink">{elapsed.toFixed(1)}s</BigNumber>
+                <div className="k k--caps mt-1 text-ink-3">Since mount</div>
             </div>
-        </GlowCard>
+        </Panel>
     );
 };
 

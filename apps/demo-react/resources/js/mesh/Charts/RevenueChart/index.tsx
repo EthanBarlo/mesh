@@ -1,8 +1,9 @@
 import React, { useMemo } from "react";
 import ReactECharts from "echarts-for-react";
 import { useEntangle } from "@mesh/react";
-import { Eyebrow, SegmentedControl } from "@/components/ui";
+import { SegmentedControl } from "@/components/ui";
 import { buildRevenueChartOption, currency } from "@/components/demo/Charts/revenueChartOption";
+import { useChartTheme } from "@/components/demo/Charts/useChartTheme";
 
 type Range = "7d" | "30d" | "90d";
 
@@ -29,22 +30,28 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ labels, series, range }) =>
     // Mesh patches the new props into this still-mounted component.
     const [selectedRange, setSelectedRange] = useEntangle<Range>("range", true);
 
+    // Colours resolved from the page's CSS variables; re-read on theme toggle.
+    const theme = useChartTheme();
+
     // Stats are derived from the props, so they always describe the dataset
     // the chart is currently showing (props.range, not the optimistic UI value).
     const totalRevenue = series.revenue.reduce((sum, v) => sum + v, 0);
     const totalOrders = series.orders.reduce((sum, v) => sum + v, 0);
     const avgPerDay = totalRevenue / DAYS[range];
 
-    const option = useMemo(() => buildRevenueChartOption(labels, series), [labels, series]);
+    const option = useMemo(
+        () => buildRevenueChartOption(labels, series, theme),
+        [labels, series, theme],
+    );
 
     return (
-        <div className="space-y-5">
-            <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="plot">
+            <div className="plot__head">
                 <div>
-                    <h3 className="text-sm font-semibold tracking-tight text-white">Revenue &amp; orders</h3>
-                    <p className="text-xs text-zinc-500 mt-0.5">
-                        Series recomputed in <code className="font-mono text-zinc-400">props()</code> on
-                        every range change
+                    <h3 className="plot__title">Revenue &amp; orders</h3>
+                    <p className="k mt-0.5 text-ink-3">
+                        Series recomputed in <code className="text-ink-2">props()</code> on every
+                        range change
                     </p>
                 </div>
 
@@ -56,9 +63,9 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ labels, series, range }) =>
                 />
             </div>
 
-            {/* Chart — fixed height; ECharts animates between datasets because
-                Mesh updates props in place and never remounts the component. */}
-            <div className="h-[360px] w-full">
+            {/* Fixed height; ECharts animates between datasets because Mesh
+                updates props in place and never remounts the component. */}
+            <div className="plot__canvas">
                 <ReactECharts
                     option={option}
                     notMerge={false}
@@ -67,31 +74,27 @@ const RevenueChart: React.FC<RevenueChartProps> = ({ labels, series, range }) =>
                 />
             </div>
 
-            {/* Stat row computed from the current props */}
-            <div className="flex flex-wrap items-center gap-x-10 gap-y-3 pt-4 border-t border-white/5">
-                <div>
-                    <Eyebrow className="block font-normal">Total revenue</Eyebrow>
-                    <span className="text-lg font-semibold tabular-nums text-white">
-                        {currency.format(totalRevenue)}
-                    </span>
+            {/* Readout computed from the current props */}
+            <dl className="readout">
+                <div className="readout__cell">
+                    <dt className="readout__k k k--caps">Total revenue</dt>
+                    <dd className="readout__v">{currency.format(totalRevenue)}</dd>
                 </div>
-                <div>
-                    <Eyebrow className="block font-normal">Avg / day</Eyebrow>
-                    <span className="text-lg font-semibold tabular-nums text-white">
-                        {currency.format(avgPerDay)}
-                    </span>
+                <div className="readout__cell">
+                    <dt className="readout__k k k--caps">Avg / day</dt>
+                    <dd className="readout__v">{currency.format(avgPerDay)}</dd>
                 </div>
-                <div>
-                    <Eyebrow className="block font-normal">Orders</Eyebrow>
-                    <span className="text-lg font-semibold tabular-nums text-white">
-                        {totalOrders.toLocaleString("en-US")}
-                    </span>
+                <div className="readout__cell">
+                    <dt className="readout__k k k--caps">Orders</dt>
+                    <dd className="readout__v">{totalOrders.toLocaleString("en-US")}</dd>
                 </div>
-                <div className="ml-auto text-xs text-zinc-500">
-                    Showing <span className="text-zinc-300 font-medium">{labels.length}</span>{" "}
-                    {range === "90d" ? "weekly" : "daily"} points
+                <div className="readout__cell">
+                    <dt className="readout__k k k--caps">Points</dt>
+                    <dd className="readout__v readout__v--mono">
+                        {labels.length} {range === "90d" ? "weekly" : "daily"}
+                    </dd>
                 </div>
-            </div>
+            </dl>
         </div>
     );
 };

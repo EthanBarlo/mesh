@@ -145,8 +145,11 @@ const Dropzone: React.FC<DropzoneProps> = ({ maxKilobytes, accept }) => {
                 busy={status === "uploading"}
                 hint={
                     <>
-                        Images only, up to {formatBytes(maxKilobytes * 1024)} —
-                        enforced server-side
+                        Images only · up to{" "}
+                        <span className="tabular-nums">
+                            {formatBytes(maxKilobytes * 1024)}
+                        </span>{" "}
+                        · checked on the server
                     </>
                 }
                 onBrowse={handleBrowse}
@@ -157,11 +160,16 @@ const Dropzone: React.FC<DropzoneProps> = ({ maxKilobytes, accept }) => {
 
             {status === "uploading" && (
                 <Panel>
-                    <div className="mb-2 flex items-center justify-between text-sm">
-                        <span className="font-medium text-white">
-                            Uploading to temporary storage…
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                        <span className="core-status core-status--ink">
+                            <span
+                                className="core-dot"
+                                data-state="live"
+                                aria-hidden="true"
+                            />
+                            Uploading to temporary storage
                         </span>
-                        <span className="tabular-nums text-zinc-400">
+                        <span className="font-mono text-sm tabular-nums text-ink">
                             {progress}%
                         </span>
                     </div>
@@ -173,27 +181,11 @@ const Dropzone: React.FC<DropzoneProps> = ({ maxKilobytes, accept }) => {
                 <Alert
                     tone="error"
                     title="Upload rejected"
-                    icon={
-                        <svg
-                            className="h-5 w-5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            strokeWidth={1.5}
-                            stroke="currentColor"
-                            aria-hidden="true"
-                        >
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M12 9v3.75m0 3.75h.008v.008H12v-.008zM21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                            />
-                        </svg>
-                    }
                     action={
                         <Button
                             variant="secondary"
+                            size="sm"
                             onClick={handleTryAgain}
-                            className="h-auto px-4 py-2"
                         >
                             Try again
                         </Button>

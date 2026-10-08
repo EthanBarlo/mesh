@@ -70,6 +70,8 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ plans }) => {
         }
     };
 
+    const errorFields = Object.keys(errors ?? {}).length;
+
     return (
         <div className="max-w-xl">
             <form onSubmit={handleSubmit} noValidate className="space-y-5">
@@ -87,13 +89,17 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ plans }) => {
                     label="Slug"
                     htmlFor="project-slug"
                     corner={
-                        <span className="inline-flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-zinc-500">
-                            <span className="inline-flex rounded-full h-1.5 w-1.5 bg-rose-400" />
-                            live — validates per keystroke
+                        <span className="core-status">
+                            <span
+                                className="core-dot"
+                                data-state="live"
+                                aria-hidden="true"
+                            />
+                            Live · per keystroke
                         </span>
                     }
                     error={errors.slug}
-                    hint="Auto-derived from the name until you edit it. Lowercase letters, numbers and dashes only."
+                    hint="Derived from the name until you edit it. Lowercase letters, numbers and dashes only."
                 >
                     <Input
                         id="project-slug"
@@ -119,8 +125,18 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ plans }) => {
                 <div>
                     <PlanPicker plans={plans} value={plan} onChange={setPlan} />
                     {errors.plan && errors.plan.length > 0 && (
-                        <p className="mt-1.5 text-xs text-rose-400" role="alert">
-                            {errors.plan[0]}
+                        <p
+                            className="mt-1.5 flex items-start gap-1.5 text-xs leading-snug text-danger"
+                            role="alert"
+                        >
+                            <svg
+                                className="mt-[2px] size-2.5 shrink-0"
+                                viewBox="0 0 10 10"
+                                aria-hidden="true"
+                            >
+                                <path d="M5 .8 9.4 9.2H.6Z" fill="currentColor" />
+                            </svg>
+                            <span>{errors.plan[0]}</span>
                         </p>
                     )}
                 </div>
@@ -129,7 +145,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ plans }) => {
                     type="submit"
                     variant="primary"
                     loading={submitting}
-                    className="w-full py-3"
+                    className="w-full"
                 >
                     {submitting ? "Creating…" : "Create project"}
                 </Button>
@@ -139,28 +155,30 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ plans }) => {
             {created && (
                 <Alert
                     tone="success"
-                    className="mt-6 rounded-xl p-4"
-                    icon={
-                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/5 text-xs text-emerald-400">
-                            ✓
-                        </span>
-                    }
-                    title={
-                        <span className="text-sm font-semibold">
-                            Project created — payload returned by save()
-                        </span>
-                    }
+                    className="mt-6"
+                    title="Project created"
                 >
-                    <JsonDump value={created} className="mt-1.5" />
+                    <p className="font-mono text-xs text-ink-3">
+                        Payload returned by save()
+                    </p>
+                    <JsonDump value={created} className="mt-2" />
                 </Alert>
             )}
 
             {/* Raw error bag — exactly the object useErrorBag() hands back. */}
-            <details className="mt-6 group">
-                <summary className="cursor-pointer select-none text-xs font-medium text-zinc-500 hover:text-white transition-colors duration-150">
-                    <span className="group-open:hidden">▸</span>
-                    <span className="hidden group-open:inline">▾</span>{" "}
-                    Error bag, raw — exactly what useErrorBag() returns
+            <details className="group mt-6">
+                <summary className="inline-flex min-h-10 cursor-pointer list-none items-center gap-2 select-none text-ink-3 transition-colors duration-150 hover:text-ink [&::-webkit-details-marker]:hidden">
+                    <span
+                        className="font-mono text-xs transition-transform duration-150 group-open:rotate-90 motion-reduce:transition-none"
+                        aria-hidden="true"
+                    >
+                        ▸
+                    </span>
+                    <span className="k k--caps">Raw error bag</span>
+                    <span className="font-mono text-xs">useErrorBag()</span>
+                    <span className="k tabular-nums">
+                        · {errorFields} {errorFields === 1 ? "field" : "fields"}
+                    </span>
                 </summary>
                 <JsonDump value={errors} className="mt-2" />
             </details>

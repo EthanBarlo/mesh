@@ -27,28 +27,31 @@ const EntangleModes: React.FC<EntangleModesProps> = ({
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
                 {/* Deferred input */}
                 <Panel>
-                    <label
-                        htmlFor="entangle-deferred"
-                        className="block text-sm font-semibold text-white"
-                    >
-                        Deferred
-                    </label>
-                    <p className="mt-0.5 mb-3 font-mono text-xs text-zinc-500">
+                    <div className="flex items-baseline justify-between gap-3">
+                        <label
+                            htmlFor="entangle-deferred"
+                            className="text-sm font-semibold text-ink"
+                        >
+                            Deferred
+                        </label>
+                        <span className="k k--caps text-ink-3">Default</span>
+                    </div>
+                    <p className="mt-0.5 mb-3 font-mono text-xs text-ink-3">
                         useEntangle("message")
                     </p>
                     <Input
                         id="entangle-deferred"
                         value={message ?? ""}
                         onChange={(e) => setMessage(e.target.value)}
-                        placeholder="Type — nothing is sent yet"
-                        className="px-4 py-3 text-base"
+                        placeholder="Type a message"
                     />
                     <ServerValue
-                        className="mt-2"
+                        mode="deferred"
+                        property="$message"
                         value={serverMessage}
                         synced={serverMessage === (message ?? "")}
                     />
@@ -56,49 +59,52 @@ const EntangleModes: React.FC<EntangleModesProps> = ({
 
                 {/* Live input */}
                 <Panel>
-                    <label
-                        htmlFor="entangle-live"
-                        className="block text-sm font-semibold text-white"
-                    >
-                        Live
-                    </label>
-                    <p className="mt-0.5 mb-3 font-mono text-xs text-zinc-500">
+                    <div className="flex items-baseline justify-between gap-3">
+                        <label
+                            htmlFor="entangle-live"
+                            className="text-sm font-semibold text-ink"
+                        >
+                            Live
+                        </label>
+                        <span className="k k--caps text-ink-3">
+                            Per keystroke
+                        </span>
+                    </div>
+                    <p className="mt-0.5 mb-3 font-mono text-xs text-ink-3">
                         useEntangle("liveMessage", true)
                     </p>
                     <Input
                         id="entangle-live"
                         value={liveMessage ?? ""}
                         onChange={(e) => setLiveMessage(e.target.value)}
-                        placeholder="Type — every keystroke syncs"
-                        className="px-4 py-3 text-base"
+                        placeholder="Type a message"
                     />
                     <ServerValue
-                        className="mt-2"
+                        mode="live"
+                        property="$liveMessage"
                         value={serverLiveMessage}
                         synced={serverLiveMessage === (liveMessage ?? "")}
                     />
                 </Panel>
             </div>
 
-            {/* Round-trip panel */}
-            <Panel className="flex flex-col sm:flex-row sm:items-center gap-4">
-                <div className="flex items-center gap-4 grow">
-                    <BigNumber className="text-5xl">{requests}</BigNumber>
-                    <div>
-                        <p className="text-sm font-semibold text-white">
-                            Server round-trips
-                        </p>
-                        <p className="text-xs text-zinc-500 leading-relaxed max-w-sm">
-                            Counted in the component's Livewire{" "}
-                            <code className="font-mono text-zinc-300">
-                                updated()
-                            </code>{" "}
-                            hooks — only requests that actually delivered a
-                            property change increment it.
-                        </p>
+            {/* Round-trip counter */}
+            <Panel className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                <div className="flex grow items-center gap-5">
+                    <div className="shrink-0">
+                        <p className="k k--caps text-ink-3">Round-trips</p>
+                        <BigNumber className="mt-1 block text-5xl leading-none">
+                            {String(requests).padStart(2, "0")}
+                        </BigNumber>
                     </div>
+                    <p className="max-w-sm border-l border-line-2 pl-5 text-xs leading-relaxed text-ink-3">
+                        Counted in the component's Livewire{" "}
+                        <code className="core-code">updated()</code> hooks.
+                        Only requests that delivered a property change count.
+                    </p>
                 </div>
                 <Button
+                    variant="secondary"
                     onClick={handleFlush}
                     className="shrink-0"
                     aria-label="Flush deferred changes to the server now"

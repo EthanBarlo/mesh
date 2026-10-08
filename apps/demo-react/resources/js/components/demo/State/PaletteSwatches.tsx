@@ -18,45 +18,52 @@ export interface PaletteSwatchesProps {
     className?: string;
 }
 
-/** Header dot + title + swatch grid for a server-computed palette prop. */
+/**
+ * Header chip + title + swatch schedule for a server-computed palette prop.
+ * The swatch colours are data from props(), so they stay real hex values.
+ */
 const PaletteSwatches: React.FC<PaletteSwatchesProps> = ({
     theme,
     palette,
     className,
 }) => (
     <div className={cn(className)}>
-        <div className="flex items-center gap-2">
+        <p className="k k--caps text-ink-3">Server props</p>
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
             <span
-                className="w-3 h-3 rounded-full"
+                className="size-3 shrink-0 border border-line-3"
                 style={{ backgroundColor: palette.accent }}
                 aria-hidden="true"
             />
-            <h3 className="text-sm font-semibold text-white">
+            <h3 className="text-sm font-semibold text-ink">
                 {palette.label} palette
             </h3>
-            <code className="font-mono text-xs text-zinc-500">
+            <code className="font-mono text-xs text-ink-3">
                 theme = "{theme}"
             </code>
         </div>
-        <p className="mt-1 text-xs text-zinc-500">
-            Computed in <code className="font-mono">props()</code> on the
-            server, delivered as a prop on every re-render.
+        <p className="mt-1 text-xs leading-relaxed text-ink-3">
+            Computed in <code className="core-code">props()</code> on the
+            server and delivered as a prop on every render.
         </p>
-        <div className="mt-4 flex gap-3">
+        <ul className="mt-4 flex flex-wrap gap-3">
             {palette.swatches.map((swatch) => (
-                <div key={swatch.name} className="text-center">
+                <li key={swatch.name} className="w-14">
                     <div
-                        className="w-14 h-14 rounded-xl border border-white/10"
+                        className="size-14 border border-line-3"
                         style={{ backgroundColor: swatch.hex }}
                         role="img"
                         aria-label={`${palette.label} ${swatch.name}: ${swatch.hex}`}
                     />
-                    <span className="mt-1.5 block font-mono text-[10px] text-zinc-500">
+                    <span className="mt-1.5 block font-mono text-[11px] leading-tight text-ink-2 tabular-nums">
+                        {swatch.name}
+                    </span>
+                    <span className="block font-mono text-[10px] leading-tight text-ink-3">
                         {swatch.hex}
                     </span>
-                </div>
+                </li>
             ))}
-        </div>
+        </ul>
     </div>
 );
 

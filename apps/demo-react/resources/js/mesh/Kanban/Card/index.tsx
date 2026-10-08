@@ -101,19 +101,12 @@ const Card: React.FC<CardProps> = ({ card, columnId, position }) => {
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
-            className={cn(
-                "relative mx-3 mt-2.5 cursor-grab active:cursor-grabbing select-none",
-                isSource && "opacity-40",
-            )}
+            className="lane__item lane__grab"
             aria-label={`${card.title} (${card.tag})`}
         >
-            {indicator === "above" && (
-                <span className="absolute inset-x-1 -top-[7px] h-0.5 rounded-full bg-rose-400 pointer-events-none" />
-            )}
-            <CardFace card={card} />
-            {indicator === "below" && (
-                <span className="absolute inset-x-1 -bottom-[7px] h-0.5 rounded-full bg-rose-400 pointer-events-none" />
-            )}
+            {indicator === "above" && <span className="drop-mark drop-mark--above" aria-hidden="true" />}
+            <CardFace card={card} className={cn(isSource && "ticket--source")} />
+            {indicator === "below" && <span className="drop-mark drop-mark--below" aria-hidden="true" />}
         </div>
     );
 };

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useWire } from "@mesh/react";
-import { Button, Eyebrow, Panel, Stat, Textarea } from "@/components/ui";
+import { Button, Panel, Textarea, cn } from "@/components/ui";
 import Die from "@/components/demo/Wire/Die";
 
 interface ServerActionsProps {
@@ -52,10 +52,24 @@ const ServerActions: React.FC<ServerActionsProps> = ({ placeholder }) => {
         }
     };
 
+    // The return array's keys, exactly as PHP sends them.
+    const returned: [string, React.ReactNode][] = [
+        ["words", analysis?.words],
+        ["characters", analysis?.characters],
+        [
+            "longestWord",
+            analysis ? (analysis.longestWord ? `"${analysis.longestWord}"` : '""') : undefined,
+        ],
+        ["analyzedAt", analysis?.analyzedAt],
+    ];
+
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Panel className="flex flex-col">
-                <Eyebrow>await wire.$call("analyze", text)</Eyebrow>
+                <p className="k k--caps text-ink-3">Analyze text</p>
+                <p className="mt-0.5 font-mono text-xs text-ink">
+                    await wire.$call("analyze", text)
+                </p>
 
                 <Textarea
                     value={text}
@@ -75,42 +89,74 @@ const ServerActions: React.FC<ServerActionsProps> = ({ placeholder }) => {
                     {analyzing ? "Analyzing on server…" : "Analyze on server"}
                 </Button>
 
-                {analysis ? (
-                    <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
-                        <Stat label="Words" value={analysis.words} />
-                        <Stat label="Characters" value={analysis.characters} />
-                        <Stat label="Longest word" value={analysis.longestWord || "—"} />
-                        <Stat label="Server time" value={analysis.analyzedAt} />
-                    </div>
-                ) : (
-                    <p className="mt-4 text-sm text-zinc-500">
-                        The result object below is the PHP method's return value — no route, no controller, no fetch.
+                <div className="mt-5">
+                    <p className="k k--caps text-ink-3">
+                        Returned by analyze()
                     </p>
-                )}
+                    <dl
+                        className={cn(
+                            "core-readout mt-1 transition-opacity duration-150 motion-reduce:transition-none",
+                            analyzing && "opacity-50",
+                        )}
+                        aria-live="polite"
+                    >
+                        {returned.map(([key, value]) => (
+                            <div key={key}>
+                                <dt>{key}</dt>
+                                <dd>
+                                    {value === undefined ? (
+                                        <span className="text-ink-3">—</span>
+                                    ) : (
+                                        value
+                                    )}
+                                </dd>
+                            </div>
+                        ))}
+                    </dl>
+                </div>
             </Panel>
 
             <Panel className="flex flex-col">
-                <Eyebrow>await wire.$call("rollDice")</Eyebrow>
+                <p className="k k--caps text-ink-3">Roll dice</p>
+                <p className="mt-0.5 font-mono text-xs text-ink">
+                    await wire.$call("rollDice")
+                </p>
 
-                <div className="flex-1 flex flex-col items-center justify-center py-6">
-                    {roll ? (
-                        <>
-                            <div className={`flex items-center gap-3 transition-opacity ${rolling ? "opacity-40" : "opacity-100"}`}>
-                                {roll.dice.map((value, i) => (
-                                    <Die key={i} value={value} />
-                                ))}
-                            </div>
-                            <p className="mt-4 text-sm text-zinc-400">
-                                Server total:{" "}
-                                <span className="text-xl font-semibold text-white tabular-nums align-middle">{roll.total}</span>
-                            </p>
-                        </>
-                    ) : (
-                        <p className="text-sm text-zinc-500 text-center max-w-xs">
-                            PHP's <code className="font-mono text-zinc-400">random_int()</code> rolls the dice — the array comes back as a
-                            resolved Promise.
-                        </p>
-                    )}
+                <div className="flex flex-1 flex-col items-center justify-center py-8">
+                    <div className="inline-flex flex-col gap-3">
+                        <div
+                            className={cn(
+                                "flex items-center gap-3 transition-opacity duration-150 motion-reduce:transition-none",
+                                rolling && "opacity-40",
+                            )}
+                        >
+                            {roll
+                                ? roll.dice.map((value, i) => (
+                                      <Die key={i} value={value} />
+                                  ))
+                                : [0, 1, 2].map((i) => (
+                                      <span
+                                          key={i}
+                                          className="size-14 border border-dashed border-line-3"
+                                          aria-hidden="true"
+                                      />
+                                  ))}
+                        </div>
+                        {/* Dimension line under the three dice: their total. */}
+                        <div className="core-dim" aria-live="polite">
+                            <span>
+                                total{" "}
+                                <span className="font-medium text-ink">
+                                    {roll ? roll.total : "—"}
+                                </span>
+                            </span>
+                        </div>
+                    </div>
+                    <p className="mt-5 max-w-xs text-center text-xs leading-relaxed text-ink-3">
+                        PHP's <code className="core-code">random_int()</code>{" "}
+                        rolls the dice. The array comes back as the resolved
+                        Promise.
+                    </p>
                 </div>
 
                 <Button

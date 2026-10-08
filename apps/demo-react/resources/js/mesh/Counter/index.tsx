@@ -1,11 +1,12 @@
 import React from "react";
 import { useEntangle } from "@mesh/react";
-import { BigNumber, Button, Eyebrow, GlowCard } from "@/components/ui";
 
 interface CounterProps {
     initialCount: number;
 }
 
+// Card C on the home page. It shares the `.ctr` drafting card markup (home.css)
+// with the two Livewire cards, so all three read as one drawing.
 const Counter: React.FC<CounterProps> = ({ initialCount }) => {
     // Deferred (lazy) entangle: clicks write to the shared client-side
     // Livewire store, so the Alpine card follows instantly with zero
@@ -14,44 +15,49 @@ const Counter: React.FC<CounterProps> = ({ initialCount }) => {
     const [count, setCount] = useEntangle<number>("count");
 
     return (
-        <GlowCard contentClassName="p-8">
-            <div className="text-center">
-                <Eyebrow className="mb-4 block">React Counter</Eyebrow>
-
-                <div className="my-6">
-                    <BigNumber className="text-7xl">{count}</BigNumber>
-                </div>
-
-                <div className="flex items-center justify-center gap-3">
-                    <Button
-                        variant="secondary"
-                        size="icon"
-                        onClick={() => setCount(count - 1)}
-                        aria-label="Decrement counter"
-                    >
-                        -
-                    </Button>
-
-                    <Button
-                        variant="ghost"
-                        className="px-5 h-14"
-                        onClick={() => setCount(initialCount)}
-                        aria-label="Reset counter"
-                    >
-                        Reset
-                    </Button>
-
-                    <Button
-                        variant="primary"
-                        size="icon"
-                        onClick={() => setCount(count + 1)}
-                        aria-label="Increment counter"
-                    >
-                        +
-                    </Button>
-                </div>
+        <div className="ctr ctr--mesh" data-kind="mesh">
+            <div className="ctr__head">
+                <span className="tag ctr__tag">C</span>
+                <p className="ctr__title">
+                    <span className="ctr__name">Mesh + React</span>
+                    <span className="ctr__via">useEntangle('count')</span>
+                </p>
             </div>
-        </GlowCard>
+
+            <div className="ctr__body">
+                <span className="ctr__value">{count}</span>
+                <span className="ctr__k k k--caps">$count</span>
+            </div>
+
+            <div className="ctr__actions">
+                <button
+                    type="button"
+                    className="btn btn--line ctr__btn"
+                    onClick={() => setCount(count - 1)}
+                    aria-label="Decrement counter"
+                >
+                    −
+                </button>
+
+                <button
+                    type="button"
+                    className="btn ctr__reset"
+                    onClick={() => setCount(initialCount)}
+                    aria-label="Reset counter"
+                >
+                    Reset
+                </button>
+
+                <button
+                    type="button"
+                    className="btn btn--solid ctr__btn"
+                    onClick={() => setCount(count + 1)}
+                    aria-label="Increment counter"
+                >
+                    +
+                </button>
+            </div>
+        </div>
     );
 };
 

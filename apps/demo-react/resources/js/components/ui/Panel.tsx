@@ -1,14 +1,17 @@
 import React from "react";
 import { cn } from "./cn";
 
-/** The standard demo surface: a faint mono panel with a hairline border. */
-const Panel: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({
-    className,
-    ...rest
-}) => (
+interface PanelProps extends React.HTMLAttributes<HTMLDivElement> {
+    /** Registration marks on two corners, like a figure stage. */
+    ticks?: boolean;
+}
+
+/** The standard demo surface: paper, a hairline border, square corners. */
+const Panel: React.FC<PanelProps> = ({ ticks = false, className, ...rest }) => (
     <div
         className={cn(
-            "p-5 rounded-xl bg-white/[0.02] border border-white/5",
+            "relative border border-line-2 bg-paper p-5",
+            ticks && "ui-ticks",
             className,
         )}
         {...rest}

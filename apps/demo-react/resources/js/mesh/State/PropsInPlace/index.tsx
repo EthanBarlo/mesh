@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Eyebrow, Panel } from "@/components/ui";
+import { BigNumber, Panel } from "@/components/ui";
 import PaletteSwatches, {
     type Palette,
 } from "@/components/demo/State/PaletteSwatches";
@@ -19,8 +19,8 @@ const PropsInPlace: React.FC<PropsInPlaceProps> = ({ theme, palette }) => {
     }, []);
 
     return (
-        <Panel className="p-6">
-            <div className="flex flex-col sm:flex-row sm:items-start gap-6">
+        <Panel>
+            <div className="flex flex-col gap-6 sm:flex-row sm:items-stretch">
                 {/* Server-computed palette prop */}
                 <PaletteSwatches
                     theme={theme}
@@ -29,16 +29,20 @@ const PropsInPlace: React.FC<PropsInPlaceProps> = ({ theme, palette }) => {
                 />
 
                 {/* Local React state that survives prop updates */}
-                <div className="shrink-0 sm:w-56 p-4 rounded-xl bg-white/[0.02] border border-white/5 text-center">
-                    <Eyebrow>Mounted for</Eyebrow>
-                    <p
-                        className="my-2 text-4xl font-semibold tracking-tight tabular-nums"
-                        style={{ color: palette.accent }}
-                    >
-                        {seconds}s
+                <div className="shrink-0 border border-line-2 bg-paper-2 p-4 sm:w-52">
+                    <p className="k k--caps text-ink-3">Client state</p>
+                    <p className="mt-1.5 font-mono text-xs text-ink-3">
+                        Mounted for
                     </p>
-                    <p className="text-xs text-zinc-500 leading-relaxed">
-                        Local state survives server re-renders — this component
+                    <BigNumber className="mt-1 block text-4xl leading-none">
+                        {seconds}
+                        <span className="ml-1 text-lg font-normal text-ink-3">
+                            s
+                        </span>
+                    </BigNumber>
+                    <p className="mt-3 text-xs leading-relaxed text-ink-3">
+                        Plain <code className="core-code">useState</code>. It
+                        survives every prop update because the component
                         never remounts.
                     </p>
                 </div>

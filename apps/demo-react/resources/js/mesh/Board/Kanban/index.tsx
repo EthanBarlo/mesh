@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { DndContext, DragOverlay, MeasuringStrategy, closestCorners } from "@dnd-kit/core";
 import { useEntangle, useWire } from "@mesh/react";
-import { Badge, Button, Kbd, cn } from "@/components/ui";
+import { Button, Kbd } from "@/components/ui";
 import Column from "./Column";
 import { CardFace } from "./CardItem";
 import { useBoardDrag } from "./useBoardDrag";
@@ -53,35 +53,20 @@ const Kanban: React.FC<KanbanProps> = ({ syncCount, lastSyncAt }) => {
         <div className="space-y-4">
             {/* Toolbar */}
             <div className="flex flex-wrap items-center justify-between gap-3">
-                <Badge
-                    color="slate"
-                    className="gap-2 px-3 py-1.5 bg-white/5 border-white/10 font-normal text-zinc-400"
-                >
-                    <span
-                        className={cn(
-                            "h-1.5 w-1.5 rounded-full",
-                            syncCount > 0 ? "bg-emerald-400" : "bg-zinc-500",
-                        )}
-                        aria-hidden="true"
-                    />
+                <p className="sync k k--caps" data-on={syncCount > 0 || undefined} aria-live="polite">
+                    <span className="sync__dot" aria-hidden="true" />
                     {syncCount > 0 ? (
                         <span>
-                            Synced <span className="font-semibold text-zinc-200 tabular-nums">{syncCount}</span>{" "}
+                            Synced <span className="sync__v">{syncCount}</span>{" "}
                             {syncCount === 1 ? "move" : "moves"} · last{" "}
-                            <span className="font-mono text-zinc-300">{lastSyncAt}</span>
+                            <span className="sync__v">{lastSyncAt}</span>
                         </span>
                     ) : (
-                        <span>No moves synced yet — drag a card</span>
+                        <span>No moves synced yet. Drag a card.</span>
                     )}
-                </Badge>
+                </p>
 
-                <Button
-                    variant="secondary"
-                    size="xs"
-                    onClick={handleReset}
-                    disabled={resetting}
-                    className="px-4 py-2"
-                >
+                <Button variant="secondary" size="sm" onClick={handleReset} disabled={resetting}>
                     {resetting ? "Resetting…" : "Reset board"}
                 </Button>
             </div>
@@ -102,7 +87,7 @@ const Kanban: React.FC<KanbanProps> = ({ syncCount, lastSyncAt }) => {
                 <DragOverlay>{activeCard ? <CardFace card={activeCard} lifted /> : null}</DragOverlay>
             </DndContext>
 
-            <p className="text-xs text-zinc-500">
+            <p className="font-mono text-[11px] tracking-[0.04em] leading-loose text-ink-3">
                 Keyboard: <Kbd>Tab</Kbd> to a card, <Kbd>Space</Kbd> to lift, <Kbd>↑ ↓ ← →</Kbd> to move,{" "}
                 <Kbd>Space</Kbd> to drop.
             </p>

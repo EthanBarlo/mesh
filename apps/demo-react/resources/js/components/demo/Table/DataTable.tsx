@@ -6,14 +6,24 @@ export interface DataTableProps<TData> {
     table: Table<TData>;
     /** Shown in a full-width row when the row model is empty. */
     emptyMessage: React.ReactNode;
-    /** Per-row classes (e.g. a flagged tint) merged after the base transition classes. */
+    /** Per-row classes, e.g. `bom__flagged` for a highlighted row. */
     rowClassName?: (row: Row<TData>) => string;
     className?: string;
 }
 
+/** A small drawn caret pair: the active direction is inked, the other stays faint. */
+const SortCaret: React.FC = () => (
+    <svg className="bom__caret" viewBox="0 0 7 11" aria-hidden="true">
+        <path className="bom__caret-up" d="M0.5 4L3.5 1L6.5 4" />
+        <path className="bom__caret-down" d="M0.5 7L3.5 10L6.5 7" />
+    </svg>
+);
+
 /**
- * Generic TanStack Table renderer: bordered wrapper, sortable headers with
- * ▲/▼/↕ indicators, and meta.headerClass / meta.cellClass support.
+ * Generic TanStack Table renderer, drawn as a bill of materials: mono caps
+ * headers over an ink rule, hairline rows, drawn sort carets, and
+ * meta.headerClass / meta.cellClass support. The look lives in the shared
+ * `.bom` classes (resources/css/ecosystem.css).
  */
 function DataTable<TData>({
     table,
@@ -24,28 +34,32 @@ function DataTable<TData>({
     const rows = table.getRowModel().rows;
 
     return (
-        <div
-            className={cn(
-                "overflow-x-auto rounded-xl border border-white/5 bg-white/[0.02]",
-                className,
-            )}
-        >
-            <table className="w-full text-sm">
+        <div className={cn("bom", className)}>
+            <table>
                 <thead>
                     {table.getHeaderGroups().map((headerGroup) => (
-                        <tr
-                            key={headerGroup.id}
-                            className="border-b border-white/5 bg-white/[0.02]"
-                        >
+                        <tr key={headerGroup.id}>
                             {headerGroup.headers.map((header) => {
                                 const canSort = header.column.getCanSort();
                                 const sorted = header.column.getIsSorted();
+                                const label =
+                                    typeof header.column.columnDef.header === "string"
+                                        ? header.column.columnDef.header
+                                        : header.column.id;
 
                                 return (
                                     <th
                                         key={header.id}
+                                        scope="col"
+                                        aria-sort={
+                                            sorted === "asc"
+                                                ? "ascending"
+                                                : sorted === "desc"
+                                                  ? "descending"
+                                                  : undefined
+                                        }
                                         className={cn(
-                                            "px-4 py-3 text-left text-xs font-medium uppercase tracking-widest text-zinc-500",
+                                            "text-left",
                                             header.column.columnDef.meta?.headerClass,
                                         )}
                                     >
@@ -53,37 +67,15 @@ function DataTable<TData>({
                                             <button
                                                 type="button"
                                                 onClick={header.column.getToggleSortingHandler()}
-                                                className={cn(
-                                                    "group inline-flex items-center gap-1.5 hover:text-white transition-colors duration-150 focus:outline-none focus:text-white",
-                                                    sorted && "text-white",
-                                                )}
-                                                aria-label={`Sort by ${
-                                                    typeof header.column.columnDef
-                                                        .header === "string"
-                                                        ? header.column.columnDef
-                                                              .header
-                                                        : header.column.id
-                                                }`}
+                                                className="bom__sort"
+                                                data-sorted={sorted || undefined}
+                                                aria-label={`Sort by ${label}`}
                                             >
                                                 {flexRender(
                                                     header.column.columnDef.header,
                                                     header.getContext(),
                                                 )}
-                                                <span
-                                                    className={cn(
-                                                        "text-[10px]",
-                                                        sorted
-                                                            ? "text-zinc-300"
-                                                            : "text-zinc-600 group-hover:text-zinc-400",
-                                                    )}
-                                                    aria-hidden="true"
-                                                >
-                                                    {sorted === "asc"
-                                                        ? "▲"
-                                                        : sorted === "desc"
-                                                          ? "▼"
-                                                          : "↕"}
-                                                </span>
+                                                <SortCaret />
                                             </button>
                                         ) : (
                                             flexRender(
@@ -97,12 +89,12 @@ function DataTable<TData>({
                         </tr>
                     ))}
                 </thead>
-                <tbody className="divide-y divide-white/5">
+                <tbody>
                     {rows.length === 0 ? (
                         <tr>
                             <td
                                 colSpan={table.getAllLeafColumns().length}
-                                className="px-4 py-10 text-center text-zinc-500"
+                                className="bom__empty"
                             >
                                 {emptyMessage}
                             </td>
@@ -111,18 +103,14 @@ function DataTable<TData>({
                         rows.map((row) => (
                             <tr
                                 key={row.id}
-                                className={cn(
-                                    "transition-colors duration-150",
-                                    rowClassName?.(row),
-                                )}
+                                className={rowClassName?.(row) || undefined}
                             >
                                 {row.getVisibleCells().map((cell) => (
                                     <td
                                         key={cell.id}
-                                        className={cn(
-                                            "px-4 py-3 whitespace-nowrap",
-                                            cell.column.columnDef.meta?.cellClass,
-                                        )}
+                                        className={
+                                            cell.column.columnDef.meta?.cellClass || undefined
+                                        }
                                     >
                                         {flexRender(
                                             cell.column.columnDef.cell,

@@ -8,7 +8,7 @@ const BigNumber: React.FC<React.HTMLAttributes<HTMLSpanElement>> = ({
 }) => (
     <span
         className={cn(
-            "font-semibold tracking-tight tabular-nums text-white",
+            "font-sans font-semibold tracking-[-0.045em] tabular-nums text-ink",
             className,
         )}
         {...rest}

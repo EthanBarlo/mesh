@@ -6,17 +6,20 @@ interface StatProps extends React.HTMLAttributes<HTMLDivElement> {
     value: React.ReactNode;
 }
 
-/** Compact value-over-label stat tile. */
+/** A title-block cell: a mono label over the value. */
 const Stat: React.FC<StatProps> = ({ label, value, className, ...rest }) => (
     <div
         className={cn(
-            "p-3 rounded-lg bg-white/[0.02] border border-white/5 text-center",
+            "min-w-0 border border-line-2 bg-paper px-3 pt-2 pb-2.5",
             className,
         )}
         {...rest}
     >
+        <p className="truncate font-mono text-[10px] uppercase leading-normal tracking-[0.1em] text-ink-3">
+            {label}
+        </p>
         <p
-            className="text-lg font-semibold text-white tabular-nums truncate"
+            className="mt-0.5 truncate text-lg font-semibold leading-snug tracking-[-0.02em] tabular-nums text-ink"
             title={
                 typeof value === "string" || typeof value === "number"
                     ? String(value)
@@ -24,9 +27,6 @@ const Stat: React.FC<StatProps> = ({ label, value, className, ...rest }) => (
             }
         >
             {value}
-        </p>
-        <p className="mt-0.5 text-[11px] font-medium uppercase tracking-widest text-zinc-500">
-            {label}
         </p>
     </div>
 );

@@ -6,12 +6,21 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\View\Component;
 use Phiki\Grammar\Grammar;
 use Phiki\Phiki;
-use Phiki\Theme\Theme;
+use Phiki\Theme\ParsedTheme;
+use Phiki\Theme\ThemeParser;
 
 class CodeViewer extends Component
 {
-    /** @var array<int, array{label: string, html: string}> */
+    /** Bump when the theme, grammar mapping or markup changes to drop cached highlights. */
+    protected const CACHE_VERSION = 'drafting-2';
+
+    protected const THEME = 'drafting';
+
+    /** @var array<int, array{label: string, dir: string, name: string, path: string, lines: int, html: string}> */
     public array $tabs = [];
+
+    /** A stable id prefix for the tab/panel ARIA wiring (stable across Livewire re-renders). */
+    public string $uid;
 
     /**
      * @param  array<int, string>  $files  Paths relative to the app base path,
@@ -19,6 +28,8 @@ class CodeViewer extends Component
      */
     public function __construct(public array $files = [])
     {
+        $this->uid = 'cv-'.substr(md5(implode('|', $files)), 0, 8);
+
         foreach ($files as $file) {
             $path = $this->resolvePath($file);
 
@@ -26,8 +37,14 @@ class CodeViewer extends Component
                 continue;
             }
 
+            [$dir, $name] = $this->labelParts($file);
+
             $this->tabs[] = [
-                'label' => $this->label($file),
+                'label' => $dir.$name,
+                'dir' => $dir,
+                'name' => $name,
+                'path' => ltrim($file, '/'),
+                'lines' => substr_count(rtrim(file_get_contents($path)), "\n") + 1,
                 'html' => $this->highlight($path),
             ];
         }
@@ -51,26 +68,63 @@ class CodeViewer extends Component
         return $path;
     }
 
-    protected function label(string $file): string
+    /**
+     * Tab label as [dimmed directory, file name]. Mesh entry files are all
+     * called index.*, so they keep their component folder: "Counter/index.tsx".
+     *
+     * @return array{0: string, 1: string}
+     */
+    protected function labelParts(string $file): array
     {
         $base = basename($file);
 
         return str_starts_with($base, 'index.')
-            ? basename(dirname($file)).'/'.$base
-            : $base;
+            ? [basename(dirname($file)).'/', $base]
+            : ['', $base];
     }
 
     protected function highlight(string $path): string
     {
-        $key = 'code-viewer:'.$path.':'.filemtime($path);
+        $theme = $this->themePath();
 
-        return Cache::remember($key, now()->addWeek(), function () use ($path) {
-            return (string) (new Phiki)->codeToHtml(
-                rtrim(file_get_contents($path)),
-                $this->grammar($path),
-                Theme::GithubDark,
-            );
+        $key = implode(':', [
+            'code-viewer',
+            self::CACHE_VERSION,
+            $path,
+            filemtime($path),
+            filemtime($theme),
+        ]);
+
+        return Cache::remember($key, now()->addWeek(), function () use ($path, $theme) {
+            return (string) (new Phiki)
+                ->theme(self::THEME, $this->parseTheme($theme))
+                ->codeToHtml(rtrim(file_get_contents($path)), $this->grammar($path), self::THEME)
+                ->withGutter();
         });
+    }
+
+    protected function themePath(): string
+    {
+        return resource_path('themes/'.self::THEME.'.json');
+    }
+
+    /**
+     * The theme's colours are CSS variables (var(--code-keyword) and so on),
+     * which Phiki passes through untouched, so one theme follows light, dark
+     * and every framework accent. Each rule is split to one selector apiece:
+     * Phiki scores a rule by its first matching selector, so a grouped rule
+     * would let `punctuation` beat `punctuation.definition.string`.
+     */
+    protected function parseTheme(string $path): ParsedTheme
+    {
+        $theme = json_decode(file_get_contents($path), true, flags: JSON_THROW_ON_ERROR);
+
+        $theme['tokenColors'] = collect($theme['tokenColors'])
+            ->flatMap(fn (array $rule) => collect((array) ($rule['scope'] ?? []))
+                ->map(fn (string $scope) => [...$rule, 'scope' => $scope]))
+            ->all();
+
+        return (new ThemeParser)->parse($theme);
     }
 
     protected function grammar(string $path): Grammar
@@ -80,8 +134,12 @@ class CodeViewer extends Component
             str_ends_with($path, '.php') => Grammar::Php,
             str_ends_with($path, '.tsx') => Grammar::Tsx,
             str_ends_with($path, '.jsx') => Grammar::Jsx,
+            str_ends_with($path, '.vue') => Grammar::Vue,
+            str_ends_with($path, '.svelte') => Grammar::Svelte,
             str_ends_with($path, '.ts') => Grammar::Typescript,
+            str_ends_with($path, '.js') => Grammar::Javascript,
             str_ends_with($path, '.json') => Grammar::Json,
+            str_ends_with($path, '.css') => Grammar::Css,
             default => Grammar::Txt,
         };
     }

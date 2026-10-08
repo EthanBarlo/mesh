@@ -14,29 +14,34 @@ const Card = ({
     children?: React.ReactNode;
     slots?: { title?: React.ReactNode; footer?: React.ReactNode };
 }) => {
-    // `variant` still selects behaviour upstream; styling is mono regardless.
+    // `variant` still selects behaviour upstream; styling is the same regardless.
     void variant;
 
+    // Each region is labelled with the prop it arrived on, like a callout on a drawing.
     return (
-        <GlowCard contentClassName="overflow-hidden p-0">
+        <GlowCard contentClassName="p-0">
             {slots?.title && (
-                <header className="px-6 pt-5 pb-4 border-b border-white/5">
-                    <span className="block text-xs font-medium uppercase tracking-widest text-zinc-500 mb-1.5">
-                        slots.title
-                    </span>
-                    <h3 className="text-lg font-semibold text-white tracking-tight leading-snug">
+                <header className="border-b border-line-2 px-5 pt-4 pb-4">
+                    <span className="k text-ink-3">slots.title</span>
+                    <h3 className="mt-1 text-lg leading-snug font-semibold tracking-tight text-ink">
                         {slots.title}
                     </h3>
                 </header>
             )}
 
-            <div className="px-6 py-5 text-sm text-zinc-300 leading-relaxed">
-                {children}
+            <div className="px-5 py-5">
+                <span className="k text-ink-3">children</span>
+                <div className="mt-1.5 text-sm leading-relaxed text-ink-2">
+                    {children}
+                </div>
             </div>
 
             {slots?.footer && (
-                <footer className="px-6 py-3 border-t border-white/5 text-xs text-zinc-500">
-                    {slots.footer}
+                <footer className="border-t border-line-2 bg-paper-2 px-5 py-3">
+                    <span className="k text-ink-3">slots.footer</span>
+                    <div className="mt-0.5 text-xs leading-relaxed text-ink-2">
+                        {slots.footer}
+                    </div>
                 </footer>
             )}
         </GlowCard>

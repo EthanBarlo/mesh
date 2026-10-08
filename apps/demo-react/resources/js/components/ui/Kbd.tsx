@@ -1,13 +1,14 @@
 import React from "react";
 import { cn } from "./cn";
 
+/** A mono keycap: hairline sides, a heavier bottom edge. */
 const Kbd: React.FC<React.HTMLAttributes<HTMLElement>> = ({
     className,
     ...rest
 }) => (
     <kbd
         className={cn(
-            "px-1.5 py-0.5 rounded-md bg-white/5 border border-white/10 font-mono text-zinc-300",
+            "inline-flex min-w-[1.75em] items-center justify-center border border-b-2 border-line-3 bg-paper px-1.5 py-px font-mono text-[0.85em] leading-[1.4] text-ink",
             className,
         )}
         {...rest}
