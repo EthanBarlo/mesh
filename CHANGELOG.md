@@ -2,6 +2,35 @@
 
 All notable changes to `mesh` will be documented in this file.
 
+## Unreleased
+
+Fixes from the post-revamp follow-up list, plus lazy framework runtimes.
+
+- Framework runtimes load lazily. `@mesh/react`, `@mesh/vue` and `@mesh/svelte` now export
+  small descriptors; React DOM, Vue or Svelte downloads with the first island that needs it,
+  so pages without islands load none of it. Full renderer objects are still accepted.
+- New renderer factories for app-level setup: `createReactRenderer({ wrap, strictMode })`,
+  `createVueRenderer({ setup })` and `createSvelteRenderer({ context })`.
+- Custom renderers can claim file extensions with `extensions`; components with those
+  extensions come in through `sources`.
+- `initMesh` is synchronous and never throws. A duplicate id, an unknown extension or a
+  source entry outside `resources/js/mesh/` is logged and skipped; the first registration
+  of an id wins, and the other islands still mount.
+- React `useEntangle` no longer writes on mount or echoes server-driven values, matching
+  Vue and Svelte. Its `$watch` and `useErrorBag`'s commit hook are removed on unmount, so
+  StrictMode and key changes don't stack listeners.
+- `window.Mesh.renderedComponents` entries are removed when an island is torn down.
+- A whitespace-only default slot no longer becomes `children` / a default slot. Named slots
+  are always passed. `Component::meshSlots()`, which was never used, is removed.
+- `<mesh-x>` tags are rewritten only when `x` names a Mesh component, so unrelated custom
+  elements such as `<mesh-gradient>` are left alone. `<mesh:x>` is unchanged.
+- The `Wire` type matches Livewire 4.3: `$set`, `$toggle` and `$commit` return promises,
+  `live` and dispatch `params` are optional, upload callbacks are optional, `$upload`
+  returns `void`, `$removeUpload` no longer takes an `error` callback, `$cancelUpload` and
+  the `cancelled` callback are added, and `$parent` may be `undefined`.
+- The package's `package.json` declares `"sideEffects": false`.
+- `/apps` and `/docs` are excluded from the Composer archive.
+
 ## 0.2.0 - 2026-06-11
 
 Slot support, plus a much bigger documentation and demo story.
