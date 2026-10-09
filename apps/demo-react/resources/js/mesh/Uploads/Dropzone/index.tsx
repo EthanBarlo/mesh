@@ -60,8 +60,8 @@ const Dropzone: React.FC<DropzoneProps> = ({ maxKilobytes, accept }) => {
                     setStatus("error");
                 }
             },
-            // error — transport failure or server-side validation rejection.
-            // Validation messages also land in the error bag (useErrorBag).
+            // error — a transport failure, or a file Livewire's temporary-upload
+            // rules reject. #[Validate] failures land in the error bag instead.
             () => setStatus("error"),
             // progress — Livewire emits 0–100 as the temp upload streams.
             (event) => setProgress(event.detail.progress),
@@ -108,7 +108,6 @@ const Dropzone: React.FC<DropzoneProps> = ({ maxKilobytes, accept }) => {
             wire.$removeUpload(
                 "photo",
                 meta.tmpFilename,
-                () => {},
                 () => {},
             );
         }

@@ -410,11 +410,10 @@ that chunk (or into a shared chunk, when several components import the same
 library). A page that never renders the chart never downloads ECharts; the
 architecture demo shows the chart's chunk arriving only on its first render.
 
-The framework itself is not lazy. `app.ts` imports each renderer you pass to
-`initMesh`, and the renderers import React DOM, Vue, or Svelte directly, so
-every registered framework runtime is in the main bundle on every page, with
-or without islands. What stays out of that bundle is your components' code
-and the libraries they import.
+The framework runtime is lazy too. The renderers you pass to `initMesh` are
+small descriptors; React DOM, Vue, or Svelte downloads the first time an
+island of that kind mounts, alongside the component's chunk. A page with no
+islands loads none of it.
 
 So import a library from the component that uses it, or from a file in its
 folder, and not from `app.ts`. Anything `app.ts` imports loads on every page,

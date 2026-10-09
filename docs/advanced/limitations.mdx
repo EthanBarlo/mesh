@@ -30,9 +30,10 @@ its own Livewire component on the server.
 
 - **Context does not cross islands.** A React context provider, a Vue `provide` or a Svelte
   `setContext` in one island is invisible to another, even another instance of the same component.
-- **There is no app-level setup.** Mesh creates the root or app, so you cannot wrap all islands in a
-  provider or call Vue's `app.use()` from your own code. A
-  [custom renderer](/docs/advanced/custom-renderers#example-shared-providers) can.
+- **App-level setup runs per island.** Mesh creates the root or app, so wrapping islands in a
+  provider, calling Vue's `app.use()` or adding Svelte context goes through the renderer's options
+  (`wrap`, `setup`, `context`), and runs once for each island. See
+  [Built-in renderer options](/docs/reference/renderer#built-in-renderer-options).
 - **Module state is shared.** Every island imports the same module instances, so a store or client
   created at module scope is shared by all islands on the page.
 - **Each island costs a Livewire component.** It has its own snapshot and its own requests. A page
@@ -93,9 +94,8 @@ islands add interactivity where it is needed.
 | --- | --- |
 | Components live in `resources/js/mesh` | By design. The generator, the Blade tag and browser discovery all rely on one known location, which is what lets ids match with no registration. Package components are added with [`sources`](/docs/reference/init-mesh#meshsource). |
 | `<mesh:…>` resolves classes in `App\Mesh` only | The tag is shorthand for a Livewire namespace registered for `App\Mesh`. Other classes use `<livewire:…>`. |
-| The entry is `index.tsx`, `index.jsx`, `index.vue` or `index.svelte` | Discovery globs exactly these names, and the extension picks the renderer. |
-| One entry per component folder | Two entries in one folder derive the same id, which throws. |
-| Renderers exist for React, Vue and Svelte only | The extension-to-renderer mapping is built in. A custom renderer can replace one of the three but not add a fourth. See [Custom renderers](/docs/advanced/custom-renderers#what-you-can-build-today). |
+| The entry is `index.tsx`, `index.jsx`, `index.vue` or `index.svelte` | Discovery globs exactly these names, and the extension picks the renderer. Vite only accepts a literal glob, so entries with another extension (for a [custom renderer](/docs/advanced/custom-renderers#claiming-a-file-extension)) come in through your own glob in `sources`. |
+| One entry per component folder | Two entries in one folder derive the same id. The first is kept and the other is logged and skipped. |
 
 ## FAQ
 
@@ -109,18 +109,21 @@ newer, or Svelte 5, built with Vite. You only install the frameworks you use.
 <Accordion title="Can I use React, Vue and Svelte on the same page?" id="mixing-frameworks">
 
 Yes. Pass every renderer to `initMesh`, and each component uses the one its file extension maps to.
-Each framework you register adds its runtime to the main bundle on every page (see the next
-question), so mixing is a bundle-size decision as much as anything.
+A framework only downloads on pages with an island that uses it (see the next question), but a page
+with islands from all three loads all three runtimes.
 
 </Accordion>
 <Accordion title="Is the framework loaded lazily?" id="lazy-framework">
 
-No, only your components are. `app.ts` imports the renderers statically, and each renderer imports
-its framework (`react-dom`, `vue` or Svelte's runtime), so every registered framework is in the main
-bundle and loads on every page, islands or not. Each component's entry, together with the libraries
-only it imports (a chart library, a table library), is a separate chunk that loads the first time
-that component renders. If most pages have no islands, keep heavy dependencies inside components
-rather than in shared modules.
+Yes. What `app.ts` imports from `@mesh/react`, `@mesh/vue` or `@mesh/svelte` is a small descriptor.
+The framework runtime (`react-dom`, `vue` or Svelte's runtime) and the renderer are a separate chunk,
+fetched the first time an island of that kind mounts, in parallel with that component's own chunk. A
+page without islands loads no framework. Each component's entry, together with the libraries only it
+imports (a chart library, a table library), is a separate chunk too, loaded the first time that
+component renders.
+
+What stays in the entry chunk is whatever `app.ts` imports itself, including anything your renderer
+options import. Keep heavy dependencies inside components rather than in modules `app.ts` imports.
 
 </Accordion>
 <Accordion title="Can a Mesh component render another Mesh component?" id="nesting">

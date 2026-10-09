@@ -59,14 +59,15 @@ npm install svelte
 npm install -D @sveltejs/vite-plugin-svelte
 ```
 
-The scaffolded components use `<script lang="ts">`. The Svelte demo app
-preprocesses it with `vitePreprocess`:
+The scaffolded components use `<script lang="ts">`. Svelte 5 strips type
+annotations on its own, so no preprocessor is needed. Only TypeScript that
+emits code, such as `enum`, needs `vitePreprocess` with `script: true`:
 
 ```js title="svelte.config.js"
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 
 export default {
-    preprocess: vitePreprocess(),
+    preprocess: vitePreprocess({ script: true }),
 };
 ```
 
@@ -257,8 +258,11 @@ contains Livewire; the directive only prints the configuration that copy
 reads when `Livewire.start()` runs.
 
 <Callout type="warn" title="The step people miss">
-  Without `@livewireScriptConfig`, Livewire never initializes. Nothing on
-  the page mounts, and there is no error to say why.
+  Without `@livewireScriptConfig`, Livewire injects its own copy of its
+  script, so two copies of Livewire and Alpine run on the page. The console
+  warns about multiple instances, and behaviour becomes unreliable. With
+  `inject_assets` turned off, your bundle has no update URI and every request
+  fails.
 </Callout>
 
 </Step>
@@ -295,9 +299,10 @@ initMesh(Livewire, {
 
 - `make:mesh` uses React unless told otherwise. Pass `--renderer=vue` or
   `--renderer=svelte`, or change the default in `config/mesh.php`.
-- Register only the renderers you use. Each one imports its framework, so
-  every registered renderer adds that framework's runtime to your main
-  bundle.
+- Registering a renderer costs almost nothing up front. Each is a small
+  lazy descriptor, and its framework's runtime downloads the first time an
+  island of that kind mounts, so a page only loads the frameworks its
+  islands use.
 - A component whose renderer isn't registered fails to mount, and the
   console logs `Mesh renderer for "vue" not found`.
 
@@ -311,9 +316,9 @@ and JavaScript halves together and they can never drift apart.
 | Import | What it provides |
 | --- | --- |
 | `@mesh` | `initMesh` and the public types, such as `Wire` and `MeshRenderer` |
-| `@mesh/react` | The React renderer (default export), `useWire`, `useEntangle`, `useErrorBag` |
-| `@mesh/vue` | The Vue renderer and the same three composables |
-| `@mesh/svelte` | The Svelte renderer and the same three, built on runes |
+| `@mesh/react` | The React renderer (default export), `createReactRenderer`, `useWire`, `useEntangle`, `useErrorBag` |
+| `@mesh/vue` | The Vue renderer, `createVueRenderer` and the same three composables |
+| `@mesh/svelte` | The Svelte renderer, `createSvelteRenderer` and the same three, built on runes |
 
 Two consequences are worth knowing:
 
@@ -358,7 +363,8 @@ always agree. Components shipped in Composer packages are added with the
 Vite strips types without checking them, so this matters for your editor
 and `tsc`, not for the build. Map the alias, include the vendored runtime,
 and exclude the renderer folders for frameworks you haven't installed (they
-import packages your app doesn't have).
+import packages your app doesn't have). Each config below is complete; merge
+it into yours if you already have one.
 
 <Frameworks>
 <Tab value="React">
@@ -366,6 +372,12 @@ import packages your app doesn't have).
 ```json title="tsconfig.json"
 {
     "compilerOptions": {
+        "target": "ESNext",
+        "module": "ESNext",
+        "moduleResolution": "bundler",
+        "strict": true,
+        "skipLibCheck": true,
+        "noEmit": true,
         "jsx": "react-jsx",
         "paths": {
             "@mesh": ["./vendor/ethanbarlo/mesh/resources/js/index.ts"],
@@ -394,6 +406,12 @@ Install the React types with `npm install -D @types/react @types/react-dom`.
 ```json title="tsconfig.json"
 {
     "compilerOptions": {
+        "target": "ESNext",
+        "module": "ESNext",
+        "moduleResolution": "bundler",
+        "strict": true,
+        "skipLibCheck": true,
+        "noEmit": true,
         "paths": {
             "@mesh": ["./vendor/ethanbarlo/mesh/resources/js/index.ts"],
             "@mesh/*": ["./vendor/ethanbarlo/mesh/resources/js/*"]
@@ -426,6 +444,12 @@ declare module "*.vue" {
 ```json title="tsconfig.json"
 {
     "compilerOptions": {
+        "target": "ESNext",
+        "module": "ESNext",
+        "moduleResolution": "bundler",
+        "strict": true,
+        "skipLibCheck": true,
+        "noEmit": true,
         "paths": {
             "@mesh": ["./vendor/ethanbarlo/mesh/resources/js/index.ts"],
             "@mesh/*": ["./vendor/ethanbarlo/mesh/resources/js/*"]

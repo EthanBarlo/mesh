@@ -24,7 +24,7 @@ Livewire.start();
 ## Signature
 
 ```ts
-function initMesh(Livewire: any, config: Config): Promise<void>;
+function initMesh(Livewire: any, config: Config): void;
 ```
 
 | Parameter | Type | Description |
@@ -37,25 +37,27 @@ function initMesh(Livewire: any, config: Config): Promise<void>;
 1. It discovers every `resources/js/mesh/**/index.{tsx,jsx,vue,svelte}` file with
    `import.meta.glob`, adds the entries from `sources`, and builds the registry: one entry per
    component id, with the renderer type inferred from the file extension and a loader for its chunk.
+   A bad entry is logged and skipped (see [Errors and warnings](#errors-and-warnings)).
 2. It sets `window.Mesh` (see [window.Mesh](#windowmesh)).
 3. It registers a `component.init` hook. For each Livewire component whose root has a
-   `data-mesh-component` attribute, Mesh loads the chunk, mounts it through the renderer and starts
-   watching the slot holders. Components without the attribute are ignored.
+   `data-mesh-component` attribute, Mesh loads the component's chunk and, the first time an island
+   of that type mounts, its renderer, in parallel. Then it mounts the island through the renderer
+   and starts watching the slot holders. Components without the attribute are ignored.
 4. It registers a `morph.updated` hook that passes fresh props to mounted islands.
 
-The function is declared `async`, so it returns a promise. Nothing in it awaits, and you do not need
-to await it, but it does mean its errors surface as rejected promises (see
-[Errors and warnings](#errors-and-warnings)).
+It returns nothing and does not throw for configuration mistakes. A bad registry entry or an invalid
+renderer is logged with `console.error` and skipped, so the rest of the page still mounts and your
+`Livewire.start()` still runs. There is nothing to await, though `await initMesh(...)` is harmless.
 
 ## Config
 
 <TypeTable
   type={{
     renderers: {
-      type: 'MeshRenderer<any>[]',
+      type: '(MeshRenderer<any> | LazyMeshRenderer)[]',
       required: true,
       description:
-        'The renderers this app uses. Each component is mounted by the renderer whose type matches its file extension. Two renderers with the same type: the last one wins.',
+        'The renderers this app uses: the lazy descriptors from @mesh/react, @mesh/vue and @mesh/svelte, or your own renderers. Each component is mounted by the renderer whose type matches its file extension. Two renderers with the same type: the last one wins.',
     },
     sources: {
       type: 'MeshSource[]',
@@ -75,16 +77,23 @@ to await it, but it does mean its errors surface as rejected promises (see
 There are no other options. In particular, the component directory is fixed at `resources/js/mesh`
 and cannot be configured.
 
-Renderers are imported statically in `app.ts`, and each renderer imports its framework
-(`react-dom`, `vue`, `svelte`). So every framework you register is in the main bundle on every page,
-whether or not the page has an island of that kind. Components are the lazy part: each entry, with
-the libraries only it imports, is its own chunk, loaded the first time that component renders.
+The renderers you import in `app.ts` are small lazy descriptors, not the frameworks themselves.
+React DOM, Vue or Svelte is fetched the first time an island of that kind mounts, so a page without
+islands downloads no framework at all. Components are lazy too: each entry, with the libraries only
+it imports, is its own chunk, loaded the first time that component renders. Mesh fetches a
+component's chunk and its renderer in parallel. See
+[Lazy renderers](/docs/reference/renderer#lazy-renderers).
 
 | Extension | Renderer type | Built-in renderer |
 | --- | --- | --- |
 | `.tsx`, `.jsx` | `react` | `@mesh/react` |
 | `.vue` | `vue` | `@mesh/vue` |
 | `.svelte` | `svelte` | `@mesh/svelte` |
+
+A renderer can claim more extensions with its `extensions` field, and a claim overrides the
+built-in mapping. Discovery itself only globs the four extensions above, so entries with another
+extension come in through `sources`. See
+[Claiming a file extension](/docs/advanced/custom-renderers#claiming-a-file-extension).
 
 ## MeshSource
 
@@ -118,7 +127,9 @@ initMesh(Livewire, {
   `.../resources/js/mesh/Chart/index.tsx` becomes `Acme/Chart`.
 - Every entry must have a `resources/js/mesh/` directory somewhere in its path. The id is the part
   after that marker, minus the extension and a trailing `/index`.
-- Ids must be unique across the app and all sources. Use `prefix` to separate them.
+- Ids must be unique across the app and all sources. Use `prefix` to separate them. If two entries
+  derive the same id, the first one keeps it: app components come before `sources`, and entries
+  within one glob are in path order.
 - Source entries are code-split and lazy-loaded exactly like app components.
 
 The PHP half of a package component needs its own setup. See
@@ -133,13 +144,14 @@ Every message Mesh writes to the console, so you can search for it.
 | Message | Cause |
 | --- | --- |
 | ``Mesh: no components found under resources/js/mesh. Create one with `php artisan make:mesh <Name>`.`` | A warning. The registry is empty. |
-| `Mesh: duplicate component id "Counter" derived from "…".` | Two entries derive the same id, for example `Counter/index.tsx` and `Counter/index.vue`, or an app component and a source entry. |
-| `Mesh: cannot infer renderer for component entry "…" (unknown extension "ts").` | A source entry with an extension other than `tsx`, `jsx`, `vue` or `svelte`. |
+| `Mesh: duplicate component id "Counter" derived from "…".` | Two entries derive the same id, for example `Counter/index.tsx` and `Counter/index.vue`, or an app component and a source entry. The message names the entry that was skipped. |
+| `Mesh: cannot infer renderer for component entry "…" (unknown extension "ts").` | A source entry with an extension that neither the built-in mapping nor any renderer's `extensions` claims. |
 | `Mesh: source entry "…" does not live under a "resources/js/mesh/" directory, so no component id can be derived. …` | A source glob matched a file outside a `resources/js/mesh/` directory. |
+| ``Mesh: ignoring an invalid renderer (it needs a `type` and either `mount` or `load`).`` | Something in `renderers` is neither a renderer nor a lazy descriptor. |
 
-These three errors are thrown while the registry is built. Because `initMesh` is `async`, the browser
-reports them as an uncaught promise rejection (`Uncaught (in promise) Error: Mesh: …`). `window.Mesh`
-is never set and no island on the page mounts. Livewire itself still starts.
+These are logged with `console.error` while the registry is built, and the entry or renderer is
+skipped. `window.Mesh` is still set and every other island mounts. A skipped component has no
+entry, so an island that uses it logs `is not registered` (below).
 
 ### When a component mounts or updates
 
@@ -150,8 +162,9 @@ working.
 | --- | --- |
 | `Mesh: component "Counter" is not registered. Known components: …` | The id from `component()` has no frontend entry. Compare it with the list in the message. |
 | `Mesh: component "Counter" module has no default export.` | The entry file only has named exports. |
-| `Mesh: failed to render "Counter"` | Mounting threw. The underlying error is logged with it. |
+| `Mesh: failed to render "Counter"` | Loading the renderer or mounting threw. The underlying error is logged with it. |
 | `Mesh renderer for "vue" not found` | Logged under the line above: a `.vue` entry exists but no Vue renderer was passed to `initMesh`. |
+| `Mesh: the "vue" renderer's load() did not resolve to a renderer.` | Logged under the line above: a custom lazy descriptor's `load()` resolved to something without `mount`. A failed `load()` logs its own error here instead, and the next island tries again. |
 | ``Mesh: `children` is reserved for slot content — rename the prop from props().`` | `props()` returned `children` while the tag has slots (React and Svelte). |
 | ``Mesh: `slots` is reserved for named slot content — rename the prop from props().`` | `props()` returned `slots` while the tag has named slots (React and Svelte). |
 | `Mesh root element not found` | The rendered wrapper has no `.mesh-root` element, usually because `render()` was overridden. |
@@ -181,12 +194,12 @@ browser console, not as an API.
     renderedComponents: {
       type: 'Record<string, RenderedComponent>',
       description:
-        'Mounted islands, keyed by Livewire component id.',
+        'Mounted islands, keyed by Livewire component id. An island is removed when Livewire tears it down.',
     },
     config: {
       type: 'object',
       description:
-        'renderers (the renderers keyed by type) and debug (the flag you passed).',
+        'renderers (the renderers or lazy descriptors you passed, keyed by type) and debug (the flag you passed).',
     },
   }}
 />
@@ -215,15 +228,15 @@ window.Mesh.registry['Forms/Input'].renderer;
       description:
         'Derives an id from a glob key: "/resources/js/mesh/Forms/Input/index.tsx" → "Forms/Input". Returns null when the key has no marker.',
     },
-    'inferRenderer(key)': {
-      type: '(key: string) => string',
+    'inferRenderer(key, renderers?)': {
+      type: '(key: string, renderers?: { type: string; extensions?: string[] }[]) => string',
       description:
-        'Maps tsx and jsx to "react", vue to "vue", svelte to "svelte". Throws on anything else.',
+        'Maps tsx and jsx to "react", vue to "vue", svelte to "svelte", plus every extension the given renderers claim (a claim wins). Throws on anything else.',
     },
-    'buildRegistry(globbed, sources?)': {
-      type: '(globbed, sources?) => ComponentRegistry',
+    'buildRegistry(globbed, sources?, renderers?)': {
+      type: '(globbed, sources?, renderers?) => ComponentRegistry',
       description:
-        'Builds the registry initMesh uses from a GlobResult and optional MeshSource[]. Throws on a duplicate id.',
+        'Builds the registry initMesh uses from a GlobResult, optional MeshSource[] and the renderers whose extensions to honor. Logs and skips bad entries; never throws.',
     },
   }}
 />
@@ -237,6 +250,6 @@ All are type-only exports from `@mesh`:
 | `Config` | The second argument of `initMesh` |
 | `MeshSource`, `GlobResult`, `ComponentLoader` | Discovery inputs |
 | `ComponentRegistry`, `RegistryEntry` | `{ [id]: { renderer, load } }` |
-| `MeshRenderer`, `RenderContext`, `PreparedSlots`, `SlotRenderer`, `MeshSlots` | The [renderer API](/docs/reference/renderer) |
-| `Wire` | The [`$wire` object](/docs/reference/wire) |
+| `MeshRenderer`, `LazyMeshRenderer`, `MeshRendererDefinition`, `RenderContext`, `PreparedSlots`, `SlotRenderer`, `MeshSlots` | The [renderer API](/docs/reference/renderer) |
+| `Wire`, `UploadProgressEvent` | The [`$wire` object](/docs/reference/wire) |
 | `LivewireComponent`, `LivewireSnapshot` | The Livewire component instance and its snapshot |

@@ -117,9 +117,29 @@ Livewire.start();
 `reactRenderer` is also available as a named export. To mix frameworks, list every renderer you use:
 `renderers: [reactRenderer, vueRenderer]`. Each component picks its renderer from its file extension.
 
-Importing the renderer imports `react` and `react-dom`, so React is part of your main bundle on every
-page that loads `app.ts`. What is lazy is each component: its own code, and the libraries only it
-imports, become a separate chunk that loads the first time the component renders.
+`reactRenderer` is a lazy descriptor, not the renderer itself: React DOM and the renderer are a
+separate chunk, fetched the first time a React island mounts, so pages without one never download
+React. Each component's own code (and the libraries only it imports) is a separate chunk too, loaded
+the first time the component renders.
+
+### App-level providers
+
+Each island is its own React root. To wrap every island in providers or an error boundary, build the
+renderer with `createReactRenderer` and pass `wrap`. It runs inside Mesh's context, so the wrapper
+can use the Mesh hooks:
+
+```tsx title="resources/js/renderers.tsx"
+import { createReactRenderer } from '@mesh/react';
+import { AppProviders } from './providers';
+
+export const reactRenderer = createReactRenderer({
+    wrap: (island) => <AppProviders>{island}</AppProviders>,
+});
+```
+
+`wrap` runs on every render, so create long-lived objects (a query client, a store) outside it.
+Whatever `app.ts` imports for `wrap` is in the entry chunk; to keep it lazy, see
+[Built-in renderer options](/docs/reference/renderer#built-in-renderer-options).
 
 ## Write a component
 
@@ -256,6 +276,8 @@ export default function ProjectForm() {
 ```
 
 `setValue` from `useEntangle` accepts a value or an updater function, exactly like `useState`.
+It writes to Livewire only when the value differs from what Livewire holds: nothing is sent when
+the island mounts, and values that arrive from the server are not sent back.
 `useWire` takes a type argument for your component's own members, for example
 `useWire<{ flagOrder: (id: number) => Promise<void> }>()`. See the [`$wire` API](/docs/reference/wire)
 for everything on the returned object.
@@ -306,11 +328,12 @@ the tag has at least one named slot. Type both as optional.
 
 ## Gotchas
 
-### StrictMode is always on
+### StrictMode is on by default
 
 The renderer wraps every island in `<React.StrictMode>`. In development React mounts each component,
 runs its effects, tears them down and runs them again. Any effect that subscribes to something must
-return its cleanup, or you get two subscriptions in development.
+return its cleanup, or you get two subscriptions in development. `useEntangle` and `useErrorBag`
+already do.
 
 `$watch` and `$hook` return their unsubscribe function, so an arrow body is enough:
 
@@ -340,7 +363,7 @@ useEffect(() => {
 }, [wire]);
 ```
 
-There is no option to turn StrictMode off. A [custom renderer](/docs/advanced/custom-renderers) can.
+To turn it off, build the renderer with `createReactRenderer({ strictMode: false })`.
 
 ### Each island is its own root
 
@@ -354,23 +377,11 @@ created at module scope (or a plain `EventTarget`) is visible to all islands on 
 the server should know about, share it through Livewire instead. See
 [Composing islands](/docs/guides/composition).
 
-### `useEntangle` writes its value back
+### Changing the key or mode
 
-The React hook pushes its value to Livewire with `$set` from an effect: once after mount, and again
-after every change, including changes that arrived from the server.
-
-- **Deferred** (the default) this costs nothing. Livewire only sends properties that differ from
-  the server's copy.
-- **Live** (`useEntangle(key, true)`) each `$set` is a request, so a live binding sends one request
-  when the island mounts and one more after each server-driven change.
-
-The Vue and Svelte composables skip both writes. In React, use live mode only for fields where the
-server must react to every change.
-
-### Keep the key and mode fixed
-
-`useEntangle` seeds its state from `$get(key)` once. Changing `key` after mount does not reseed the
-value, and a changed `live` flag only applies from the next change. Pass literals.
+If `key` changes, `useEntangle` drops the old watcher, watches the new property and reseeds its
+state from `$get(key)`. A changed `live` flag applies from the next write. The Vue and Svelte
+composables read both once, so pass literals if the component may move between frameworks.
 
 ### Replace, don't mutate
 

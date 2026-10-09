@@ -49,8 +49,8 @@ Knowing which members start a request saves you from accidental round trips.
 | --- | --- |
 | `$call`, `wire.someAction()` | `$get` |
 | `$refresh`, `$commit` | `$set(key, value, false)`, `$toggle(key, false)` |
-| `$set(key, value, true)`, `$toggle(key, true)` | `wire.someProperty = value` |
-| `$upload`, `$uploadMultiple`, `$removeUpload` | `$watch`, `$on`, `$hook` |
+| `$set(key, value)`, `$toggle(key)` | `wire.someProperty = value` |
+| `$upload`, `$uploadMultiple`, `$removeUpload` | `$watch`, `$on`, `$hook`, `$cancelUpload` |
 
 `$dispatch`, `$dispatchTo` and `$dispatchSelf` fire a browser event straight away. A request only
 follows if a component has a PHP `#[On]` listener for it.
@@ -63,18 +63,18 @@ entangled values. You never need `$commit()` before a `$call()`.
 
 <TypeTable
   type={{
-    '$get(key)': {
-      type: '(key: string) => any',
+    '$get(key, reactive?)': {
+      type: '(key: string, reactive?: boolean) => any',
       description:
-        "The property's current value in the browser, including deferred changes.",
+        "The property's current value in the browser, including deferred changes. Pass reactive false for the last value the server sent.",
     },
-    '$set(key, value, live)': {
-      type: '(key: string, value: any, live: boolean) => void',
+    '$set(key, value, live?)': {
+      type: '(key: string, value: any, live?: boolean) => Promise<void>',
       description:
-        'Sets a property. live true sends it now; false defers it to the next request.',
+        'Sets a property. live defaults to true, which sends it now; false defers it to the next request. The promise settles when the request does.',
     },
-    '$toggle(key, live)': {
-      type: '(key: string, live: boolean) => void',
+    '$toggle(key, live?)': {
+      type: '(key: string, live?: boolean) => Promise<void>',
       description: 'Flips a boolean property. Same live semantics as $set.',
     },
     '$watch(key, callback)': {
@@ -85,9 +85,9 @@ entangled values. You never need `$commit()` before a `$call()`.
   }}
 />
 
-- Mesh's type makes `live` required. Livewire itself defaults it to `true`, so `$set(key, value)`
-  without the third argument would send a request.
-- At runtime `$set` and `$toggle` return a promise; the type says `void`.
+- `live` defaults to `true`, as in Livewire, so `$set(key, value)` without the third argument sends
+  a request. Pass `false` to keep the change in the browser until the next one.
+- With `live` false the promise resolves straight away; nothing is sent.
 - `useEntangle` is built on `$get`, `$set` and `$watch`. Use them directly when you only need one
   direction, such as reacting to a server-owned value without ever writing it:
 
@@ -147,9 +147,9 @@ Livewire also removes every watcher when the component is torn down.
         'Re-renders the component on the server. props() runs again; the island updates in place.',
     },
     '$commit()': {
-      type: '() => void',
+      type: '() => Promise<void>',
       description:
-        'Sends all deferred property changes now, without calling an action. Returns a promise at runtime.',
+        'Sends all deferred property changes now, without calling an action.',
     },
   }}
 />
@@ -203,17 +203,17 @@ Authorize and validate inside them. See [Server actions](/docs/guides/server-act
 
 <TypeTable
   type={{
-    '$dispatch(event, params)': {
-      type: '(event: string, params: object) => void',
+    '$dispatch(event, params?)': {
+      type: '(event: string, params?: object) => void',
       description:
         'Dispatches a Livewire event that bubbles from this component to the window. Any #[On] listener hears it.',
     },
-    '$dispatchTo(component, event, params)': {
-      type: '(component, event, params) => void',
+    '$dispatchTo(component, event, params?)': {
+      type: '(component: string, event: string, params?: object) => void',
       description: 'Dispatches only to components with that Livewire name.',
     },
-    '$dispatchSelf(event, params)': {
-      type: '(event: string, params: object) => void',
+    '$dispatchSelf(event, params?)': {
+      type: '(event: string, params?: object) => void',
       description: "Dispatches only to this island's own component.",
     },
     '$on(event, callback)': {
@@ -246,7 +246,7 @@ bubbling up from components nested inside it. It does not hear events from sibli
 components. To react to those, add an `#[On]` method to the PHP class and pass the result through
 `props()` or an entangled property, as the demo's `Wire/EventBridge` does. `$on` returns nothing, so
 in React add the listener to `wire.$el` yourself when you need cleanup (see
-[React gotchas](/docs/frameworks/react#strictmode-is-always-on)).
+[React gotchas](/docs/frameworks/react#strictmode-is-on-by-default)).
 
 ## Uploads
 
@@ -254,20 +254,25 @@ The PHP class needs Livewire's `WithFileUploads` trait and a public property to 
 
 <TypeTable
   type={{
-    '$upload(name, file, finish, error, progress)': {
-      type: '(…) => Promise<void>',
+    '$upload(name, file, finish?, error?, progress?, cancelled?)': {
+      type: '(…) => void',
       description:
         'Uploads one File to the property name. finish receives the temporary filename.',
     },
-    '$uploadMultiple(name, files, finish, error, progress)': {
-      type: '(…) => Promise<void>',
+    '$uploadMultiple(name, files, finish?, error?, progress?, cancelled?, append?)': {
+      type: '(…) => void',
       description:
-        'Uploads several files to an array property. finish receives an array of temporary filenames.',
+        'Uploads several files to an array property. finish receives an array of temporary filenames. append (default true) adds them to the files already there; false replaces them.',
     },
-    '$removeUpload(name, tmpFilename, finish, error)': {
-      type: '(…) => Promise<void>',
+    '$removeUpload(name, tmpFilename, finish?)': {
+      type: '(…) => void',
       description:
-        'Removes one temporary upload from the property.',
+        'Removes one temporary upload from the property. finish receives the removed filename.',
+    },
+    '$cancelUpload(name, cancelled?)': {
+      type: '(name: string, cancelled?: () => void) => void',
+      description:
+        "Aborts the property's upload in progress, if there is one. Runs that upload's cancelled callback, then this one.",
     },
   }}
 />
@@ -285,13 +290,13 @@ wire.$upload(
 );
 ```
 
-- **Use the callbacks, not the promise.** The type says `Promise<void>`, but Livewire returns
-  nothing, so `await wire.$upload(…)` does not wait for the upload.
+- **Use the callbacks.** The upload methods return nothing, so there is nothing to `await`; do the
+  follow-up work in `finish`.
+- Every callback is optional. `error` and `cancelled` receive no arguments.
 - `error` runs when the upload request fails, including when Livewire rejects the file. Validation
   messages for the property also land in `useErrorBag()`.
 - `progress` receives an event whose `detail.progress` is a whole percentage.
-- Livewire accepts a sixth argument, a `cancelled` callback, which the `Wire` type does not list.
-  Livewire 4 does not call `$removeUpload`'s `error` callback.
+- `cancelled` runs when the upload is aborted with `$cancelUpload`.
 
 See [File uploads](/docs/guides/uploads) for the full drop zone from the demo.
 
@@ -309,9 +314,9 @@ See [File uploads](/docs/guides/uploads) for the full drop zone from the demo.
       description: 'The Livewire component id.',
     },
     $parent: {
-      type: 'Wire | null',
+      type: 'Wire | undefined',
       description:
-        "The $wire of the closest Livewire component around this one. undefined at runtime when there is none.",
+        "The $wire of the closest Livewire component around this one, or undefined when there is none.",
     },
     '$hook(event, callback)': {
       type: '(event, callback) => () => void',
@@ -344,7 +349,7 @@ const unhook = wire.$hook('commit', ({ succeed }) => {
 ## Beyond the Wire type
 
 Livewire 4's `$wire` has more members than Mesh's `Wire` type lists, among them `$refs`, `$js`,
-`$dirty`, `$errors`, `$entangle`, `$effect`, `$intercept`, `$island`, `$dispatchEl`,
-`$dispatchRef` and `$cancelUpload`. They exist at runtime, and you can type the ones you use
+`$dirty`, `$errors`, `$entangle`, `$effect`, `$intercept`, `$island`, `$dispatchEl` and
+`$dispatchRef`. They exist at runtime, and you can type the ones you use
 through `useWire<T>()`. Mesh does not use them, and most are aimed at Alpine and Blade, so check
 Livewire's documentation before relying on one in an island.

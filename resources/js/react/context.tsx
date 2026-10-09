@@ -4,7 +4,9 @@ import { useEntangle } from "./hooks/useEntangle";
 import { useErrorBag } from "./hooks/useErrorBag";
 import { LivewireComponent } from "../types";
 
-const LivewireContext = createContext<LivewireComponent | null>(null);
+const LivewireContext = /* @__PURE__ */ createContext<LivewireComponent | null>(
+    null
+);
 
 export default LivewireContext;
 

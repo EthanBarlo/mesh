@@ -15,15 +15,18 @@ import {
 // references stable across props-only updates.
 
 // Split `MeshSlots` into the default slot vs named slots and render each through
-// `renderSlot`. The default slot is dropped when its HTML is empty; named slots
-// are all kept (even empty) so a component can still match on their presence.
+// `renderSlot`. The default slot is dropped when its HTML is empty or
+// whitespace-only (e.g. the indentation left around named `<livewire:slot>`
+// tags); named slots are always kept, even when empty, so a component can still
+// match on their presence.
 export function prepareSlots<T>(
     slots: MeshSlots,
     renderSlot: SlotRenderer<T>
 ): PreparedSlots<T> {
     const { default: def, ...named } = slots;
 
-    const children = def ? renderSlot(def, "default") : undefined;
+    const children =
+        def && def.trim() !== "" ? renderSlot(def, "default") : undefined;
 
     const renderedNamed: Record<string, T> = Object.fromEntries(
         Object.entries(named).map(([name, html]) => [

@@ -93,6 +93,24 @@ describe("prepareSlots", () => {
         expect(prepareSlots({ default: "" }, mark).children).toBeUndefined();
     });
 
+    it("drops a whitespace-only default slot left around named slots", () => {
+        // `<mesh:card>\n  <livewire:slot name="title">T</livewire:slot>\n</mesh:card>`
+        // leaves only the indentation in the default holder.
+        const spy = vi.fn(mark);
+        const p = prepareSlots({ default: "\n  \n", title: "T" }, spy);
+
+        expect(p.children).toBeUndefined();
+        expect(p.named).toEqual({ title: { html: "T", name: "title" } });
+        expect(spy).not.toHaveBeenCalledWith("\n  \n", "default");
+    });
+
+    it("keeps a default slot that has content besides whitespace", () => {
+        expect(prepareSlots({ default: "\n  hi\n" }, mark).children).toEqual({
+            html: "\n  hi\n",
+            name: "default",
+        });
+    });
+
     it("returns undefined children when no default key is present", () => {
         expect(prepareSlots({ title: "T" }, mark).children).toBeUndefined();
     });

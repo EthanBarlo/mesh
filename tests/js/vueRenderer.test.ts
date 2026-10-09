@@ -1,7 +1,11 @@
 // @vitest-environment happy-dom
-import { describe, expect, it } from "vitest";
-import { createApp, defineComponent, h, nextTick } from "vue";
-import vueRenderer from "../../resources/js/vue/renderer";
+import { describe, expect, it, vi } from "vitest";
+import { createApp, defineComponent, h, inject, nextTick, resolveComponent } from "vue";
+import vueRenderer, { buildVueRenderer } from "../../resources/js/vue/renderer";
+import vueDescriptor, {
+    createVueRenderer,
+    vueRenderer as namedVueDescriptor,
+} from "../../resources/js/vue";
 import { useLivewireComponent } from "../../resources/js/vue/context";
 import { mountComponent } from "../../resources/js/slots";
 import type { LivewireComponent } from "../../resources/js/types";
@@ -67,6 +71,26 @@ describe("vueRenderer", () => {
 
         expect(meshRoot(lw).querySelector("header")!.textContent).toBe("title");
         expect(meshRoot(lw).querySelector("main")!.textContent).toBe("body");
+        rc.cleanup();
+    });
+
+    it("passes no default slot when its HTML is whitespace-only", () => {
+        const lw = fakeLivewire();
+        let hasDefault: boolean | undefined;
+        const Comp = defineComponent({
+            setup: (_, { slots }) => () => {
+                hasDefault = "default" in slots;
+                return h("header", slots.title?.());
+            },
+        });
+
+        const rc = mountComponent(vueRenderer, lw, Comp, {}, {
+            default: "\n  \n",
+            title: "T",
+        });
+
+        expect(hasDefault).toBe(false);
+        expect(meshRoot(lw).textContent).toBe("T");
         rc.cleanup();
     });
 
@@ -182,5 +206,53 @@ describe("vueRenderer", () => {
             app.config.warnHandler = () => {};
             app.mount(document.createElement("div"));
         }).toThrow("useLivewireComponent must be used within a Mesh component");
+    });
+});
+
+describe("vue renderer options", () => {
+    it("runs `setup` on each island's app before it mounts", () => {
+        const lw = fakeLivewire();
+        const setup = vi.fn((app: any) => {
+            app.provide("theme", "dark");
+            app.component("Badge", { render: () => h("em", "badge") });
+        });
+        const Comp = defineComponent({
+            setup() {
+                const theme = inject("theme");
+                const Badge = resolveComponent("Badge");
+                return () => h("p", [`theme ${theme} `, h(Badge as any)]);
+            },
+        });
+
+        const rc = mountComponent(buildVueRenderer({ setup }), lw, Comp, {}, {});
+
+        expect(setup).toHaveBeenCalledTimes(1);
+        expect(setup).toHaveBeenCalledWith(expect.anything(), {
+            livewireComponent: lw,
+        });
+        expect(meshRoot(lw).textContent).toBe("theme dark badge");
+        rc.cleanup();
+    });
+
+    it("exports a lazy descriptor as the default and named renderer", () => {
+        expect(vueDescriptor).toBe(namedVueDescriptor);
+        expect(vueDescriptor.type).toBe("vue");
+        expect("mount" in vueDescriptor).toBe(false);
+    });
+
+    it("createVueRenderer's load() builds a renderer with the options", async () => {
+        const lw = fakeLivewire();
+        const setup = vi.fn();
+
+        const renderer = await createVueRenderer({ setup }).load();
+        expect(renderer.type).toBe("vue");
+        expect(renderer.nativeSlots).toBe(true);
+
+        const Comp = defineComponent({ setup: () => () => h("p", "x") });
+        const rc = mountComponent(renderer, lw, Comp, {}, {});
+
+        expect(setup).toHaveBeenCalledTimes(1);
+        expect(meshRoot(lw).textContent).toBe("x");
+        rc.cleanup();
     });
 });

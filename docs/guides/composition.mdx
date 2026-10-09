@@ -26,9 +26,9 @@ everything inside.
 interactivity in places, when the pieces are independent, or when the server
 is the source of truth anyway. Each island stays small, and each component's
 code loads the first time it renders. Several instances of one component
-share a single chunk, and all islands share the framework runtime from the
-main bundle, so splitting a screen into more islands doesn't load the
-framework again.
+share a single chunk, and all islands of one framework share its runtime,
+which downloads once with the first of them. Splitting a screen into more
+islands doesn't load the framework again.
 
 ## One island: the dnd-kit board
 

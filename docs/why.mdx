@@ -58,9 +58,8 @@ Livewire state.
 An island is one Blade tag. You can add the first one to an existing
 Livewire app without changing the rest of the page, and there is no
 migration. Each component's code is its own lazy chunk, fetched only on
-pages that render it. The framework runtime itself (React DOM, Vue, or
-Svelte) is imported by the renderer in `app.ts`, so it is part of your main
-bundle on every page that loads it.
+pages that render it, and so is the framework runtime: React DOM, Vue, or
+Svelte downloads with the first island that needs it.
 
 ### The server stays the source of truth
 

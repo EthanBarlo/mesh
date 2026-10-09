@@ -1,26 +1,10 @@
 // NOTE: the `.svelte.ts` suffix is required — it tells vite-plugin-svelte to
 // compile this module so the `$state` rune below becomes real reactive state.
-import { createRawSnippet, mount, unmount, type Snippet } from "svelte";
+import { mount, unmount } from "svelte";
 import { LivewireComponentKey } from "./context";
+import { renderSlotHtml, type SvelteSlot } from "./slot";
+import type { SvelteRendererOptions } from "./factory";
 import { MeshRenderer, RenderContext } from "../types";
-
-// A Mesh slot in Svelte is a snippet: a stable reference the core can hold
-// onto across props-only updates, re-rendered by the component wherever it
-// does `{@render ...}`.
-export type SvelteSlot = Snippet;
-
-// Slot content is mirrored as static HTML. A wrapper element is unavoidable
-// (createRawSnippet must render a single root element); `display: contents`
-// drops the wrapper box so it doesn't affect layout.
-//
-// Security: `html` is server-rendered slot content from Blade. Blade escapes
-// `{{ }}` interpolation, so it is safe by default; only `{!! … !!}` (or other
-// unescaped output) injects raw HTML, which is the caller's responsibility —
-// never pass unsanitised user input through a slot.
-export const renderSlotHtml = (html: string): SvelteSlot =>
-    createRawSnippet(() => ({
-        render: () => `<div style="display: contents">${html}</div>`,
-    }));
 
 // Svelte components receive everything as props, so the context is flattened
 // into a single props object. Like the React renderer (and unlike Vue's
@@ -34,44 +18,60 @@ const flattenContext = (
     ...(ctx.slots.hasNamed ? { slots: ctx.slots.named } : {}),
 });
 
+// The full (eager) Svelte renderer. Apps normally get it through the lazy
+// descriptor in ./factory, which imports this module on the first mount.
+//
 // The core owns all slot/props bookkeeping; this renderer supplies only the
 // two Svelte-specific pieces: HTML string -> snippet, and mount/update.
-const svelteRenderer: MeshRenderer<SvelteSlot> = {
-    type: "svelte",
+export function buildSvelteRenderer(
+    options: SvelteRendererOptions = {}
+): MeshRenderer<SvelteSlot> {
+    const { context } = options;
 
-    renderSlot: (html) => renderSlotHtml(html),
+    return {
+        type: "svelte",
 
-    mount: ({ el, livewireComponent, Component, ctx }) => {
-        // Svelte mounts once and then mutates state: holding the flat props
-        // in a `$state` object makes every prop read inside the component
-        // reactive, so `update` only has to assign into this object.
-        const props: Record<string, any> = $state(flattenContext(ctx));
+        renderSlot: (html) => renderSlotHtml(html),
 
-        // Each island is its own Svelte component tree, so mount-level
-        // context reaches every component inside it (see useLivewireComponent).
-        const app = mount(Component, {
-            target: el,
-            props,
-            context: new Map([[LivewireComponentKey, livewireComponent]]),
-        });
+        mount: ({ el, livewireComponent, Component, ctx }) => {
+            // Svelte mounts once and then mutates state: holding the flat
+            // props in a `$state` object makes every prop read inside the
+            // component reactive, so `update` only has to assign into it.
+            const props: Record<string, any> = $state(flattenContext(ctx));
 
-        return {
-            update: (ctx: RenderContext<SvelteSlot>) => {
-                const next = flattenContext(ctx);
+            // Each island is its own Svelte component tree, so mount-level
+            // context reaches every component inside it (see
+            // useLivewireComponent). The app's own context is merged in
+            // first, so it can't shadow the Livewire component.
+            const app = mount(Component, {
+                target: el,
+                props,
+                context: new Map<any, any>([
+                    ...(context?.({ livewireComponent }) ?? []),
+                    [LivewireComponentKey, livewireComponent],
+                ]),
+            });
 
-                // Drop keys that vanished (e.g. a slot emptied out), then
-                // assign the rest — both are tracked by the `$state` proxy.
-                for (const key of Object.keys(props)) {
-                    if (!(key in next)) {
-                        delete props[key];
+            return {
+                update: (ctx: RenderContext<SvelteSlot>) => {
+                    const next = flattenContext(ctx);
+
+                    // Drop keys that vanished (e.g. a slot emptied out), then
+                    // assign the rest — both are tracked by the `$state` proxy.
+                    for (const key of Object.keys(props)) {
+                        if (!(key in next)) {
+                            delete props[key];
+                        }
                     }
-                }
-                Object.assign(props, next);
-            },
-            cleanup: () => unmount(app),
-        };
-    },
-};
+                    Object.assign(props, next);
+                },
+                cleanup: () => unmount(app),
+            };
+        },
+    };
+}
+
+const svelteRenderer = /* @__PURE__ */ buildSvelteRenderer();
 
 export default svelteRenderer;
-export { svelteRenderer };
+export { svelteRenderer, renderSlotHtml, type SvelteSlot };

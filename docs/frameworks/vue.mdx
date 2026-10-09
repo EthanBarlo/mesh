@@ -122,9 +122,37 @@ initMesh(Livewire, {
 Livewire.start();
 ```
 
-`vueRenderer` is also a named export. Importing it imports `vue`, so Vue is part of your main bundle
-on every page that loads `app.ts`. Each component's own code (and the libraries only it imports) is a
-separate chunk, loaded the first time the component renders.
+`vueRenderer` is also a named export. It is a lazy descriptor, not the renderer itself: Vue and the
+renderer are a separate chunk, fetched the first time a Vue island mounts, so pages without one
+never download Vue. Each component's own code (and the libraries only it imports) is a separate
+chunk too, loaded the first time the component renders.
+
+### App-level setup
+
+Each island is its own Vue app. To install plugins, register global components or `provide` a value
+on every island's app, build the renderer with `createVueRenderer` and pass `setup`. It runs on each
+app after Mesh provides the Livewire component and before the app mounts:
+
+```ts title="resources/js/app.ts"
+import { createVueRenderer } from '@mesh/vue';
+import Icon from './components/Icon.vue';
+
+initMesh(Livewire, {
+    renderers: [
+        createVueRenderer({
+            setup: (app) => {
+                app.component('Icon', Icon);
+                app.config.errorHandler = (error) => console.error(error);
+            },
+        }),
+    ],
+});
+```
+
+`setup` runs once per island. Whether one plugin instance can be installed on several apps depends on
+the plugin; when in doubt, create one per call. Whatever `app.ts` imports for `setup` is in the entry
+chunk; to keep it lazy, see
+[Built-in renderer options](/docs/reference/renderer#built-in-renderer-options).
 
 Generate Vue components with
 `php artisan make:mesh Counter --renderer=vue`, or make Vue the default in
@@ -318,14 +346,12 @@ Mesh calls `createApp` once per island and mounts it into the island's `.mesh-ro
 live on an app do not cross islands:
 
 - `provide` at the root of one island does not reach another island.
-- Plugins installed with `app.use()` are not installed. Mesh creates the app for you, and the
-  built-in renderer has no hook to configure it, so register components locally instead of globally.
-- `app.config` settings (error handlers, global properties) are not set.
+- Plugins, global components and `app.config` settings only apply to the island whose app they were
+  set on. Mesh creates the apps, so set them for every island with the renderer's
+  [`setup` option](#app-level-setup).
 
-If every island needs the same plugin, replace the built-in renderer with
-[one that installs it](/docs/advanced/custom-renderers#example-shared-providers). Module-level state
-(a `ref` exported from a `.ts` module) is shared, because every island imports the same module
-instance.
+Module-level state (a `ref` exported from a `.ts` module) is shared, because every island imports the
+same module instance.
 
 ### Clean up your own subscriptions
 

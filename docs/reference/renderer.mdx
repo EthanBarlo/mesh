@@ -1,11 +1,13 @@
 ---
 title: Renderer API
-description: The MeshRenderer contract, the context objects a renderer receives, and exactly what the Mesh core does before and after it calls a renderer.
+description: The MeshRenderer contract, lazy renderers, the options of the built-in renderers, and exactly what the Mesh core does before and after it calls a renderer.
 ---
 
 A renderer is a plain object that teaches Mesh to mount one framework's components. React, Vue and
-Svelte ship as `@mesh/react`, `@mesh/vue` and `@mesh/svelte`; each is under eighty lines, because the
-Mesh core does everything that is the same across frameworks. This page is the contract. For a
+Svelte ship as `@mesh/react`, `@mesh/vue` and `@mesh/svelte`; each renderer is under eighty lines,
+because the Mesh core does everything that is the same across frameworks. Their default exports are
+[lazy renderers](#lazy-renderers), so a framework only downloads on pages that need it, and each has
+a factory for [app-level setup](#built-in-renderer-options). This page is the contract. For a
 walkthrough of writing one, see [Custom renderers](/docs/advanced/custom-renderers).
 
 <Figure caption="The renderer contract. Left of the line is the core, shared by every framework; right of it, the four operations a renderer implements.">
@@ -17,6 +19,7 @@ walkthrough of writing one, see [Custom renderers](/docs/advanced/custom-rendere
 ```ts
 type MeshRenderer<TNode = unknown> = {
     type: string;
+    extensions?: string[];
     nativeSlots?: boolean;
     renderSlot: SlotRenderer<TNode>;
     mount: (args: {
@@ -40,7 +43,13 @@ React, a slot function for Vue, a `Snippet` for Svelte.
       type: 'string',
       required: true,
       description:
-        'The renderer type. Components are matched to it by file extension: "react" for .tsx/.jsx, "vue" for .vue, "svelte" for .svelte.',
+        'The renderer type. Components are matched to it by file extension: "react" for .tsx/.jsx, "vue" for .vue, "svelte" for .svelte, plus any extensions a renderer claims.',
+    },
+    extensions: {
+      type: 'string[]',
+      default: '[]',
+      description:
+        'Extra entry-file extensions, without the dot, that map to this type. A claim overrides the built-in mapping for that extension.',
     },
     nativeSlots: {
       type: 'boolean',
@@ -63,10 +72,168 @@ React, a slot function for Vue, a `Snippet` for Svelte.
   }}
 />
 
-Only the three types above can be reached today, because the core infers a component's renderer
-from its extension and knows no others. A renderer with `type: 'react'` replaces the built-in React
-renderer for every `.tsx` and `.jsx` component. See
-[what a custom renderer can do](/docs/advanced/custom-renderers#what-you-can-build-today).
+The core picks a component's renderer from its entry file's extension. A renderer with
+`type: 'react'` replaces the built-in React renderer for every `.tsx` and `.jsx` component; a
+renderer for another framework lists the extensions it owns in `extensions`. See
+[Claiming a file extension](/docs/advanced/custom-renderers#claiming-a-file-extension).
+
+## Lazy renderers
+
+`renderers` in `initMesh` also accepts a lazy descriptor: the type, any extensions, and a function
+that loads the real renderer.
+
+```ts
+type LazyMeshRenderer = {
+    type: string;
+    extensions?: string[];
+    load: () => Promise<MeshRenderer<any>>;
+};
+```
+
+This is what `@mesh/react`, `@mesh/vue` and `@mesh/svelte` export. The descriptor module imports no
+framework code, and `load()` is a dynamic `import()` of the renderer, so Vite puts the framework
+runtime in its own chunk instead of the entry bundle.
+
+- The core calls `load()` the first time an island of that type mounts, never at start-up. A page
+  without islands of that type never calls it.
+- It calls `load()` once per descriptor. Every island of that type waits on the same promise and
+  shares the renderer.
+- It loads the renderer and the component's chunk in parallel, and mounts once both are in.
+- If `load()` rejects, or resolves to something without `mount`, the island logs
+  `Mesh: failed to render "<id>"` with the error, and the next island of that type calls `load()`
+  again.
+
+A full renderer object is still accepted anywhere a descriptor is. Write your own descriptor when a
+custom renderer should load lazily too:
+
+```ts title="resources/js/app.ts"
+initMesh(Livewire, {
+    renderers: [
+        {
+            type: 'marko',
+            extensions: ['marko'],
+            load: () => import('./renderers/marko').then((m) => m.default),
+        },
+    ],
+});
+```
+
+## Built-in renderer options
+
+Each framework entry exports a factory that builds its lazy descriptor with app-level options. The
+default export is the factory called with no options, so these two lines are equivalent:
+
+```ts
+import reactRenderer, { createReactRenderer } from '@mesh/react';
+
+const sameAsDefault = createReactRenderer();
+```
+
+Every island is its own root or app, so the options apply once per island.
+
+<Frameworks>
+<Tab value="React">
+
+```tsx title="resources/js/renderers.tsx"
+import { createReactRenderer } from '@mesh/react';
+import { AppProviders } from './providers';
+
+export const reactRenderer = createReactRenderer({
+    wrap: (island) => <AppProviders>{island}</AppProviders>,
+    strictMode: true,
+});
+```
+
+```ts title="resources/js/app.ts"
+import { reactRenderer } from './renderers';
+
+initMesh(Livewire, { renderers: [reactRenderer] });
+```
+
+<TypeTable
+  type={{
+    wrap: {
+      type: '(node: ReactNode, ctx: { livewireComponent }) => ReactNode',
+      description:
+        'Wraps every island, for example in providers or an error boundary. It runs on every render, inside Mesh\'s context, so the wrapper can use the Mesh hooks. Create long-lived objects (a query client, a store) outside it.',
+    },
+    strictMode: {
+      type: 'boolean',
+      default: 'true',
+      description: 'Renders each island inside <React.StrictMode>.',
+    },
+  }}
+/>
+
+</Tab>
+<Tab value="Vue">
+
+```ts title="resources/js/renderers.ts"
+import { createVueRenderer } from '@mesh/vue';
+import { installPlugins } from './plugins';
+
+export const vueRenderer = createVueRenderer({
+    // Your function: app.use(...), app.component(...), app.provide(...)
+    setup: (app) => installPlugins(app),
+});
+```
+
+<TypeTable
+  type={{
+    setup: {
+      type: '(app: App, ctx: { livewireComponent }) => void',
+      description:
+        'Runs on each island\'s Vue app after Mesh provides the Livewire component and before the app mounts.',
+    },
+  }}
+/>
+
+Every island is a separate app, so `setup` runs once per island. Whether one plugin instance can be
+installed on several apps depends on the plugin; when in doubt, create one per call.
+
+</Tab>
+<Tab value="Svelte">
+
+```ts title="resources/js/renderers.ts"
+import { createSvelteRenderer } from '@mesh/svelte';
+import { theme } from './theme.svelte';
+
+export const svelteRenderer = createSvelteRenderer({
+    context: () => new Map([['theme', theme]]),
+});
+```
+
+<TypeTable
+  type={{
+    context: {
+      type: '(ctx: { livewireComponent }) => Map<any, any>',
+      description:
+        'Extra context for each island, merged into the context Map passed to mount(), so components can getContext() it. Mesh\'s own key is added last and cannot be replaced.',
+    },
+  }}
+/>
+
+</Tab>
+</Frameworks>
+
+The factory defers the framework and the renderer, not your options. Whatever the options import
+(the providers, plugins or stores above, and React itself for the JSX) is imported by `app.ts`, so
+it is in the entry chunk. To keep it lazy too, load the module that calls the factory from a
+descriptor of your own; the factory's `load()` returns the configured renderer:
+
+```ts title="resources/js/app.ts"
+initMesh(Livewire, {
+    renderers: [
+        {
+            type: 'react',
+            load: () => import('./renderers').then((m) => m.reactRenderer.load()),
+        },
+    ],
+});
+```
+
+Each factory's options type is exported too: `ReactRendererOptions`, `VueRendererOptions` and
+`SvelteRendererOptions`.
 
 ## mount()
 
@@ -143,7 +310,7 @@ type MeshSlots = Record<string, string>;
     'slots.children': {
       type: 'TNode | undefined',
       description:
-        'The default slot, rendered through renderSlot(html, "default"). undefined when its HTML is empty.',
+        'The default slot, rendered through renderSlot(html, "default"). undefined when its HTML is empty or only whitespace.',
     },
     'slots.named': {
       type: 'Record<string, TNode>',
@@ -185,13 +352,14 @@ slot is used.
 
 | The Mesh core | The renderer |
 | --- | --- |
-| Discovering entries and building the registry | `type` |
+| Discovering entries and building the registry | `type`, `extensions` |
 | Loading the lazy chunk, caching it, retrying a failed load | `renderSlot(html, name)` |
-| Checking for a default export | `mount(...)` |
-| Reading `data-mesh-props` and the slot holders | `update(ctx)` |
-| Finding `.mesh-root` | `cleanup()` |
-| Splitting default and named slots | Providing `livewireComponent` to the framework's context |
-| The reserved-prop check | Wrapping slot HTML so it does not affect layout |
+| Loading a lazy renderer once, before its first mount | `mount(...)` |
+| Checking for a default export | `update(ctx)` |
+| Reading `data-mesh-props` and the slot holders | `cleanup()` |
+| Finding `.mesh-root` | Providing `livewireComponent` to the framework's context |
+| Splitting default and named slots | Wrapping slot HTML so it does not affect layout |
+| The reserved-prop check | |
 | Dirty-checking props | |
 | Watching slot holders with a `MutationObserver` | |
 | Teardown, including teardown during a load | |
@@ -216,8 +384,10 @@ What the core guarantees about calls to `update` and `cleanup`:
 - **Mount failures are contained.** If `mount` throws, the core logs `Mesh: failed to render "<id>"`
   with the error; other islands are unaffected.
 - **Cleanup is wired before loading.** The core registers its teardown with Livewire before it starts
-  loading the chunk. If Livewire removes the component while the chunk loads, `mount` is never
-  called.
+  loading the chunk and the renderer. If Livewire removes the component while either loads, `mount`
+  is never called.
+- **Teardown forgets the island.** When Livewire removes a mounted island, the core calls `cleanup`
+  and removes the island from `window.Mesh.renderedComponents`.
 
 For frameworks that re-render from the top (React), `update` can simply render again. For frameworks
 that mount once and then mutate state (Vue, Svelte), `update` assigns the new context into reactive

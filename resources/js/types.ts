@@ -100,50 +100,88 @@ export type LivewireComponent = {
     snapshotEncoded: string;
 };
 
+// What an upload's `progress` callback receives: the XHR progress event, with
+// Livewire's whole-number percentage added as `detail.progress`.
+export type UploadProgressEvent = ProgressEvent & {
+    detail: { progress: number };
+};
+
+// Livewire's `$wire` proxy, typed from Livewire 4.3's `js/$wire.js`. Methods
+// that send a request return a Promise; the upload and dispatch helpers fire
+// and forget, so they return nothing — use their callbacks instead of `await`.
+// Every upload callback is optional (Livewire defaults each to a no-op).
 export type Wire = {
-    $parent: Wire | null;
+    // The nearest parent Livewire component's wire, or undefined at the top.
+    $parent: Wire | undefined;
     $el: HTMLElement;
     $id: string;
-    $get: (key: string) => any;
-    $set: (key: string, value: any, live: boolean) => void;
-    $toggle: (key: string, live: boolean) => void;
+    // `reactive: false` reads the last server value instead of the local one.
+    $get: (key: string, reactive?: boolean) => any;
+    // `live` defaults to true (send a request now); pass false to defer.
+    $set: (key: string, value: any, live?: boolean) => Promise<void>;
+    $toggle: (key: string, live?: boolean) => Promise<void>;
     $call: (method: string, ...args: any[]) => Promise<any>;
     // Returns Livewire's unsubscribe function (also auto-cleaned on
     // component teardown via addCleanup).
     $watch: (key: string, callback: (value: any) => void) => () => void;
     $refresh: () => Promise<void>;
-    $commit: () => void;
+    $commit: () => Promise<void>;
     $on: (event: string, callback: (...args: any[]) => void) => void;
     // Returns Livewire's unhook function (also auto-cleaned on teardown).
     $hook: (event: string, callback: (...args: any[]) => void) => () => void;
-    $dispatch: (event: string, params: object) => void;
-    $dispatchTo: (component: string, event: string, params: object) => void;
-    $dispatchSelf: (event: string, params: object) => void;
+    $dispatch: (event: string, params?: object) => void;
+    $dispatchTo: (component: string, event: string, params?: object) => void;
+    $dispatchSelf: (event: string, params?: object) => void;
     $upload: (
         name: string,
         file: File,
-        finish: (response: any) => void,
-        error: (response: any) => void,
-        progress: (event: { detail: { progress: number } }) => void
-    ) => Promise<void>;
+        // Receives the temporary filename.
+        finish?: (tmpFilename: string) => void,
+        // Transport failures and Livewire's temporary-upload rules only.
+        error?: () => void,
+        progress?: (event: UploadProgressEvent) => void,
+        cancelled?: () => void
+    ) => void;
     $uploadMultiple: (
         name: string,
-        files: File[],
-        finish: (response: any) => void,
-        error: (response: any) => void,
-        progress: (event: { detail: { progress: number } }) => void
-    ) => Promise<void>;
+        files: File[] | FileList,
+        // Receives the temporary filenames.
+        finish?: (tmpFilenames: string[]) => void,
+        error?: () => void,
+        progress?: (event: UploadProgressEvent) => void,
+        cancelled?: () => void,
+        // Add to the files already in the property (Livewire's default)
+        // instead of replacing them.
+        append?: boolean
+    ) => void;
     $removeUpload: (
         name: string,
         tmpFilename: string,
-        finish: (response: any) => void,
-        error: (response: any) => void
-    ) => Promise<void>;
+        // Receives the removed temporary filename.
+        finish?: (tmpFilename: string) => void
+    ) => void;
+    // Aborts the property's in-flight upload, if any.
+    $cancelUpload: (name: string, cancelled?: () => void) => void;
     __instance: LivewireComponent;
 };
 
+// A renderer that is loaded on demand. `initMesh` only holds this small
+// descriptor; the core calls `load()` (once per type, cached) the first time
+// an island of this type mounts, so the framework runtime is fetched only on
+// pages that have such an island.
+export type LazyMeshRenderer = {
+    type: string;
+    // Extra entry-file extensions (without the dot) that map to this type.
+    extensions?: string[];
+    load: () => Promise<MeshRenderer<any>>;
+};
+
+// What `Config.renderers` accepts: a full renderer object, or a lazy
+// descriptor (what `@mesh/react`, `@mesh/vue` and `@mesh/svelte` export).
+export type MeshRendererDefinition = MeshRenderer<any> | LazyMeshRenderer;
+
 export type Config = {
-    renderers: MeshRenderer<any>[];
+    renderers: MeshRendererDefinition[];
     // Additional component sources beyond the host app's resources/js/mesh
     // (see MeshSource). Ids must not collide with auto-discovered ones.
     sources?: MeshSource[];
@@ -166,6 +204,9 @@ export type RenderedComponent = {
 // references stable across props-only updates) is owned by the Mesh core.
 export type MeshRenderer<TNode = unknown> = {
     type: string;
+    // Extra entry-file extensions (without the dot) that map to this type,
+    // on top of the built-in tsx/jsx -> react, vue -> vue, svelte -> svelte.
+    extensions?: string[];
     // Native slot APIs keep Blade slots separate from ordinary component props.
     // Omit this for renderers that pass slot content through `children`/`slots`.
     nativeSlots?: boolean;
@@ -199,8 +240,10 @@ declare global {
                   };
                   config: {
                       debug?: boolean;
+                      // As passed to initMesh, keyed by type: full
+                      // renderers or lazy descriptors.
                       renderers: {
-                          [key: string]: MeshRenderer<any>;
+                          [key: string]: MeshRendererDefinition;
                       };
                   };
               }

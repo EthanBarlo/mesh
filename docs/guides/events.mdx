@@ -31,9 +31,9 @@ event:
 | `wire.$dispatchSelf(name, params)` | Only this component. |
 
 `params` is an object, and its keys become named arguments of the PHP
-listener. Mesh's types require it, so pass `{}` when there is nothing to
-send. Dispatching doesn't touch the server by itself. Each component with a
-PHP listener for the event calls the server to run it.
+listener. Leave it out when there is nothing to send. Dispatching doesn't
+touch the server by itself. Each component with a PHP listener for the event
+calls the server to run it.
 
 A plain Livewire component on the same page handles the ping above:
 

@@ -1,12 +1,20 @@
 import { buildRegistry } from "./buildRegistry";
 import renderComponent from "./renderComponent";
-import { Config, RenderedComponent } from "./types";
+import {
+    ComponentRegistry,
+    Config,
+    MeshRenderer,
+    MeshRendererDefinition,
+    RenderedComponent,
+} from "./types";
 import {
     debugLog,
     getComponentName,
     getProps,
     getRenderedComponent,
+    getRenderer,
     getSlots,
+    removeRenderedComponent,
     setRenderedComponent,
 } from "./utils";
 
@@ -65,17 +73,67 @@ function loadComponent(id: string): Promise<any> {
     return cache[id];
 }
 
-export default async function initMesh(Livewire: any, config: Config) {
-    const { renderers, debug, sources } = config;
+// Key the configured renderers by type. Anything that is neither a full
+// renderer (`mount`) nor a lazy descriptor (`load`) is logged and skipped
+// rather than thrown, so app.ts still reaches Livewire.start(). Two renderers
+// with the same type: the last one wins.
+function indexRenderers(
+    renderers: unknown
+): Record<string, MeshRendererDefinition> {
+    const byType: Record<string, MeshRendererDefinition> = {};
+    if (!Array.isArray(renderers)) {
+        console.error("Mesh: `renderers` must be an array.");
+        return byType;
+    }
 
-    // Initialize the Mesh global object synchronously (before any await) so the
-    // registry is available the moment Livewire begins initializing components.
+    for (const renderer of renderers) {
+        if (
+            !renderer ||
+            typeof renderer.type !== "string" ||
+            (typeof renderer.mount !== "function" &&
+                typeof renderer.load !== "function")
+        ) {
+            console.error(
+                "Mesh: ignoring an invalid renderer (it needs a `type` and either `mount` or `load`).",
+                renderer
+            );
+            continue;
+        }
+        byType[renderer.type] = renderer;
+    }
+
+    return byType;
+}
+
+// Boot Mesh: build the registry, set `window.Mesh` and hook into Livewire.
+// Synchronous and non-throwing for configuration mistakes: a bad registry
+// entry or renderer is logged with console.error and skipped, so the rest of
+// the page's islands still mount. (`await initMesh(...)` still works.)
+export default function initMesh(Livewire: any, config: Config): void {
+    const { debug, sources } = config;
+    const renderers = indexRenderers(config.renderers);
+
+    let registry: ComponentRegistry = {};
+    try {
+        registry = buildRegistry(
+            componentModules,
+            sources,
+            Object.values(renderers)
+        );
+    } catch (e) {
+        // buildRegistry logs bad entries itself; this only catches a
+        // malformed `sources` value.
+        console.error("Mesh: failed to build the component registry", e);
+    }
+
+    // Initialize the Mesh global object synchronously so the registry is
+    // available the moment Livewire begins initializing components.
     window.Mesh = {
-        registry: buildRegistry(componentModules, sources),
+        registry,
         resolved: {},
         renderedComponents: {},
         config: {
-            renderers: Object.fromEntries(renderers.map((r) => [r.type, r])),
+            renderers,
             debug,
         },
     };
@@ -106,22 +164,49 @@ export default async function initMesh(Livewire: any, config: Config) {
         let renderedComponent: RenderedComponent | undefined;
         cleanup(() => {
             disposed = true;
-            renderedComponent?.cleanup();
+            if (renderedComponent) {
+                removeRenderedComponent(component.id, renderedComponent);
+                renderedComponent.cleanup();
+            }
         });
 
-        let resolvedComponent: any;
+        // Fetch the component's chunk and its renderer (for a lazy renderer,
+        // the framework runtime) in parallel. Both are cached, so only the
+        // first island of a kind waits on the network.
+        let componentLoad: Promise<any>;
         try {
-            resolvedComponent = await loadComponent(id);
+            componentLoad = loadComponent(id);
         } catch (e) {
             console.error(e);
+            return;
+        }
+        const [loadedComponent, loadedRenderer] = await Promise.allSettled([
+            componentLoad,
+            getRenderer(window.Mesh!.registry[id].renderer),
+        ]);
+        if (loadedComponent.status === "rejected") {
+            console.error(loadedComponent.reason);
+            return;
+        }
+        if (loadedRenderer.status === "rejected") {
+            console.error(
+                "Mesh: failed to render \"" + id + "\"",
+                loadedRenderer.reason
+            );
             return;
         }
         if (disposed) {
             return;
         }
+        const resolvedComponent = loadedComponent.value;
+        const renderer: MeshRenderer<any> = loadedRenderer.value;
 
         try {
-            const rendered = renderComponent(component, id, resolvedComponent);
+            const rendered = renderComponent(
+                component,
+                renderer,
+                resolvedComponent
+            );
             renderedComponent = rendered;
             if (disposed) {
                 rendered.cleanup();

@@ -5,6 +5,7 @@
     "author": "Ethan Barlow",
     "license": "MIT",
     "type": "module",
+    "sideEffects": false,
     "peerDependencies": {
         "react": ">=18",
         "react-dom": ">=18",

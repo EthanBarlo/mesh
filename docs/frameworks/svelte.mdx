@@ -68,13 +68,14 @@ apps). Two copies of Svelte break reactivity between the renderer and your compo
 
 ### Configure TypeScript
 
-The demo enables full TypeScript in `<script lang="ts">` with `vitePreprocess`:
+Svelte 5 compiles `<script lang="ts">` with type annotations on its own. TypeScript that emits code,
+such as `enum`, needs a preprocessor; `vitePreprocess()` only handles scripts with `script: true`:
 
 ```js title="svelte.config.js"
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 
 export default {
-    preprocess: vitePreprocess(),
+    preprocess: vitePreprocess({ script: true }),
 };
 ```
 
@@ -130,9 +131,42 @@ initMesh(Livewire, {
 Livewire.start();
 ```
 
-`svelteRenderer` is also a named export. Importing it imports Svelte's runtime, so that is part of
-your main bundle on every page that loads `app.ts`. Each component's own code (and the libraries only
-it imports) is a separate chunk, loaded the first time the component renders.
+`svelteRenderer` is also a named export. It is a lazy descriptor, not the renderer itself: Svelte's
+runtime and the renderer are a separate chunk, fetched the first time a Svelte island mounts, so
+pages without one never download Svelte. Each component's own code (and the libraries only it
+imports) is a separate chunk too, loaded the first time the component renders.
+
+### App-level context
+
+Each island is its own component tree, so `setContext` in one island does not reach another. To give
+every island the same context, build the renderer with `createSvelteRenderer` and pass `context`, a
+function that returns a `Map`. Mesh merges it into the context it passes to `mount()`:
+
+```ts title="resources/js/app.ts"
+import { createSvelteRenderer } from '@mesh/svelte';
+import { theme } from './theme.svelte';
+
+initMesh(Livewire, {
+    renderers: [
+        createSvelteRenderer({
+            context: () => new Map([['theme', theme]]),
+        }),
+    ],
+});
+```
+
+```svelte title="resources/js/mesh/Counter/index.svelte"
+<script lang="ts">
+    import { getContext } from 'svelte';
+
+    const theme = getContext<{ mode: string }>('theme');
+</script>
+```
+
+`context` runs once per island, before it mounts. Mesh adds its own key last, so the Livewire
+component is always there for the composables. Whatever `app.ts` imports for `context` is in the
+entry chunk; to keep it lazy, see
+[Built-in renderer options](/docs/reference/renderer#built-in-renderer-options).
 
 Generate Svelte components with
 `php artisan make:mesh Counter --renderer=svelte`, or make Svelte the default in
@@ -362,7 +396,8 @@ only allows while a component initialises. Calling `useWire()` inside an event h
 ### Each island is its own component tree
 
 Mesh calls `mount()` once per island and passes the Livewire component through `mount`'s `context`
-option. `setContext` in one island does not reach another. Module-level state (a `$state` exported
+option. `setContext` in one island does not reach another; for context every island needs, use the
+renderer's [`context` option](#app-level-context). Module-level state (a `$state` exported
 from a `.svelte.ts` module) is shared, because every island imports the same module instance. The
 demo's kanban board coordinates drags across islands with window events instead.
 

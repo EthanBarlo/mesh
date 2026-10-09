@@ -216,14 +216,14 @@ To keep the file, store it from an action, for example
 
 ## Remove or reset
 
-`wire.$removeUpload(property, tmpFilename, finish, error)` deletes the
+`wire.$removeUpload(property, tmpFilename, finish?)` deletes the
 temporary file on the server and clears the property:
 
 ```tsx
-wire.$removeUpload("photo", meta.tmpFilename, () => {}, () => {});
+wire.$removeUpload("photo", meta.tmpFilename);
 ```
 
-Mesh's types ask for both callbacks; Livewire only calls `finish`.
+An optional third argument, `finish`, runs once the file is gone.
 
 To recover from a rejected file, clear the property and its errors on the
 server. The demo's "Try again" button calls this action, then resets its

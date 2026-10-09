@@ -69,8 +69,8 @@
                     status = "error";
                 }
             },
-            // error — transport failure or server-side validation rejection.
-            // Validation messages also land in the error bag (useErrorBag).
+            // error — a transport failure, or a file Livewire's temporary-upload
+            // rules reject. #[Validate] failures land in the error bag instead.
             () => (status = "error"),
             // progress — Livewire emits 0–100 as the temp upload streams.
             (event) => (progress = event.detail.progress),
@@ -117,7 +117,6 @@
             wire.$removeUpload(
                 "photo",
                 meta.tmpFilename,
-                () => {},
                 () => {},
             );
         }

@@ -231,8 +231,8 @@ island mounts. If nothing appears, start with
 2. The component rendered a wrapper element carrying its id, `Counter`, and
    the output of `props()` as JSON.
 3. In the browser, Mesh looked up `Counter` in its registry, loaded that
-   component's chunk, and mounted it with the renderer its file extension
-   names.
+   component's chunk and, on this first island, the framework renderer its
+   file extension names, then mounted it.
 4. `useEntangle` kept the island and `$count` in step, and `$call` ran
    `save()` in the same request that delivered the new count.
 

@@ -1,49 +1,100 @@
 ---
 title: Custom renderers
-description: How the three shipped renderers work, how to replace one with your own to add providers or plugins, and what custom renderers cannot do yet.
+description: How the three shipped renderers work, how to replace one or add a framework with its own file extension, and how to keep a custom renderer lazy.
 ---
 
 A renderer is the small adapter between Mesh and a UI framework: it turns slot HTML into the
 framework's nodes and mounts, updates and unmounts a component. The contract is on the
-[Renderer API](/docs/reference/renderer) page. This page reads the shipped renderers line by line and
-then builds a replacement.
+[Renderer API](/docs/reference/renderer) page. This page reads the shipped renderers line by line,
+then shows how to add a renderer of your own.
 
-## What you can build today
+<Callout title="Only need providers, plugins or context?">
+  You probably don't need a custom renderer. `createReactRenderer({ wrap, strictMode })`,
+  `createVueRenderer({ setup })` and `createSvelteRenderer({ context })` cover app-level setup. See
+  [Built-in renderer options](/docs/reference/renderer#built-in-renderer-options).
+</Callout>
 
-Be clear about the limits before you start. The core picks a component's renderer from its file
-extension, and it only knows three mappings:
+## What a custom renderer can do
+
+The core picks a component's renderer from its entry file's extension. The built-in mapping is
+`tsx` and `jsx` to `react`, `vue` to `vue` and `svelte` to `svelte`, and a renderer's `extensions`
+adds to it:
 
 ```ts title="resources/js/buildRegistry.ts (inferRenderer, simplified)"
-if (ext === 'tsx' || ext === 'jsx') return 'react';
-if (ext === 'vue') return 'vue';
-if (ext === 'svelte') return 'svelte';
+const map = { tsx: 'react', jsx: 'react', vue: 'vue', svelte: 'svelte' };
+for (const renderer of renderers) {
+    for (const ext of renderer.extensions ?? []) map[ext] = renderer.type;
+}
+if (ext in map) return map[ext];
 throw new Error('Mesh: cannot infer renderer for component entry …');
 ```
 
-Discovery in `initMesh` only globs `/resources/js/mesh/**/index.{tsx,jsx,vue,svelte}`, and entries
-added through `sources` go through the same `inferRenderer`, so any other extension throws. That
-means:
+That means:
 
 - **You can replace a built-in renderer.** A renderer whose `type` is `'react'`, `'vue'` or
   `'svelte'` takes over every component with that extension. Pass it to `initMesh` instead of the
-  built-in one (if you pass both, the one listed last wins). This is how you wrap every island in
-  providers, install Vue plugins, add an error boundary, or drop React's StrictMode.
-- **You cannot add a new framework with its own file type yet.** A Solid, Lit or Angular renderer has
-  no extension that maps to it, and a Solid renderer registered as `'react'` would take over every
-  `.tsx` file in the app.
+  built-in one (if you pass both, the one listed last wins).
+- **You can add a framework with its own file type.** Give the renderer a new `type`, claim its
+  extension in `extensions`, and glob its entries through `sources`. See
+  [Claiming a file extension](#claiming-a-file-extension).
+- **A claim beats the built-in mapping.** A Solid renderer with `extensions: ['tsx']` takes every
+  `.tsx` entry away from React, so only do that in an app with no React islands. When two configured
+  renderers claim one extension, the one listed last wins.
 - **You cannot pick a renderer per component.** The PHP side carries only an id and props; the
   extension decides.
 
-<Callout title="Planning a new framework?">
-  Supporting another framework needs a change to `inferRenderer` and the discovery glob in the
-  package. Open an issue on [GitHub](https://github.com/EthanBarlo/mesh) to discuss it.
-</Callout>
+## Claiming a file extension
+
+Say you have a renderer for a framework whose components are `.marko` files. Wire it up in three
+parts: the renderer claims the extension, a lazy descriptor keeps it out of the entry chunk, and a
+glob of your own finds the entries.
+
+```ts title="resources/js/app.ts"
+import { Livewire } from
+    '../../vendor/livewire/livewire/dist/livewire.esm';
+import { initMesh } from '@mesh';
+import reactRenderer from '@mesh/react';
+
+initMesh(Livewire, {
+    renderers: [
+        reactRenderer,
+        {
+            type: 'marko',
+            extensions: ['marko'],
+            load: () => import('./renderers/marko').then((m) => m.default),
+        },
+    ],
+    sources: [import.meta.glob('/resources/js/mesh/**/index.marko')],
+});
+
+Livewire.start();
+```
+
+- **`extensions`** maps `.marko` entries to the `marko` type. Write it without the dot. It can sit on
+  the lazy descriptor, as here, or on a full renderer object.
+- **The glob is yours.** Mesh's own discovery glob is the literal
+  `/resources/js/mesh/**/index.{tsx,jsx,vue,svelte}`. Vite only accepts literal patterns, so Mesh
+  cannot add your extension to it at runtime. Glob the entries yourself and pass the result in
+  `sources`.
+- **Ids work the same.** The extension is stripped whatever it is, then a trailing `/index`, so
+  `resources/js/mesh/Clock/index.marko` is `Clock`. Entries in the app's own `resources/js/mesh`
+  share one id space with the discovered ones: `Clock/index.tsx` next to `Clock/index.marko` is a
+  duplicate, and the first one found keeps the id.
+- **The PHP side is unchanged.** The class is an ordinary `Mesh\Component`. `make:mesh` only knows
+  the built-in frameworks, so create the entry file by hand.
+- **The module `./renderers/marko`** default-exports a `MeshRenderer` built like the walkthroughs
+  below. It should provide `livewireComponent` through the framework's own context mechanism so your
+  components can reach `$wire`. Keep it outside `resources/js/mesh`, which is for components.
+
+Passing the renderer object itself instead of a descriptor also works, but then the framework is in
+the entry chunk on every page.
 
 ## Walkthrough: React
 
-The shipped React renderer, lightly reformatted, with imports omitted:
+`@mesh/react`'s default export is a lazy descriptor whose `load()` imports this module. The renderer
+itself, simplified: imports and the `wrap` and `strictMode` options are left out.
 
-```tsx title="resources/js/react/renderer.tsx"
+```tsx title="resources/js/react/slot.tsx and renderer.tsx (simplified)"
 export function MeshSlot({ html }: { html: string }) {
     return (
         <div
@@ -108,10 +159,10 @@ Reading it top to bottom:
 ## Mount once, then mutate: Vue
 
 Vue does not re-render from the top. It mounts an app once and reacts to state changes, so the
-renderer keeps the context in reactive state and `update` writes into it (shipped code, lightly
-reformatted):
+renderer keeps the context in reactive state and `update` writes into it (simplified: the `setup`
+option is left out):
 
-```ts title="resources/js/vue/renderer.ts"
+```ts title="resources/js/vue/slot.ts and renderer.ts (simplified)"
 export type VueSlot = () => VNodeChild;
 
 export const renderSlotHtml = (html: string): VueSlot => () =>
@@ -169,10 +220,10 @@ What is different from React:
 ## Svelte: state you can assign into
 
 The Svelte renderer has the same mount-once shape. Svelte components take everything as props, so
-it flattens the context into a single props object kept in `$state` (shipped code, lightly
-reformatted):
+it flattens the context into a single props object kept in `$state` (simplified: the `context`
+option is left out):
 
-```ts title="resources/js/svelte/renderer.svelte.ts"
+```ts title="resources/js/svelte/slot.ts and renderer.svelte.ts (simplified)"
 export const renderSlotHtml = (html: string): SvelteSlot =>
     createRawSnippet(() => ({
         render: () => `<div style="display: contents">${html}</div>`,
@@ -227,59 +278,25 @@ const svelteRenderer: MeshRenderer<SvelteSlot> = {
 
 ## Example: shared providers
 
-The most common reason to write a renderer today is to put something around every island: a theme,
-a data-fetching client, an error boundary. Each island is its own root, so there is no other place
-to do it. Copy the built-in renderer and add your wrapper:
+The most common reason to touch a renderer is to put something around every island: a theme, a
+data-fetching client, an error boundary. Each island is its own root, so the renderer is the only
+place to do it. The built-in factories take that as an option, so you do not need to copy a
+renderer:
 
-```tsx title="resources/js/renderers/react.tsx"
-import { StrictMode, type ReactNode } from 'react';
-import { createRoot } from 'react-dom/client';
-import { LivewireContext, MeshSlot } from '@mesh/react';
-import type { MeshRenderer, RenderContext } from '@mesh';
+```tsx title="resources/js/renderers.tsx"
+import { createReactRenderer } from '@mesh/react';
 import { AppProviders } from '@/providers';
 
-export const reactRenderer: MeshRenderer<ReactNode> = {
-    type: 'react',
-
-    renderSlot: (html, name) => (
-        <MeshSlot
-            key={name === 'default' ? undefined : name}
-            html={html}
-        />
-    ),
-
-    mount: ({ el, livewireComponent, Component, ctx }) => {
-        const root = createRoot(el);
-
-        const render = ({ props, slots }: RenderContext<ReactNode>) => {
-            const named = slots.hasNamed ? { slots: slots.named } : {};
-            const island = (
-                <Component {...props} {...named}>
-                    {slots.children}
-                </Component>
-            );
-
-            root.render(
-                <StrictMode>
-                    <LivewireContext.Provider value={livewireComponent}>
-                        <AppProviders>{island}</AppProviders>
-                    </LivewireContext.Provider>
-                </StrictMode>,
-            );
-        };
-
-        render(ctx);
-
-        return { update: render, cleanup: () => root.unmount() };
-    },
-};
+export const reactRenderer = createReactRenderer({
+    wrap: (island) => <AppProviders>{island}</AppProviders>,
+});
 ```
 
 ```ts title="resources/js/app.ts"
 import { Livewire } from
     '../../vendor/livewire/livewire/dist/livewire.esm';
 import { initMesh } from '@mesh';
-import { reactRenderer } from './renderers/react';
+import { reactRenderer } from './renderers';
 
 initMesh(Livewire, {
     renderers: [reactRenderer],
@@ -288,26 +305,36 @@ initMesh(Livewire, {
 Livewire.start();
 ```
 
-Keep renderer files out of `resources/js/mesh`, which is for components. Anything created at module
+`wrap` runs inside Mesh's context, so `AppProviders` can use `useWire()`. Anything created at module
 scope in `@/providers` (a client, a store) is created once and shared by every island on the page,
-while each island still gets its own provider instance.
+while each island still gets its own provider instance. `createReactRenderer({ strictMode: false })`
+drops StrictMode the same way.
 
-The Vue version follows the same pattern: copy the shipped renderer, then call your setup on the app
-before mounting it.
+The Vue version passes `setup`, which runs on each island's app before it mounts:
 
 ```ts
-app.provide(LivewireComponentKey, livewireComponent);
-installPlugins(app); // your function: app.use(...), app.component(...)
-app.mount(el);
+import { createVueRenderer } from '@mesh/vue';
+
+export const vueRenderer = createVueRenderer({
+    setup: (app) => installPlugins(app), // your function: app.use(...), app.component(...)
+});
 ```
 
 Every island is a separate app, so `installPlugins` runs once per island. Whether one plugin
 instance can be installed on several apps depends on the plugin; when in doubt, create one per call.
+Svelte's factory takes `context`, a function returning a `Map` that is merged into each island's
+mount context.
+
+Whatever `renderers.tsx` imports ends up in the entry chunk, because `app.ts` imports it. To keep the
+providers lazy too, see [Built-in renderer options](/docs/reference/renderer#built-in-renderer-options).
+Write a renderer of your own only for what the options do not cover, and keep renderer files out of
+`resources/js/mesh`.
 
 ## Testing a renderer
 
-Mesh's own renderer tests (`tests/js/vueRenderer.test.ts` and `svelteRenderer.test.ts`) call
-`mount` directly with a fake component and a hand-built context. They are a good template. A
+Mesh's own renderer tests (`tests/js/reactRenderer.test.ts`, `vueRenderer.test.ts` and
+`svelteRenderer.test.ts`) mount a real component through the core's `mountComponent` with a
+hand-built context. They are a good template. A
 renderer should pass the same checks:
 
 - mounts a component with props;

@@ -25,8 +25,8 @@ Mesh |  Initialized Mesh {renderers: {…}, debug: true}
 Mesh |  component.init | Counter {component: …}
 ```
 
-- **No `Initialized Mesh` line:** `initMesh` never ran, or threw (look for an uncaught promise
-  rejection just above).
+- **No `Initialized Mesh` line:** `initMesh` never ran. Check that `app.ts` calls it and that the
+  layout loads the bundle.
 - **`Initialized Mesh` but no `component.init | Counter`:** Livewire never initialised that
   component. The problem is on the Livewire side, not in your frontend code.
 - **`component.init | Counter` but nothing renders:** the error is in the lines after it.
@@ -46,16 +46,20 @@ the layout has `@livewireScriptConfig`, Livewire waits for you to start it.
 layout loads it with `@vite([... 'resources/js/app.ts'])`.
 
 </Accordion>
-<Accordion title="Alpine warns it was initialized twice, and requests fail" id="missing-script-config">
+<Accordion title="Livewire and Alpine start twice, or requests fail" id="missing-script-config">
 
 ```text
-Alpine has already been initialized on this page. Calling
-Alpine.start() more than once can cause problems.
+Detected multiple instances of Livewire running
+Detected multiple instances of Alpine running
+Uncaught TypeError: Cannot redefine property: $persist
 ```
 
-**Cause.** `@livewireScriptConfig` is missing from the layout. Without it, Livewire's ESM build
-starts itself on `DOMContentLoaded` (so your `Livewire.start()` makes it start twice) and has no
-update URI or CSRF token to send requests with.
+**Cause.** `@livewireScriptConfig` is missing from the layout. Without it, your bundle's copy of
+Livewire starts itself on `DOMContentLoaded`, so your `Livewire.start()` starts it a second time.
+With Livewire's default `inject_assets` setting, Livewire also injects its own script tag, so a
+second copy of Livewire and Alpine runs beside yours and the console shows the lines above. With
+`inject_assets` off, there is no second copy, but your bundle has no update URI or CSRF token, so
+every request fails.
 
 **Fix.** Put `@livewireScriptConfig` before `</body>` in every layout that loads the bundle. Do not
 also use `@livewireScripts`.
@@ -69,13 +73,14 @@ Detected multiple instances of Alpine running
 ```
 
 **Cause.** Livewire is loaded twice: once from your bundle and once from Livewire's own script tag
-(`@livewireScripts`), or by importing a second copy.
+(`@livewireScripts`, or the tag Livewire injects when
+[`@livewireScriptConfig` is missing](#missing-script-config)), or by importing a second copy.
 
 **Fix.** Import Livewire only from `vendor/livewire/livewire/dist/livewire.esm` in `app.ts`, and use
 `@livewireScriptConfig` (not `@livewireScripts`) in the layout.
 
 </Accordion>
-<Accordion title="Uncaught (in promise) Error: Mesh: … and no island mounts" id="registry-errors">
+<Accordion title="Mesh: duplicate component id, unknown extension, or source entry outside a mesh directory" id="registry-errors">
 
 ```text
 Mesh: duplicate component id "Counter" derived from
@@ -88,17 +93,20 @@ Mesh: source entry "…" does not live under a "resources/js/mesh/"
 directory, so no component id can be derived. …
 ```
 
-**Cause.** Building the registry failed, so `initMesh` stopped before it hooked into Livewire.
-`window.Mesh` is never set, and no island on the page mounts. These appear as uncaught promise
-rejections because `initMesh` is `async`. Livewire itself keeps working.
+**Cause.** One entry could not be added to the registry. `initMesh` logs the error, skips that
+entry and carries on, so every other island on the page still mounts. A skipped entry has no
+component behind it: an island that uses it logs `is not registered` instead. For a duplicate id,
+the first entry found keeps the id. App components are read before `sources`, and within one glob
+entries are in path order, so `Counter/index.tsx` wins over `Counter/index.vue`.
 
 **Fix.**
 
 - *Duplicate id:* two entries derive the same id, usually `index.tsx` and `index.vue` in one folder,
   or an app component and a package component. Keep one entry per folder; give package sources a
   `prefix`.
-- *Unknown extension:* a `sources` glob matched a file Mesh cannot map to a renderer. Narrow the
-  glob to `index.{tsx,jsx,vue,svelte}`.
+- *Unknown extension:* a `sources` glob matched a file no renderer claims. Narrow the glob to
+  `index.{tsx,jsx,vue,svelte}`, or, for a custom renderer, list the extension in its `extensions`
+  (see [Custom renderers](/docs/advanced/custom-renderers#claiming-a-file-extension)).
 - *Source entry outside a mesh directory:* every source entry needs `resources/js/mesh/` in its
   path. Move the files or fix the glob.
 
@@ -168,6 +176,10 @@ passed to `initMesh`.
 
 **Fix.** Add it: `renderers: [reactRenderer, vueRenderer]`, and install the framework and its Vite
 plugin (see [Vue](/docs/frameworks/vue#install) or [Svelte](/docs/frameworks/svelte#install)).
+
+The same `Mesh: failed to render "<id>"` line also appears when a renderer fails to load, for
+example when the browser cannot fetch its chunk (see [The chunk fails to load](#chunk-load)). Mesh
+forgets the failed load, and the next island of that kind tries again.
 
 </Accordion>
 <Accordion title="children or slots is reserved" id="reserved-props">
@@ -250,9 +262,9 @@ config so only one copy is bundled.
 Failed to fetch dynamically imported module: …
 ```
 
-**Cause.** This is the browser's message (Chrome's wording) for a lazy component chunk it cannot
-load: a stale build or manifest, a deploy that removed old chunks while a tab was open, or a wrong
-`@mesh` alias.
+**Cause.** This is the browser's message (Chrome's wording) for a lazy chunk it cannot load, either a
+component or a framework renderer: a stale build or manifest, a deploy that removed old chunks while
+a tab was open, or a wrong `@mesh` alias.
 
 **Fix.** Rebuild and redeploy, and check the alias is `'@mesh': '/vendor/ethanbarlo/mesh/resources/js'`.
 Mesh forgets a failed load, so the next attempt to mount the component tries again.
@@ -331,26 +343,18 @@ success. Keep `try`/`finally` for real request failures.
 </Accordion>
 <Accordion title="React: a $watch callback runs twice" id="strictmode-double">
 
-**Cause.** React StrictMode, which the renderer always enables, runs effects twice in development.
+**Cause.** React StrictMode, which the renderer enables by default, runs effects twice in
+development.
 An effect that calls `wire.$watch` without returning the unwatch function leaves two watchers.
 
 **Fix.** Return it: `useEffect(() => wire.$watch('price', onPrice), [wire])`. See
-[React gotchas](/docs/frameworks/react#strictmode-is-always-on).
-
-</Accordion>
-<Accordion title="React: a live entangle sends a request on page load" id="live-mount-request">
-
-**Cause.** React's `useEntangle` writes its value back to Livewire after mount and after every
-change. In live mode each write is a request.
-
-**Fix.** Expected behaviour of the React hook (Vue and Svelte skip it). Use live mode only where the
-server must see every change. See [React gotchas](/docs/frameworks/react#useentangle-writes-its-value-back).
+[React gotchas](/docs/frameworks/react#strictmode-is-on-by-default).
 
 </Accordion>
 <Accordion title="await wire.$upload() returns before the upload finishes" id="upload-await">
 
-**Cause.** Livewire's `$upload` returns nothing. The `Promise<void>` in the type does not wait for
-anything.
+**Cause.** Livewire's `$upload` returns nothing (the `Wire` type says `void`), so `await` has
+nothing to wait for.
 
 **Fix.** Do the follow-up work in the `finish` callback (third argument). See the
 [`$wire` API](/docs/reference/wire#uploads).
