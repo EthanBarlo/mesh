@@ -17,9 +17,10 @@ const PriceWatcher: React.FC<PriceWatcherProps> = ({ symbol, initialPrice }) => 
     const [paused, setPaused] = useState(false);
 
     // Inbound: the server owns `price` — every change it makes flows
-    // through $watch into local React state.
+    // through $watch into local React state. Returning the unwatch keeps
+    // StrictMode's double mount from appending each price twice.
     useEffect(() => {
-        wire.$watch("price", (value: number) => {
+        return wire.$watch("price", (value: number) => {
             setHistory((prev) => [...prev, value].slice(-MAX_POINTS));
         });
     }, [wire]);

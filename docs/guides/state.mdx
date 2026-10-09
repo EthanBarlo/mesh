@@ -89,8 +89,13 @@ const count = useEntangle<number>("count");
 A few rules hold everywhere:
 
 - `key` names a **public** property. The type parameter defaults to `string`.
-- Treat `key` and `live` as fixed. They are read when the component sets up
-  the binding, and changing them after mount is not supported.
+- Treat `key` and `live` as fixed. Vue and Svelte read them once, when the
+  component sets up the binding. React follows a changed `key` (see
+  [React](/docs/frameworks/react#changing-the-key-or-mode)), but literals keep
+  a component portable.
+- Only your own writes reach Livewire, and only when the value differs from
+  what Livewire holds. Nothing is sent when the island mounts, and a value
+  that arrives from the server is not sent back.
 - **Replace values, don't mutate them.** Vue and Svelte track the entangled
   value shallowly, so `tags.value.push("new")` changes nothing on the server.
   Assign a new array or object instead:

@@ -7,9 +7,10 @@ export function useErrorBag() {
     const $wire = useWire();
     const [errors, setErrors] = useState($wire.__instance.snapshot.memo.errors);
 
-    // Listen to requests, and grab the error bag from them after completion
+    // Listen to requests, and grab the error bag from them after completion.
+    // Returning the unhook keeps StrictMode's double mount from stacking hooks.
     useEffect(() => {
-        $wire.$hook("commit", ({ succeed }) => {
+        return $wire.$hook("commit", ({ succeed }) => {
             succeed(() => {
                 // The snapshot on $wire.__instance is already parsed, so we read
                 // the errors from there rather than re-parsing the commit payload.

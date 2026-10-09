@@ -36,15 +36,19 @@ const [slug, setSlug] = useEntangle<string>('slug', true);
 setCount((c) => c + 1);
 ```
 
-- Returns a `useState` pair. The setter accepts a value or an updater function.
+- Returns a `useState`-style pair. The setter accepts a value or an updater function.
 - The initial state is `wire.$get(key)`.
-- **Inbound:** an effect registers `wire.$watch(key, setValue)`, so server changes re-render the
-  component. The watcher is not unsubscribed by the hook; Livewire removes it when the component
-  is torn down.
-- **Outbound:** an effect calls `wire.$set(key, value, live)` whenever the value changes, and once
-  after mount. With `live` this means a request on mount and after every server-driven change (see
-  [React gotchas](/docs/frameworks/react#useentangle-writes-its-value-back)).
-- `key` and `live` are read on mount. Keep them constant.
+- **Inbound:** an effect registers `wire.$watch(key, …)`, so server changes re-render the
+  component. The effect returns the unwatch function, so StrictMode's second mount and a changed
+  `key` leave exactly one watcher.
+- **Outbound:** the setter calls `wire.$set(key, value, live)` only if the new value differs (`!==`)
+  from what Livewire holds. Nothing is sent on mount, and a server push is not echoed back. An
+  updater function receives the value Livewire currently holds.
+- Compared by identity: pass a new object or array to the setter. Mutating the current value does
+  not sync.
+- If `key` changes, the hook watches the new property and reseeds from `$get(key)`. A changed
+  `live` applies from the next write. Vue and Svelte read both once, so literals keep a component
+  portable.
 
 </Tab>
 <Tab value="Vue">
@@ -112,7 +116,7 @@ In every framework, `live` decides when Livewire hears about a change:
 | Mode | Call | Network |
 | --- | --- | --- |
 | Deferred (default) | `useEntangle('name')` | None. The change rides along with the next request: an action, `$commit`, `$refresh`, or a live update. |
-| Live | `useEntangle('slug', true)` | One request per change. `updatedSlug()` runs on the server each time. |
+| Live | `useEntangle('slug', true)` | One request per change. The server runs the property's `#[Validate]` rules and any `updatedSlug()` hook each time. |
 
 The [Two-way state guide](/docs/guides/state) shows both modes side by side.
 
@@ -234,6 +238,8 @@ function useErrorBag(): {
   appear straight away.
 - The bag is replaced as a whole each time. Errors clear when the server validates again and the
   key is gone. There is no client-side `clear()`.
+- The `commit` hook is removed when the island unmounts: by the effect cleanup in React,
+  `onScopeDispose` in Vue and `onDestroy` in Svelte.
 - Livewire only keeps errors whose key is a property of the component. An empty bag is serialized
   as `[]`, so test for a key (`errors.email`) rather than comparing with `{}`.
 - Each package also exports `type ErrorBagItem = string[] | null`.
