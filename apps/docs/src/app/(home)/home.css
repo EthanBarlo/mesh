@@ -534,20 +534,21 @@ html:has(.home) {
   display: none;
 }
 
-/* Theme switch (Fumadocs' control, redrawn): a square two-cell toggle. */
-.mh-theme[data-theme-toggle] {
+/* Theme toggle (ThemeToggle): a square two-cell switch, sun and moon. The
+   inked cell follows the `dark` class next-themes sets on <html>. */
+.mh-theme {
+  display: inline-flex;
+  align-items: center;
   height: 36px;
   padding: 0;
   gap: 0;
+  overflow: hidden;
   border: 1px solid var(--line-3);
   border-radius: 0;
   background: var(--paper);
   transition: border-color var(--t-fast) ease;
 }
-.mh-theme[data-theme-toggle] > * {
-  border-radius: 0 !important;
-}
-.mh-theme[data-theme-toggle] svg {
+.mh-theme__cell {
   box-sizing: content-box;
   width: 14px;
   height: 14px;
@@ -559,12 +560,13 @@ html:has(.home) {
     color var(--t-fast) ease,
     background-color var(--t-fast) ease;
 }
-.mh-theme[data-theme-toggle] svg.bg-fd-accent {
+html:not(.dark) .mh-theme__cell--light,
+html.dark .mh-theme__cell--dark {
   background: var(--ink);
   color: var(--paper);
 }
 @media (hover: hover) and (pointer: fine) {
-  .mh-theme[data-theme-toggle]:hover {
+  .mh-theme:hover {
     border-color: var(--ink);
   }
 }
@@ -1253,6 +1255,9 @@ html:has(.home) {
 .home .stack__callout.is-hot .stack__callout-k {
   fill: var(--accent-ink);
 }
+.home .stack__callout-narrow {
+  display: none;
+}
 .home .packet {
   pointer-events: none;
 }
@@ -1349,6 +1354,17 @@ html:has(.home) {
   }
   .home .stack__balloons {
     display: inline;
+  }
+  /* The figure is drawn at ~0.7–0.84 scale here, so the 9.5px callout would
+     read at ~7px. Set it at 15px (~10–12px on screen) on three short lines. */
+  .home .stack__callout-wide {
+    display: none;
+  }
+  .home .stack__callout-narrow {
+    display: inline;
+  }
+  .home .stack__callout-narrow .svg-k {
+    font-size: 15px;
   }
 }
 
@@ -1696,6 +1712,32 @@ html:has(.home) {
 .home .seg__opt input:focus-visible + span {
   outline: 2px solid var(--accent);
   outline-offset: -4px;
+}
+
+/* Before hydration the stored framework isn't known to React, so Sheet 02
+   renders every variant and these rules pick one from <html data-framework>
+   (set before paint by the inline script in the root layout). No attribute,
+   or no JS at all, means React. */
+html:not([data-framework='vue']):not([data-framework='svelte']) .home [data-fw-only]:not([data-fw-only='react']),
+html[data-framework='vue'] .home [data-fw-only]:not([data-fw-only='vue']),
+html[data-framework='svelte'] .home [data-fw-only]:not([data-fw-only='svelte']) {
+  display: none;
+}
+/* Without JS a radio can still be checked natively but changes nothing, so
+   only the rules below may ink a label while pending. */
+.home .seg[data-fw-pending] .seg__opt input:checked + span {
+  color: inherit;
+}
+html[data-framework='vue'] .home .seg[data-fw-pending] .seg__track {
+  --i: 1;
+}
+html[data-framework='svelte'] .home .seg[data-fw-pending] .seg__track {
+  --i: 2;
+}
+html:not([data-framework='vue']):not([data-framework='svelte']) .home .seg[data-fw-pending] .seg__opt[data-fw='react'] span,
+html[data-framework='vue'] .home .seg[data-fw-pending] .seg__opt[data-fw='vue'] span,
+html[data-framework='svelte'] .home .seg[data-fw-pending] .seg__opt[data-fw='svelte'] span {
+  color: var(--paper);
 }
 
 /* Parts + inspector */

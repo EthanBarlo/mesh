@@ -89,23 +89,42 @@ function partFrom(target: EventTarget | null, root: HTMLElement | null): Part | 
   return el.getAttribute('data-part') as Part;
 }
 
+/**
+ * Framework-dependent content. While the stored choice is unknown (`fw` is
+ * null: the server render and the hydration pass), every variant is rendered
+ * and CSS shows the one matching <html data-framework>, React by default.
+ */
+function ByFramework({ fw, children }: { fw: FrameworkId | null; children: (fw: FrameworkId) => ReactNode }) {
+  if (fw) return children(fw);
+  return frameworkIds.map((id) => (
+    <span key={id} data-fw-only={id}>
+      {children(id)}
+    </span>
+  ));
+}
+
 function FrameworkSwitch({
   value,
   onChange,
   label,
 }: {
-  value: FrameworkId;
+  value: FrameworkId | null;
   onChange: (fw: FrameworkId) => void;
   label: string;
 }) {
   const name = useId();
-  const index = frameworkIds.indexOf(value);
+  // Until the choice is known, CSS positions the thumb and inks the label
+  // from <html data-framework> (see `data-fw-pending` in home.css).
+  const pending = value === null;
   return (
-    <fieldset className="seg">
+    <fieldset className="seg" data-fw-pending={pending ? '' : undefined}>
       <legend className="vh">{label}</legend>
-      <div className="seg__track" style={{ '--i': index } as CSSProperties}>
+      <div
+        className="seg__track"
+        style={pending ? undefined : ({ '--i': frameworkIds.indexOf(value) } as CSSProperties)}
+      >
         {frameworkIds.map((fw) => (
-          <label key={fw} className="seg__opt">
+          <label key={fw} className="seg__opt" data-fw={fw}>
             <input
               type="radio"
               name={name}
@@ -121,7 +140,7 @@ function FrameworkSwitch({
   );
 }
 
-function Path({ parts }: { parts: Array<[string, Part | null]> }) {
+function Path({ parts }: { parts: Array<[ReactNode, Part | null]> }) {
   return (
     <code className="panel__path">
       {parts.map(([text, part], i) =>
@@ -147,7 +166,7 @@ function ComponentFigure({
   php: ReactNode;
   blade: ReactNode;
   front: Record<FrameworkId, ReactNode>;
-  fw: FrameworkId;
+  fw: FrameworkId | null;
   setFw: (fw: FrameworkId) => void;
 }) {
   const rootRef = useRef<HTMLElement>(null);
@@ -224,7 +243,7 @@ function ComponentFigure({
           <div className="panel__body code">{php}</div>
         </section>
 
-        <section className="panel" aria-label={`Frontend entry, ${frameworkNames[fw]}`}>
+        <section className="panel" aria-label={`Frontend entry, ${frameworkNames[fw ?? 'react']}`}>
           <header className="panel__head panel__head--wrap">
             <span className="tag">C</span>
             <span className="panel__kind">Frontend entry</span>
@@ -242,13 +261,21 @@ function ComponentFigure({
                 ['/', null],
                 ['Counter', 'name'],
                 ['/index', null],
-                [`.${ext[fw]}`, 'renderer'],
+                [<ByFramework key="ext" fw={fw}>{(id) => `.${ext[id]}`}</ByFramework>, 'renderer'],
               ]}
             />
           </header>
-          <div className="panel__body code" key={fw} data-enter={switches > 0 ? '' : undefined}>
-            {front[fw]}
-          </div>
+          {fw ? (
+            <div className="panel__body code" key={fw} data-enter={switches > 0 ? '' : undefined}>
+              {front[fw]}
+            </div>
+          ) : (
+            frameworkIds.map((id) => (
+              <div key={id} className="panel__body code" data-fw-only={id}>
+                {front[id]}
+              </div>
+            ))
+          )}
         </section>
       </div>
 
@@ -305,9 +332,9 @@ const COLS: Array<{ id: Col; label: string }> = [
   { id: 'entry', label: 'Entry' },
 ];
 
-type Row = { label: string; base: string; folder: string; sep: string; name: string; tail: string; rule: ReactNode };
+type Row = { label: string; base: string; folder: string; sep: string; name: string; tail: ReactNode; rule: ReactNode };
 
-function rows(fw: FrameworkId): Row[] {
+function rows(fw: FrameworkId | null): Row[] {
   return [
     {
       label: 'PHP class',
@@ -328,7 +355,7 @@ function rows(fw: FrameworkId): Row[] {
       folder: 'Forms',
       sep: '/',
       name: 'Input',
-      tail: `/index.${ext[fw]}`,
+      tail: <ByFramework fw={fw}>{(id) => `/index.${ext[id]}`}</ByFramework>,
       rule: (
         <>
           Strip the base, the extension and <code>/index</code>
@@ -356,13 +383,13 @@ function rows(fw: FrameworkId): Row[] {
   ];
 }
 
-function DerivationFigure({ fw }: { fw: FrameworkId }) {
+function DerivationFigure({ fw }: { fw: FrameworkId | null }) {
   const [hot, setHot] = useState<Col | null>(null);
   const [pinned, setPinned] = useState<Col | null>(null);
   const shown = hot ?? pinned;
   const data = rows(fw);
 
-  const cell = (col: Col | 'sep', text: string) => (
+  const cell = (col: Col | 'sep', text: ReactNode) => (
     <span className={cn('derive__c', `derive__c--${col}`)} data-col={col === 'sep' ? undefined : col}>
       {text}
     </span>

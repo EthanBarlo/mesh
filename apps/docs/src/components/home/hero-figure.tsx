@@ -496,12 +496,26 @@ export function HeroFigure() {
           <g className={cn('stack__callout', hot === 'alpine' && 'is-hot')}>
             <path className="ln stack__leader" d={`M${S.alpine.cx} ${S.alpine.cy - S.alpine.h}V${S.alpine.cy - S.alpine.h - 30}`} />
             <circle className="stack__node" cx={S.alpine.cx} cy={S.alpine.cy - S.alpine.h} r="2.2" />
-            <text className="svg-k stack__callout-k" x="2" y={S.alpine.cy - S.alpine.h - 52}>
-              ALPINE
-            </text>
-            <text className="svg-k svg-k--dim" x="2" y={S.alpine.cy - S.alpine.h - 39}>
-              DIRECT TO LIVEWIRE
-            </text>
+            <g className="stack__callout-wide">
+              <text className="svg-k stack__callout-k" x="2" y={S.alpine.cy - S.alpine.h - 52}>
+                ALPINE
+              </text>
+              <text className="svg-k svg-k--dim" x="2" y={S.alpine.cy - S.alpine.h - 39}>
+                DIRECT TO LIVEWIRE
+              </text>
+            </g>
+            {/* phones: the whole figure scales down, so the callout is set larger, on three lines */}
+            <g className="stack__callout-narrow">
+              <text className="svg-k stack__callout-k" x="2" y={S.alpine.cy - S.alpine.h - 77}>
+                ALPINE
+              </text>
+              <text className="svg-k svg-k--dim" x="2" y={S.alpine.cy - S.alpine.h - 56}>
+                DIRECT TO
+              </text>
+              <text className="svg-k svg-k--dim" x="2" y={S.alpine.cy - S.alpine.h - 39}>
+                LIVEWIRE
+              </text>
+            </g>
           </g>
 
           {/* leaders */}

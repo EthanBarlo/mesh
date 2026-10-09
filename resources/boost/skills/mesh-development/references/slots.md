@@ -85,11 +85,16 @@ const Card = ({
 export default Card;
 ```
 
-Guard named slots with `slots?.title && …` — Mesh only passes named slots that were actually provided (and skips whitespace-only ones), so each entry is optional.
+Type every slot as optional:
+
+- **Default slot**: dropped when it is empty or whitespace-only, so `children` is `undefined` (React and Svelte) and Vue gets no default slot.
+- **Named slots**: a key exists only for the slots the tag contains, and the `slots` prop only exists when there is at least one. A named slot the tag contains is always passed, **even when it is empty**.
+
+So `slots?.title && …` guards against a missing slot, not an empty one.
 
 ## How it works
 
-The Blade view renders slot content into a hidden `[data-mesh-slots]` holder that Livewire keeps current via normal morphing; Mesh observes that holder and mirrors each slot's HTML into the React tree with `dangerouslySetInnerHTML`. Slot content is therefore **reactive to the server**: when a Livewire re-render changes a slot (e.g. a slot interpolating parent state via `wire:model.live`), Mesh replaces the mirrored HTML in place — the island itself never remounts. Props-only updates leave slot node references stable, so React skips unchanged slot subtrees.
+The Blade view renders slot content into a hidden `[data-mesh-slots]` holder that Livewire keeps current via normal morphing; Mesh observes that holder and mirrors each slot's HTML into the React tree with `dangerouslySetInnerHTML`. Slot content is therefore **reactive to the server**: when a Livewire re-render changes a slot (e.g. a slot interpolating parent state via `wire:model.live`), Mesh replaces the mirrored HTML in place — the island itself never remounts. The holder keeps every slot, empty ones included, so a default slot that was dropped as empty appears once a re-render gives it content. Props-only updates leave slot node references stable, so React skips unchanged slot subtrees.
 
 ## Limitations (v1)
 
@@ -101,7 +106,7 @@ The Blade view renders slot content into a hidden `[data-mesh-slots]` holder tha
 
 For React and other renderers that pass slots through props, Mesh throws (fail-fast, on every render) when `props()` collides with slot content. Vue uses native slots and permits these as ordinary props:
 
-- `props()` returns a `children` key while **any** slot is present →
+- `props()` returns a `children` key while the tag has default-slot content or **any** named slot →
   ``Mesh: `children` is reserved for slot content — rename the prop from props().``
 - `props()` returns a `slots` key while **named** slots are present →
   ``Mesh: `slots` is reserved for named slot content — rename the prop from props().``

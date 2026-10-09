@@ -3,12 +3,12 @@
 import { type ComponentProps, useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { useSearchContext } from 'fumadocs-ui/contexts/search';
-import { ThemeSwitch } from 'fumadocs-ui/layouts/shared/slots/theme-switch';
 import { Brand } from '@/lib/layout.shared';
 import { demoUrl, docsRoute, githubUrl } from '@/lib/shared';
 import { ChevronDownIcon, ExtIcon, GitHubIcon, SearchIcon } from './icons';
 import { pad2, sheetCount, sheets } from './sheets';
 import { getActiveSheet, getServerActiveSheet, subscribeActiveSheet } from './sheet-spy';
+import { ThemeToggle } from './theme-toggle';
 
 function useActiveSheet() {
   return useSyncExternalStore(subscribeActiveSheet, getActiveSheet, getServerActiveSheet);
@@ -141,7 +141,7 @@ function SheetIndex({ active }: { active: number }) {
         </ul>
         <div className="mh-index__theme">
           <span className="mh-index__k mh-index__k--inline">Sheet colour</span>
-          <ThemeSwitch className="mh-theme" />
+          <ThemeToggle />
         </div>
       </div>
     </div>
@@ -197,7 +197,7 @@ export function Masthead(props: ComponentProps<'header'>) {
           <span className="mh__search-sm">
             <SearchChip compact />
           </span>
-          <ThemeSwitch className="mh-theme mh__theme" />
+          <ThemeToggle className="mh__theme" />
           <Link className="mh-cta" href={docsRoute}>
             <span className="mh-cta__no" aria-hidden="true">
               →

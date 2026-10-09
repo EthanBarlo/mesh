@@ -1,9 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useSyncExternalStore } from 'react';
+import { type FrameworkId, frameworkIds, frameworkKey } from '@/lib/framework';
 
-export const frameworkIds = ['react', 'vue', 'svelte'] as const;
-export type FrameworkId = (typeof frameworkIds)[number];
+export { type FrameworkId, frameworkIds };
 
 export const frameworkNames: Record<FrameworkId, string> = {
   react: 'React',
@@ -11,41 +11,54 @@ export const frameworkNames: Record<FrameworkId, string> = {
   svelte: 'Svelte',
 };
 
-// Same key and values as the docs' <Frameworks> tabs (Fumadocs groupId
-// "framework", persisted), so a choice made here carries into /docs.
-const KEY = 'framework';
-
 function isFramework(v: string | null): v is FrameworkId {
   return v === 'react' || v === 'vue' || v === 'svelte';
 }
 
-function read(): FrameworkId | null {
-  try {
-    const v = sessionStorage.getItem(KEY) ?? localStorage.getItem(KEY);
-    return isFramework(v) ? v : null;
-  } catch {
-    return null;
-  }
+// Storage can be unavailable (private mode); the switch still works for the
+// rest of the visit from this copy.
+let memory: FrameworkId | null = null;
+const listeners = new Set<() => void>();
+
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
 }
 
-export function useFramework(): [FrameworkId, (fw: FrameworkId) => void] {
-  const [fw, setFw] = useState<FrameworkId>('react');
+function getSnapshot(): FrameworkId {
+  try {
+    const v = sessionStorage.getItem(frameworkKey) ?? localStorage.getItem(frameworkKey);
+    if (isFramework(v)) return v;
+  } catch {
+    // fall through to the in-memory choice
+  }
+  return memory ?? 'react';
+}
 
-  useEffect(() => {
-    const stored = read();
-    // Adopt the persisted choice after hydration; the server always renders React.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (stored) setFw(stored);
-  }, []);
+// The server can't see storage, so the server render and the hydration pass
+// get `null`: "not known yet". Components then render every variant and let
+// CSS pick the one matching <html data-framework> (set before paint by
+// `frameworkScript`), so a returning Vue or Svelte reader never sees React
+// first. Right after hydration React re-renders with the real choice.
+function getServerSnapshot(): null {
+  return null;
+}
+
+export function useFramework(): [FrameworkId | null, (fw: FrameworkId) => void] {
+  const fw = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   const choose = useCallback((next: FrameworkId) => {
-    setFw(next);
+    memory = next;
+    document.documentElement.setAttribute('data-framework', next);
     try {
-      sessionStorage.setItem(KEY, next);
-      localStorage.setItem(KEY, next);
+      sessionStorage.setItem(frameworkKey, next);
+      localStorage.setItem(frameworkKey, next);
     } catch {
-      // Storage can be unavailable (private mode); the switch still works.
+      // see `memory`
     }
+    listeners.forEach((listener) => listener());
   }, []);
 
   return [fw, choose];

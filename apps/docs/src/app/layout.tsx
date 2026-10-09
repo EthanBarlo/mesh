@@ -1,6 +1,7 @@
 import { RootProvider } from 'fumadocs-ui/provider/next';
 import type { Metadata, Viewport } from 'next';
 import { IBM_Plex_Mono, Inter_Tight } from 'next/font/google';
+import { frameworkScript } from '@/lib/framework';
 import { siteDescription, siteUrl } from '@/lib/shared';
 import './global.css';
 import './drafting.css';
@@ -43,6 +44,12 @@ export default function Layout({ children }: LayoutProps<'/'>) {
       className={`${interTight.variable} ${plexMono.variable}`}
       suppressHydrationWarning
     >
+      <head>
+        {/* Sets <html data-framework> from the stored framework choice before
+            first paint, so the home page shows a returning reader's choice
+            from the first frame. suppressHydrationWarning above covers it. */}
+        <script dangerouslySetInnerHTML={{ __html: frameworkScript }} />
+      </head>
       <body className="flex flex-col min-h-screen font-sans">
         <RootProvider>{children}</RootProvider>
       </body>

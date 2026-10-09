@@ -24,11 +24,8 @@ class ProjectForm extends Component
     #[Validate('required|email')]
     public string $email = '';
 
-    // Live-entangled on the React side, so this hook runs per keystroke.
-    public function updatedSlug(): void
-    {
-        $this->validateOnly('slug');
-    }
+    // No updatedSlug() hook needed: #[Validate] already runs
+    // validateOnly('slug') on every update the client sends.
 
     public function save(): array
     {
@@ -56,7 +53,7 @@ export default function ProjectForm() {
     // Deferred (default): batched into the next request — i.e. the submit.
     const [name, setName] = useEntangle<string>("name");
     const [email, setEmail] = useEntangle<string>("email");
-    // Live: every change round-trips, so updatedSlug() validates per keystroke.
+    // Live: every change round-trips, and #[Validate] checks it each time.
     const [slug, setSlug] = useEntangle<string>("slug", true);
 
     const errors = useErrorBag();
@@ -106,16 +103,17 @@ const errors = useErrorBag(); // Record<string, string[]>
 - **Shape**: a plain object keyed by property name; each value is an **array of message strings** (`{ slug: ["The slug field format is invalid."] }`). Keys with no error are **absent** (`errors.slug` is `undefined`), so render with `errors.slug && errors.slug[0]` or `errors.slug?.[0]`.
 - **Source**: Livewire's snapshot (`memo.errors`). Only errors attached to real component properties survive dehydration — errors from ad-hoc `Validator::make` keys that aren't properties are dropped.
 - **When it updates**: after **every** completed Livewire request (the hook listens to the `commit` → `succeed` hook). A request whose action failed validation is still a *succeeded commit* (HTTP 200), so failed `$call`s populate the bag immediately. Initial value is seeded from the first snapshot, so server-rendered errors show on mount.
-- **How errors clear**: the bag is replaced wholesale each request. The next request in which a property passes validation (e.g. `validateOnly` on a fixed field, or a successful `save()`) returns a snapshot without that key, and the component re-renders with it gone. There is no client-side `clear` API — clearing happens by re-validating server-side.
+- **How errors clear**: the bag is replaced wholesale each request. The next request in which a property passes validation (e.g. `#[Validate]` re-checking a corrected field, or a successful `save()`) returns a snapshot without that key, and the component re-renders with it gone. There is no client-side `clear` API — clearing happens server-side, by re-validating or calling `$this->resetValidation()`.
 
 ## Live per-field validation
 
-Two pieces, one per side:
+`#[Validate]` does the server half on its own: whenever an update for the property arrives from the client, Livewire runs `validateOnly()` for that property. So live validation is one change, on the React side:
 
-1. **React**: entangle the field live — `useEntangle<string>("slug", true)`. Every change triggers its own request.
-2. **PHP**: add an `updatedSlug()` hook that calls `$this->validateOnly('slug')`. Livewire runs `updated{Property}` after the client value is applied, so each keystroke validates *only* that field — other fields' errors are untouched, and the slug's error appears/disappears as the user types.
+- Entangle the field live — `useEntangle<string>("slug", true)`. Every change is its own request, `#[Validate]` checks *only* that field, other fields' errors are untouched, and the slug's error appears/disappears as the user types.
 
-Deferred fields also fire their `updatedFoo()` hooks, but only when the change is actually committed (i.e. alongside the submit) — so per-keystroke validation requires `live = true`.
+Deferred fields go through the same check, but only when their update arrives, i.e. alongside the submit (before `save()` runs) — so per-keystroke validation requires `live = true`.
+
+An `updatedSlug()` hook that calls `$this->validateOnly('slug')` is only needed when the rules are declared in a `rules()` method instead of `#[Validate]` (or with `#[Validate('…', onUpdate: false)]`, which turns the per-update check off). With `#[Validate]` in place it just validates the field a second time.
 
 ## Deferred fields + submit: no manual commit
 
@@ -136,4 +134,5 @@ For a normal component method, `$this->validate()` throwing `ValidationException
 - **Forgetting `event.preventDefault()`** in the submit handler — the browser performs a full-page form submission and the Livewire request never finishes.
 - **Mirroring entangled values into `useState`.** `useEntangle` *is* React state already. A second copy desyncs from server-driven changes and skips the dirty-tracking that makes deferred submit work. Derive, don't duplicate.
 - **Calling `wire.$commit()` before `$call`.** Redundant; deferred updates ride along with the call request.
-- **Validating everything on keystroke.** `updatedSlug()` + `validateOnly('slug')` keeps live validation scoped; calling `$this->validate()` in an `updated` hook flags untouched fields as the user types the first one.
+- **Validating everything on keystroke.** Calling `$this->validate()` in an `updated` hook flags untouched fields as the user types the first one. `#[Validate]` already scopes the per-update check to the changed field; in a `rules()`-based component, use `validateOnly('field')` in the hook.
+- **Adding `updatedFoo()` + `validateOnly('foo')` next to `#[Validate]`.** Redundant: the attribute already runs that check on every update.

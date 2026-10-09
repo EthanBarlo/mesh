@@ -107,7 +107,7 @@ Components are auto-discovered (no registration). The PHP class and the frontend
 | `App\Mesh\Forms\Input` | `resources/js/mesh/Forms/Input/index.tsx` | `Forms/Input` |
 
 - Auto-discovery only scans the host app's `resources/js/mesh` — components elsewhere are silently ignored. Frontend entries shipped by Composer packages use the `sources` option of `initMesh` (host-authored `import.meta.glob`, optional id `prefix`; entries must live under a `resources/js/mesh/` directory inside the package). Their PHP classes also need Livewire registration — see `references/setup-and-troubleshooting.md`.
-- Both sides are StudlyCase. A case mismatch (`counter/` vs `Counter.php`) **works on macOS but breaks on Linux/CI** because macOS filesystems are case-insensitive. When a component fails to mount, compare the namespace path and folder path character-for-character first.
+- Both sides are StudlyCase. A case mismatch (`counter/` vs `Counter.php`) **works on macOS but breaks on Linux/CI** because macOS filesystems are case-insensitive. When a component fails to mount, the console shows `Mesh: component "X" is not registered. Known components: …`; compare the namespace path and folder path character-for-character first.
 
 ## Pitfall #2: props are snapshots — don't mirror them into state
 
@@ -161,8 +161,8 @@ See `references/slots.md` for details.
 Before debugging anything else, verify:
 
 - [ ] PHP class path and `resources/js/mesh/` folder path match **exactly**, including case
-- [ ] Frontend entry is named `index.tsx` (or `.jsx`/`.vue`/`.svelte`) — renderer is inferred from the extension; unknown extensions throw
-- [ ] `@livewireScriptConfig` is in the Blade layout (not in app.ts) — without it Livewire never starts
+- [ ] Frontend entry is named `index.tsx` (or `.jsx`/`.vue`/`.svelte`) — renderer is inferred from the extension; an entry with an unknown extension is logged and skipped
+- [ ] `@livewireScriptConfig` (not `@livewireScripts`) is in the Blade layout, and `app.ts` ends with `Livewire.start()` — without the directive Livewire injects a second copy of itself (two Livewire and Alpine instances), or, with `inject_assets` off, every request fails
 - [ ] Vite config has the `@mesh` alias pointing at `/vendor/ethanbarlo/mesh/resources/js`
 - [ ] You're not expecting a prop to be reactive (use entangle) or expecting deferred entangle to hit the server per keystroke (pass `true`)
 - [ ] For React and Svelte, `props()` doesn't return `children` or `slots` when those names are used for Blade slots

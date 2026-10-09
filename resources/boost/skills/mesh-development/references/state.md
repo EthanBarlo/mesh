@@ -11,11 +11,11 @@ const [value, setValue] = useEntangle<T>("propertyName");        // deferred (de
 const [value, setValue] = useEntangle<T>("propertyName", true);  // live
 ```
 
-- Returns an exact `useState` pair: `[T, React.Dispatch<React.SetStateAction<T>>]`. Drops into existing React code; functional updates (`setValue(v => v + 1)`) work.
+- Returns a `useState`-style pair: `[T, React.Dispatch<React.SetStateAction<T>>]`. Drops into existing React code; functional updates (`setValue(v => v + 1)`) work, and the updater receives the value Livewire currently holds.
 - `key` is the name of a **public** property on the Livewire component. Type parameter defaults to `string`.
 - Sync is **both directions**:
-  - **Out**: an effect calls `wire.$set(key, value, live)` whenever the React value changes.
-  - **In**: the hook registers `wire.$watch(key, setValue)`, so server-driven changes (e.g. a Livewire action mutating the property) update React state and re-render.
+  - **Out**: only the returned setter writes. It calls `wire.$set(key, next, live)`, and only when `next !== wire.$get(key)`.
+  - **In**: the hook registers `wire.$watch(key, …)`, so server-driven changes (e.g. a Livewire action mutating the property) update React state and re-render. The watcher is removed on unmount and when `key` changes.
 
 ### Deferred vs. live, mechanically
 
@@ -24,13 +24,15 @@ const [value, setValue] = useEntangle<T>("propertyName", true);  // live
 - **Deferred (default)** — React state updates instantly; the property is marked dirty client-side and is **batched with the next Livewire network request** (any `wire.$call`, a live update, `$refresh`, or an explicit `$commit`). No round-trip happens just from typing.
 - **Live (`true`)** — every change triggers its own round-trip immediately. Use when the server must react per change (live validation, dependent fields).
 
-### Gotchas (from the hook source)
+### Behaviour worth knowing (from the hook source)
 
-- **Mount echo**: the `$set` effect also runs on mount, writing the seeded value back. Harmless — Livewire builds the commit payload by diffing client state against the server's canonical state, so echoing the unchanged value sends nothing extra.
-- **`key` must be stable**: the initial value comes from a `useState(wire.$get(key))` initializer (runs once). Changing `key` after mount will not reseed state — React keeps the old key's value, and subsequent writes target the new key. Don't compute `key` dynamically.
-- **Changing `live` after mount** is not reliably applied — it is not in the effect dependency array, so the new flag only takes effect on the next value change. Treat it as fixed at mount.
-- **The watch effect has no cleanup**: the hook registers `$watch` without unwatching when the effect re-runs, so a changed `key` stacks an extra watcher. Livewire tears all watchers down when the component is removed. Fine for normal use; another reason to keep `key` fixed.
-- **Server echoes count as changes**: a server-driven `$watch` update sets React state, which re-runs the `$set` effect (a no-op write of the same value).
+- **Nothing is sent on mount.** The initial value is read with `wire.$get(key)`; the hook never writes it back. A live binding costs no request until the user changes the value.
+- **Server pushes are never echoed.** A `$watch` update goes straight into React state without calling `$set`, so a server-driven change doesn't trigger another request, even in live mode.
+- **Writes compare by identity (`!==`).** Setting the value Livewire already holds sends nothing. Replace objects and arrays instead of mutating them in place, or the change is never sent.
+- **`key` changes are handled**: the old watcher is removed and state is reseeded from `wire.$get(newKey)`. Still, prefer a fixed `key` per component.
+- **`live` is read when the setter runs**, so changing it applies from the next write.
+
+React's StrictMode (on by default in Mesh's React renderer) mounts effects twice in development; the hook cleans up its watcher, so this doesn't stack watchers. Apply the same rule to your own `$watch` calls (see below).
 
 ## `wire.$commit()` — flush deferred changes
 
@@ -67,17 +69,20 @@ import { useWire } from "@mesh/react";
 export default function JobMonitor() {
     const wire = useWire();
 
-    useEffect(() => {
-        wire.$watch("status", (status: string) => {
-            if (status === "done") confetti();
-        });
-    }, [wire]);
+    // Return the unwatch function so the effect cleans up after itself.
+    useEffect(
+        () =>
+            wire.$watch("status", (status: string) => {
+                if (status === "done") confetti();
+            }),
+        [wire],
+    );
 
     return null;
 }
 ```
 
-The callback fires whenever the Livewire property changes server-side. `$watch` returns an unwatch function (Mesh's `Wire` type declares `void`, so cast if you need it), and Livewire cleans all watchers up when the component is removed — registering once in a mount effect is the normal pattern.
+The callback fires whenever the Livewire property changes, including changes the server makes. `$watch` returns an unwatch function (typed `() => void`). Always return it from the effect: Mesh renders React islands in `StrictMode` by default, which runs effects twice in development, so an effect without cleanup registers the watcher twice and the callback fires twice per change. Livewire also removes every watcher when the component is torn down. In Vue, pass the unwatch to `onUnmounted`; in Svelte, to `onDestroy`.
 
 ## Props lifecycle
 

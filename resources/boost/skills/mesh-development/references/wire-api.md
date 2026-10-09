@@ -20,7 +20,7 @@ Low-level escape hatch: `useLivewireComponent()` returns the raw Livewire compon
 
 | Triggers a server request | Local (no request) |
 | --- | --- |
-| `$call`, `$refresh`, `$commit`, `$set(key, v, true)`, `$toggle(key, true)`, `$upload`, `$uploadMultiple`, `$removeUpload` | `$get`, `$set(key, v, false)`, `$watch`, `$on` |
+| `$call`, `$refresh`, `$commit`, `$set(key, v, true)`, `$toggle(key, true)`, `$upload`, `$uploadMultiple`, `$removeUpload` | `$get`, `$set(key, v, false)`, `$toggle(key, false)`, `$watch`, `$on`, `$hook` |
 
 `$dispatch` / `$dispatchTo` / `$dispatchSelf` fire on the client-side event bus immediately; a round-trip happens only for components with a server-side `#[On]` listener.
 
@@ -50,27 +50,27 @@ Reads a Livewire property's current (client-side) value. Local, synchronous.
 const name = wire.$get("name");
 ```
 
-### `$set(key, value, live): void`
+### `$set(key, value, live = true): Promise<void>`
 
-Sets a Livewire property. The third argument controls the commit: `live: true` sends the update to the server immediately; `live: false` defers it — the new value piggybacks on the next request (`$call`, `$commit`, `$refresh`, …). For two-way binding prefer `useEntangle`; `$set` is the imperative form.
+Sets a Livewire property. The third argument controls the commit: `live: true` sends the update to the server immediately; `live: false` defers it — the new value piggybacks on the next request (`$call`, `$commit`, `$refresh`, …). **Livewire defaults `live` to `true`**, so `$set(key, value)` without the third argument sends a request; pass it explicitly. The returned promise settles when that request completes (deferred: immediately). For two-way binding prefer `useEntangle`; `$set` is the imperative form.
 
 ```tsx
 wire.$set("name", "Ada", false); // deferred — sent with the next request
 wire.$set("query", q, true);     // live — network request now
 ```
 
-### `$toggle(key, live): void`
+### `$toggle(key, live = true): Promise<void>`
 
-Boolean flip of a property; same `live` semantics as `$set`.
+Boolean flip of a property; same `live` semantics (and default) as `$set`.
 
-### `$watch(key, callback): void`
+### `$watch(key, callback): () => void`
 
-Runs the callback whenever the property changes — including changes the **server** makes. This is the inbound channel for server-owned state (PriceWatcher pattern):
+Runs the callback whenever the property changes — including changes the **server** makes — and returns an unwatch function. This is the inbound channel for server-owned state (PriceWatcher pattern). In React, return the unwatch from the effect: Mesh mounts React islands in `StrictMode` by default, so in development an effect without cleanup registers the watcher twice.
 
 ```tsx
 // resources/js/mesh/Wire/PriceWatcher/index.tsx
 useEffect(() => {
-    wire.$watch("price", (value: number) => {
+    return wire.$watch("price", (value: number) => {
         setHistory((prev) => [...prev, value].slice(-40));
     });
 }, [wire]);
@@ -82,17 +82,23 @@ useEffect(() => {
 }, [wire]);
 ```
 
-### `$commit(): void`
+### `$commit(): Promise<void>`
 
-Sends all deferred property updates to the server now, without calling a method. Use after a batch of `$set(..., false)` calls.
+Sends all deferred property updates to the server now, without calling a method. Use after a batch of `$set(..., false)` calls. The promise settles when the request completes.
 
 ### `$refresh(): Promise<void>`
 
 Forces a server round-trip and re-render. `props()` re-runs and the island receives fresh props (no remount — local React state survives).
 
-### `$dispatch(event, params)` / `$dispatchTo(component, event, params)` / `$dispatchSelf(event, params)`
+### `$dispatch(event, params?)` / `$dispatchTo(component, event, params?)` / `$dispatchSelf(event, params?)`
 
-Dispatch onto Livewire's event bus — any component with a matching listener hears it, React island or plain Livewire alike. Listen on the React side with `wire.$on(event, callback)`.
+Dispatch a Livewire event. The params object's keys become the PHP listener's named arguments.
+
+| Method | Heard by |
+| --- | --- |
+| `$dispatch` | Bubbles from this component's element up to `window`: every `#[On]` listener on the page, and `window` listeners |
+| `$dispatchTo` | Only components with that Livewire name |
+| `$dispatchSelf` | Only this component |
 
 EventBridge pattern — both directions:
 
@@ -116,9 +122,38 @@ public function props(): array
 }
 ```
 
-### `$upload(name, file, finish, error, progress)` / `$uploadMultiple(name, files, ...)` / `$removeUpload(name, tmpFilename, finish, error)`
+This is the default way to push something into an island: dispatch an event, handle it with `#[On]` on the island's own PHP class, and let `props()` carry the result.
 
-Streams a `File` into a Livewire property (the PHP class needs `use WithFileUploads;`). `finish(response)` fires when the temp upload lands, `error(response)` on transport failure or server-side validation rejection (validation messages also land in the error bag — read via `useErrorBag()`), and `progress(event)` receives `event.detail.progress` as 0–100. `$removeUpload` deletes the temp file server-side.
+### `$on(event, callback)`
+
+Listens for a Livewire event in the browser; `callback` receives the event's params. It listens on **this component's own element**, so it only hears events that reach that element:
+
+- events the component's PHP class dispatches (`$this->dispatch('saved')` in an action);
+- `$dispatchSelf`, and `$dispatchTo` aimed at this component;
+- the island's own `$dispatch` calls, and events bubbling up from components nested inside it.
+
+It does **not** hear a `$dispatch` from a sibling or parent component: that event starts at the other component's element and bubbles to `window` without passing through this one. For those, add an `#[On]` method to the PHP class (above), or listen on `window`:
+
+```tsx
+useEffect(() => {
+    const onMoved = (event: Event) => setLastMove((event as CustomEvent).detail);
+    window.addEventListener("kanban.card-moved", onMoved);
+    return () => window.removeEventListener("kanban.card-moved", onMoved);
+}, []);
+```
+
+`$on` returns nothing, so its listener can't be removed. In Vue and Svelte (setup runs once) that's fine. In React, StrictMode runs effects twice in development, so instead of `$on` inside `useEffect`, add the listener to `wire.$el` yourself and remove it in the cleanup. `$dispatchTo` and `$dispatchSelf` events don't bubble, so they never reach `window`.
+
+### `$upload(name, file, finish?, error?, progress?)` / `$uploadMultiple(name, files, ...)` / `$removeUpload(name, tmpFilename, finish?)`
+
+Streams a `File` into a Livewire property (the PHP class needs `use WithFileUploads;`). The callbacks are optional (Livewire defaults them to no-ops):
+
+- `finish(tmpFilename)` fires when the temp upload lands and the property is set (`$uploadMultiple` passes an array of filenames).
+- `error()` fires only when the upload itself fails: a network error, an error response from the temporary-upload endpoint, or Livewire's own temporary-upload rules (`livewire.temporary_file_upload.rules`) rejecting the file. A rejection's message also lands in the error bag.
+- **Your `#[Validate]` rules are not part of `error`.** They run when the property is set, in the same request that triggers `finish`. A file that fails them still calls `finish`; the message lands in `useErrorBag()` under the property name. Check the bag, or call an action that runs `$this->validate()`, before using the file (the Dropzone below does the latter).
+- `progress(event)` receives `event.detail.progress` as 0–100.
+
+Livewire's `$upload` returns nothing, so `await wire.$upload(...)` doesn't wait for the upload; do follow-up work in `finish`. `$removeUpload(name, tmpFilename, finish)` deletes the temp file server-side and clears it from the property; Livewire never calls an `error` callback for it.
 
 ```tsx
 // resources/js/mesh/Uploads/Dropzone/index.tsx (condensed)
@@ -126,15 +161,18 @@ wire.$upload(
     "photo",
     file,
     async () => {
-        const info = await wire.$call("inspect"); // re-validates, returns metadata
-        setMeta(info);
+        // finish doesn't mean valid: inspect() runs $this->validate() and
+        // resolves with null when the file breaks the rules.
+        const info = await wire.$call("inspect");
+        if (info) setMeta(info);
+        else setStatus("error"); // errors.photo explains why
     },
     () => setStatus("error"),
     (event) => setProgress(event.detail.progress),
 );
 
 // Later: remove the temp file (tmpFilename came back from the server)
-wire.$removeUpload("photo", meta.tmpFilename, () => {}, () => {});
+wire.$removeUpload("photo", meta.tmpFilename);
 ```
 
 ```php
@@ -142,12 +180,12 @@ wire.$removeUpload("photo", meta.tmpFilename, () => {}, () => {});
 use Livewire\WithFileUploads;
 
 #[Validate('image|max:2048')]
-public $photo = null; // validated the moment the temp upload lands
+public $photo = null; // checked when the temp upload sets it; failures go to the error bag, not error()
 ```
 
 ### Other members
 
-`$parent` (parent component's wire or `null`), `$el` (root element), `$id` (component ID), `$hook(event, callback)` (Livewire lifecycle hooks), `__instance` (the raw `LivewireComponent`).
+`$parent` (the closest parent component's wire, or `undefined` when there is none), `$el` (root element), `$id` (component ID), `$hook(event, callback)` (Livewire lifecycle hooks; returns an unhook function), `__instance` (the raw `LivewireComponent`). `$cancelUpload(name)` aborts an upload in progress.
 
 ## Pattern: server action with loading state
 
