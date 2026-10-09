@@ -21,7 +21,9 @@ yarn-error.log
 /.vscode
 
 # Misc
-phpunit.xml
+# Anchored: the root's local phpunit.xml override stays out, but the demo apps
+# under apps/* commit theirs.
+/phpunit.xml
 phpstan.neon
 testbench.yaml
 /coverage

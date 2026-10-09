@@ -29,8 +29,8 @@
     const email = useEntangle<string>("email");
     const plan = useEntangle<string>("plan");
 
-    // Live: every keystroke is sent to the server, so the slug's
-    // validation rules fire per keystroke via updatedSlug().
+    // Live: every keystroke is sent to the server, where the
+    // #[Validate] rules re-check the slug on each update.
     const slug = useEntangle<string>("slug", true);
 
     const errors = useErrorBag();
@@ -57,14 +57,14 @@
         submitting = true;
         created = null;
         try {
-            // On validation failure $call may reject or resolve with no
-            // payload while the error bag updates — handle both.
-            const res = (await wire.$call("save")) as SaveResult | null | undefined;
+            // A validation failure resolves with null and fills the error
+            // bag; $call only rejects when the request itself fails.
+            const res = (await wire.$call("save")) as SaveResult | null;
             if (res && res.ok) {
                 created = res.project;
             }
         } catch {
-            // Validation failed — useErrorBag() picks up the messages.
+            // The request failed (network or server error).
         } finally {
             submitting = false;
         }

@@ -268,8 +268,8 @@ public function updatedSlug(): void
 
 `validateOnly()` checks one field and leaves the other fields' errors as they
 are. Calling `validate()` in an update hook would flag every empty field the
-moment the user types into the first one. (The demo's `ProjectForm` has
-`updatedSlug()` as well as the attribute, so its slug is checked twice.)
+moment the user types into the first one. The demo's `ProjectForm` uses
+`#[Validate]` alone, so it has no update hooks.
 
 ## Submitting
 

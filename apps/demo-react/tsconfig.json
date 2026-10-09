@@ -21,8 +21,9 @@
     "include": [
         "resources/js/**/*.ts",
         "resources/js/**/*.tsx",
-        "vendor/ethanbarlo/mesh/resources/js/**/*.ts",
-        "vendor/ethanbarlo/mesh/resources/js/**/*.tsx"
+        "vendor/ethanbarlo/mesh/resources/js/*.ts",
+        "vendor/ethanbarlo/mesh/resources/js/react/**/*.ts",
+        "vendor/ethanbarlo/mesh/resources/js/react/**/*.tsx"
     ],
     "exclude": ["node_modules"]
 }

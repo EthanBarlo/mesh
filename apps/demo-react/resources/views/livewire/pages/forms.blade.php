@@ -6,7 +6,7 @@
     <x-demo.section
         title="Project form"
         caption="A server-validated form with a live slug"
-        description="Name and email are deferred and go with the submit. The slug is live-entangled, so `updatedSlug()` runs `validateOnly('slug')` on every keystroke: type an uppercase letter or a space and the regex rule fails on the server. Submit calls `save()` through `wire.$call`. A failure fills the error bag; a success returns the new project."
+        description="Name and email are deferred and go with the submit. The slug is live-entangled, so every keystroke reaches the server and its `#[Validate]` rules run there: type an uppercase letter or a space and the regex rule fails. Submit calls `save()` through `wire.$call`. A validation failure fills the error bag and resolves with `null`; a success returns the new project."
         :files="[
             'app/Mesh/Forms/ProjectForm.php',
             'resources/js/mesh/Forms/ProjectForm/index.tsx',

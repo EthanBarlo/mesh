@@ -19,15 +19,6 @@ class ProjectForm extends Component
     #[Validate('in:starter,pro,team')]
     public string $plan = 'starter';
 
-    /**
-     * The slug input is live-entangled on the Svelte side, so this hook
-     * runs on every keystroke — re-validating just the slug each time.
-     */
-    public function updatedSlug(): void
-    {
-        $this->validateOnly('slug');
-    }
-
     public function save(): array
     {
         $this->validate();
