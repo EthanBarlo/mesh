@@ -105,9 +105,18 @@ defineProps<{ variant?: string }>();
 </Tab>
 </Frameworks>
 
-Type every slot as optional. The default slot is left out when it is empty,
-the `slots` prop only exists when the tag has named slots, and a named slot
-is only there if the tag contains it. Each slot is wrapped in a
+Type every slot as optional:
+
+- The default slot is left out when it is empty or only whitespace. A tag
+  that holds nothing but named slots still has the indentation between them
+  as its default slot, and that doesn't count as `children`.
+- The `slots` prop only exists when the tag has named slots.
+- A named slot is passed whenever the tag contains it, even when its content
+  is empty. A blank `<livewire:slot name="footer">` still sets the footer
+  slot, so the guards above still render the `<footer>`.
+
+Mesh re-checks this on every update, so a default slot that starts out blank
+appears as soon as the server sends it content. Each slot is wrapped in a
 `<div style="display: contents">`, so the wrapper adds no box to your layout.
 
 ## Slots follow the server

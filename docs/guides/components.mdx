@@ -146,13 +146,13 @@ import.meta.glob("/resources/js/mesh/**/index.{tsx,jsx,vue,svelte}")
   You can mix renderers in one app as long as each one is passed to
   [`initMesh`](/docs/reference/init-mesh).
 - **One entry per folder.** `Counter/index.tsx` next to `Counter/index.vue`
-  derives the same id twice, and Mesh throws a duplicate-id error at
-  startup.
+  derives the same id twice. Mesh logs a duplicate-id error at startup and
+  keeps the first one.
 - **Each component is its own chunk.** Vite splits every entry into a lazy
   chunk that loads the first time that component renders on a page. Adding a
   component never touches `app.ts` or your Vite `input` list. The framework
-  runtime is different: each renderer imported in `app.ts` brings its
-  framework into the main bundle, which loads on every page.
+  runtime loads the same way: React DOM, Vue, or Svelte downloads with the
+  first island that needs it.
 
 The directory is fixed at `resources/js/mesh` and is not configurable.
 Components that ship in a Composer package are added with the `sources`
@@ -205,6 +205,10 @@ way:
 ```blade
 <mesh-counter />
 ```
+
+The dash form is only rewritten when a matching class exists, so custom
+elements named `mesh-…` are left alone. A typo in it is left alone too, so
+prefer the colon form, which fails loudly.
 
 Use a paired tag when you pass [slots](/docs/guides/slots):
 `<mesh:card>…</mesh:card>`. The `mesh:` prefix only resolves classes under

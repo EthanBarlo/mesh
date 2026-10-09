@@ -1,6 +1,6 @@
 ---
 title: Mesh\Component
-description: The base class every Mesh PHP component extends, its four methods, and what it inherits from Livewire.
+description: The base class every Mesh PHP component extends, its three methods, and what it inherits from Livewire.
 ---
 
 Every Mesh component has a PHP class that extends `EthanBarlo\Mesh\Component`. That class extends
@@ -18,9 +18,6 @@ abstract class Component extends \Livewire\Component
     public function component(): string;
 
     public function render();
-
-    /** @internal */
-    public function meshSlots(): array;
 }
 ```
 
@@ -42,10 +39,6 @@ abstract class Component extends \Livewire\Component
       type: 'View',
       default: "view('mesh::component')",
       description: 'Renders the island wrapper. Do not override it.',
-    },
-    'meshSlots()': {
-      type: 'array<string, string>',
-      description: 'Internal. Real slot content keyed by name.',
     },
   }}
 />
@@ -169,14 +162,6 @@ public function render()
 hidden holder for slot content, and the empty `.mesh-root` element the frontend mounts into. The
 runtime depends on all three, so **do not override `render()`**. The exact markup is shown in
 [Blade tags](/docs/reference/blade#the-rendered-dom).
-
-## meshSlots()
-
-`meshSlots()` is marked `@internal`. It returns the real slot content keyed by name (the unnamed slot
-is `default`), skipping placeholder slots and whitespace-only content. Slot content is only present
-on the render where the parent passes it in; on the component's own re-renders Livewire hands it
-placeholder slots instead, and `meshSlots()` returns `[]`. You do not need to call it. See
-[Slots](/docs/guides/slots) for how slots reach the frontend.
 
 ## Everything from Livewire
 

@@ -16,7 +16,7 @@ Livewire component mount, so everything you can do with a Livewire tag works her
 <mesh:forms.input />
 <mesh:wire.server-actions />
 
-{{-- Hyphen form: identical to the colon form --}}
+{{-- Hyphen form: the same mount, when App\Mesh\Counter exists --}}
 <mesh-counter />
 
 {{-- Paired, with slot content --}}
@@ -33,8 +33,9 @@ separators:
 | `<mesh:wire.server-actions />` | `App\Mesh\Wire\ServerActions` | `Wire/ServerActions` |
 | `<mesh:table.orders-table />` | `App\Mesh\Table\OrdersTable` | `Table/OrdersTable` |
 
-A name that does not resolve to a class fails at render time with Livewire's
-`Unable to find component: [mesh::countr]`.
+A colon-form name that does not resolve to a class fails at render time with Livewire's
+`Unable to find component: [mesh::countr]`. The hyphen form fails quietly instead: `<mesh-countr />`
+reaches the browser as an unknown element, so prefer the colon form.
 
 ### How the tag compiles
 
@@ -45,7 +46,13 @@ Mesh registers a Blade precompiler that rewrites the tag before Livewire sees it
 <mesh-counter />     →  <livewire:mesh::counter />
 <mesh:card>          →  <livewire:mesh::card>
 </mesh:card>         →  </livewire:mesh::card>
+<mesh-gradient>      →  <mesh-gradient>   (no App\Mesh\Gradient, left alone)
 ```
+
+The colon form is always rewritten. The hyphen form is only rewritten when its name resolves to a
+component class in `App\Mesh`, looked up the same way Livewire resolves `mesh::` names, so custom
+elements such as `<mesh-gradient>` reach the browser untouched. A closing tag is treated the same as
+its opening tag.
 
 `mesh::` is a Livewire component namespace that Mesh registers for `App\Mesh` (in
 `app/Mesh`). So `<livewire:mesh::counter />` is a valid way to write the same tag, and the `mesh`
@@ -53,13 +60,17 @@ shorthand only ever resolves classes in `App\Mesh`. Components elsewhere, such a
 package, are registered with Livewire and rendered with `<livewire:…>` (see
 [Components in Composer packages](/docs/guides/packages)).
 
-<Callout type="warn" title="The rewrite is textual">
-  Every tag that starts with `<mesh:` or `<mesh-` is rewritten, including closing tags. A custom
-  element named `<mesh-gradient>` in the same view would be turned into a Livewire mount. Wrap
-  literal markup like that, or code samples that show a mesh tag, in `@verbatim`, which Blade
-  processes before the precompiler runs. `<mesh:styles />` is not Livewire's styles directive; it
-  looks for a class `App\Mesh\Styles`.
+<Callout type="warn" title="The hyphen form is resolved when the view compiles">
+  A custom element whose name matches a Mesh component is still rewritten: once `App\Mesh\Gradient`
+  exists, `<mesh-gradient>` mounts it. Wrap that literal markup, or a code sample that shows a mesh
+  tag, in `@verbatim`, which Blade processes before the precompiler runs.
+
+  The check uses the classes that exist when Blade compiles the view. If a view using
+  `<mesh-counter />` was compiled before `App\Mesh\Counter` existed, run `php artisan view:clear`
+  (or save the view again) so it recompiles. The colon form doesn't depend on this check.
 </Callout>
+
+`<mesh:styles />` is not Livewire's styles directive; it looks for a class `App\Mesh\Styles`.
 
 ## Attributes
 

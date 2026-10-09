@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use App\Mesh\TestComponent;
 use Illuminate\Support\Facades\Blade;
+use Livewire\Mechanisms\HandleComponents\HandleComponents;
 
 it('renders the default slot into a hidden holder', function () {
     $html = Blade::render('<mesh:test-component>inner</mesh:test-component>');
@@ -29,16 +29,28 @@ it('renders no slots wrapper for a self-closing tag', function () {
 
 it('still renders a default holder for an empty body so it can gain content later', function () {
     // Livewire captures an (empty) default slot for a paired tag, so the holder is
-    // rendered with a fragment marker — this lets the slot gain content on a later
-    // server render — but there is no real content to forward as children.
+    // rendered with its fragment markers. That lets the slot gain content on a later
+    // server render; the JS side leaves an empty default slot out of `children`.
     $html = Blade::render('<mesh:test-component></mesh:test-component>');
 
-    expect($html)->toContain('data-mesh-slot="default"');
+    expect($html)
+        ->toContain('data-mesh-slot="default"')
+        ->toContain('FRAGMENT:name=default|type=slot');
+});
 
-    $component = new TestComponent;
-    $component->setId('test-id');
+it('renders a holder for a whitespace-only default slot too', function () {
+    // A tag with only named slots still has a whitespace-only default slot (the
+    // indentation between them). The holder is kept for morphing; dropping it is
+    // the JS side's job, which re-checks on every slot update.
+    $html = Blade::render(<<<'BLADE'
+        <mesh:test-component>
+            <livewire:slot name="title">T</livewire:slot>
+        </mesh:test-component>
+        BLADE);
 
-    expect($component->withSlots(['default' => ''])->meshSlots())->toBe([]);
+    expect($html)
+        ->toContain('data-mesh-slot="title"')
+        ->toContain('data-mesh-slot="default"');
 });
 
 it('renders both named and default slot holders', function () {
@@ -51,34 +63,18 @@ it('renders both named and default slot holders', function () {
         ->toContain('body');
 });
 
-it('returns real slot content from meshSlots()', function () {
-    $component = new TestComponent;
-    $component->setId('test-id');
+it('keeps the holders, as skip markers, on the component\'s own re-render', function () {
+    // On a self-render Livewire swaps the slots for placeholders. The holders must
+    // still render, or the morph would drop the slot content already in the page.
+    $html = Blade::render('<mesh:test-component>inner</mesh:test-component>');
 
-    $slots = $component
-        ->withSlots(['default' => 'hello'])
-        ->meshSlots();
+    preg_match('/wire:snapshot="([^"]+)"/', $html, $matches);
+    $snapshot = json_decode(htmlspecialchars_decode($matches[1]), true);
 
-    expect($slots)->toBe(['default' => 'hello']);
-});
+    [, $effects] = app(HandleComponents::class)->update($snapshot, [], []);
 
-it('skips placeholder slots in meshSlots()', function () {
-    $slots = (new TestComponent)
-        ->withPlaceholderSlots([
-            ['name' => 'default', 'componentId' => 'x', 'parentId' => null],
-        ])
-        ->meshSlots();
-
-    expect($slots)->toBe([]);
-});
-
-it('skips whitespace-only slots in meshSlots()', function () {
-    $component = new TestComponent;
-    $component->setId('test-id');
-
-    $slots = $component
-        ->withSlots(['default' => "  \n  "])
-        ->meshSlots();
-
-    expect($slots)->toBe([]);
+    expect($effects['html'])
+        ->toContain('data-mesh-slot="default"')
+        ->toContain('mode=skip')
+        ->not->toContain('inner');
 });

@@ -25,9 +25,8 @@ put.
 ### The tag
 
 Blade runs `MeshTagPrecompiler` before compiling a view. It rewrites
-`<mesh:` and `<mesh-` to `<livewire:mesh::`, in opening and closing tags,
-then hands the result to Livewire's own tag precompiler. So these are the
-same:
+`<mesh:` to `<livewire:mesh::`, in opening and closing tags, then hands the
+result to Livewire's own tag precompiler. So these are the same:
 
 ```blade
 <mesh:counter :count="5" />
@@ -41,8 +40,10 @@ dots become namespace segments and kebab-case becomes StudlyCase, so
 it really is a Livewire tag, attributes fill public properties, and
 `wire:model` and `wire:key` behave as usual.
 
-The rewrite matches any tag that starts with `<mesh-` or `<mesh:`, so
-don't give your own custom elements a `mesh-` prefix.
+The hyphen alias, `<mesh-counter />`, is rewritten the same way, but only
+when the name resolves to a class through that namespace. Custom elements
+such as `<mesh-gradient>` pass through untouched unless a Mesh component
+has the same name (see [Blade tags](/docs/reference/blade#how-the-tag-compiles)).
 
 ### The wrapper
 
@@ -232,7 +233,7 @@ one broken island doesn't stop the rest of the page:
 | `component "X" is not registered` | The PHP id has no frontend entry. The message lists the ids that do exist; compare them, including case. |
 | `module has no default export` | The entry exports the component by name only. |
 | `Mesh renderer for "vue" not found` | A component needs a renderer that isn't in `renderers`. |
-| `duplicate component id` | Two entries derive the same id, so `initMesh()` failed and nothing mounts. Keep one entry per folder. |
+| `duplicate component id` | Two entries derive the same id. The first one keeps it and the other is skipped. Keep one entry per folder. |
 | `` `children` is reserved for slot content `` | `props()` returns `children` (or `slots`) while the tag has slots. Rename the prop. |
 
 [Troubleshooting](/docs/advanced/troubleshooting) covers the symptoms
