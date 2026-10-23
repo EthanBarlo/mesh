@@ -8,7 +8,7 @@ export const siteDescription =
   'Render React, Vue, and Svelte components as islands inside Livewire 4. Livewire owns the state; Mesh carries it across the boundary.';
 
 // Keep in step with the package version in the repo-root package.json / CHANGELOG.
-export const packageVersion = '0.2.0';
+export const packageVersion = '0.3.0';
 
 export const demoUrl = 'https://mesh-demo-react.ebarlow.dev';
 

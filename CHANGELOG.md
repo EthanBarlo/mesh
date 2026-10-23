@@ -2,10 +2,20 @@
 
 All notable changes to `mesh` will be documented in this file.
 
-## Unreleased
+## 0.3.0 - 2026-10-23
 
-Fixes from the post-revamp follow-up list, plus lazy framework runtimes.
+Vue and Svelte support, lazy framework runtimes, and fixes from the post-revamp follow-up list.
 
+- Vue support: a Vue 3.3+ renderer with `useWire`, `useEntangle` and `useErrorBag`
+  composables, Blade slots passed as native Vue slots, and a Vue demo app.
+- Svelte support: a Svelte 5 renderer with the same composables, Blade slots passed as
+  snippets, and a Svelte demo app.
+- `php artisan make:mesh --renderer=vue` (or `svelte`) scaffolds Vue and Svelte components.
+  Set the default with `make.renderer` in `config/mesh.php`.
+- Discovery sources: `initMesh`'s `sources` option registers components that live outside
+  `resources/js/mesh`, such as inside a Composer package, optionally under a `prefix`.
+- Laravel Boost support: Mesh ships a Boost guideline and a `mesh-development` skill in
+  `resources/boost/`.
 - Framework runtimes load lazily. `@mesh/react`, `@mesh/vue` and `@mesh/svelte` now export
   small descriptors; React DOM, Vue or Svelte downloads with the first island that needs it,
   so pages without islands load none of it. Full renderer objects are still accepted.
@@ -30,6 +40,20 @@ Fixes from the post-revamp follow-up list, plus lazy framework runtimes.
   the `cancelled` callback are added, and `$parent` may be `undefined`.
 - The package's `package.json` declares `"sideEffects": false`.
 - `/apps` and `/docs` are excluded from the Composer archive.
+- The docs are rewritten, and the React, Vue and Svelte demos are redrawn.
+
+### Upgrading from 0.2
+
+- Change your Composer constraint to `^0.3.0`.
+- `@mesh/react`'s default export is now a lazy descriptor. Passing it to `initMesh` needs no
+  change. Code that called its `mount` or `renderSlot` directly should get the renderer from
+  `createReactRenderer().load()`.
+- `initMesh` returns `void` instead of a promise. `await initMesh(...)` still works; `.then()`
+  does not.
+- `Component::meshSlots()` is removed.
+- A whitespace-only default slot is no longer passed as `children`.
+- The `Wire` type changes above can surface new TypeScript errors, for example where
+  `$parent` is used without a check or `$removeUpload` is given an `error` callback.
 
 ## 0.2.0 - 2026-06-11
 
