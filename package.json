@@ -1,6 +1,6 @@
 {
     "name": "@ethanbarlo/mesh",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "description": "Render React, Vue, or Svelte (and other frameworks) as the frontend of your Livewire components.",
     "author": "Ethan Barlow",
     "license": "MIT",
