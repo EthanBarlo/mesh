@@ -2,9 +2,12 @@
 
 All notable changes to `mesh` will be documented in this file.
 
-## Unreleased
+## 0.4.0 - 2026-10-26
 
-- Laravel 13 support. CI now tests Laravel 11, 12 and 13 on PHP 8.3 and 8.4.
+Laravel 13 support.
+
+- Mesh now installs on Laravel 11, 12 and 13. CI tests all three on PHP 8.3 and 8.4.
+- The demo apps run on Laravel 13 and require PHP 8.4.
 
 ## 0.3.0 - 2026-10-23
 

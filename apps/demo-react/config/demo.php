@@ -23,7 +23,7 @@ return [
     'drawing_prefix' => 'MESH-R',
 
     // Keep in step with the package version (repo-root package.json / CHANGELOG).
-    'revision' => '0.3.0',
+    'revision' => '0.4.0',
     'package' => 'ethanbarlo/mesh',
 
     'docs_url' => env('MESH_DOCS_URL', 'https://mesh.ebarlow.dev'),
