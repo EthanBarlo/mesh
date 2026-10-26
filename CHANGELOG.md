@@ -2,6 +2,13 @@
 
 All notable changes to `mesh` will be documented in this file.
 
+## 0.4.0 - 2026-10-26
+
+Laravel 13 support.
+
+- Mesh now installs on Laravel 11, 12 and 13. CI tests all three on PHP 8.3 and 8.4.
+- The demo apps run on Laravel 13 and require PHP 8.4.
+
 ## 0.3.0 - 2026-10-23
 
 Vue and Svelte support, lazy framework runtimes, and fixes from the post-revamp follow-up list.

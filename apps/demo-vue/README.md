@@ -1,6 +1,6 @@
 # Mesh demo (Laravel + Livewire + Vue)
 
-A small Laravel 12 / Livewire 4 app that demonstrates the Mesh package end-to-end:
+A small Laravel 13 / Livewire 4 app that demonstrates the Mesh package end-to-end:
 a Livewire `Counter` whose view is a Vue component mounted by Mesh. It mirrors
 `apps/demo-react` page-for-page, using the `@mesh/vue` renderer and composables.
 
