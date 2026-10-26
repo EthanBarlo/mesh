@@ -18,10 +18,10 @@
         }
     ],
     "require": {
-        "php": "^8.3",
+        "php": "^8.4",
         "ethanbarlo/mesh": "@dev",
-        "laravel/framework": "^12.0",
-        "laravel/tinker": "^2.10.1",
+        "laravel/framework": "^13.0",
+        "laravel/tinker": "^3.0",
         "livewire/livewire": "^4.0",
         "phiki/phiki": "^2.2"
     },

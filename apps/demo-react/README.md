@@ -1,6 +1,6 @@
 # Mesh demo (Laravel + Livewire + React)
 
-A small Laravel 12 / Livewire 4 app that demonstrates the Mesh package end-to-end:
+A small Laravel 13 / Livewire 4 app that demonstrates the Mesh package end-to-end:
 a Livewire `Counter` whose view is a React component mounted by Mesh.
 
 It consumes the Mesh package straight from the repo root via a Composer **path
