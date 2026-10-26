@@ -2,6 +2,10 @@
 
 All notable changes to `mesh` will be documented in this file.
 
+## Unreleased
+
+- Laravel 13 support. CI now tests Laravel 11, 12 and 13 on PHP 8.3 and 8.4.
+
 ## 0.3.0 - 2026-10-23
 
 Vue and Svelte support, lazy framework runtimes, and fixes from the post-revamp follow-up list.
