@@ -317,7 +317,7 @@ export default function Card({ variant, children, slots }: CardProps) {
 }
 ```
 
-Each slot is a `MeshSlot` element: a `<div style="display: contents">` holding the server HTML via
+Each slot is a `MeshSlot` element: a `<div style="display: contents" x-ignore>` holding the server HTML via
 `dangerouslySetInnerHTML`. The wrapper does not create a layout box, so it does not disturb flex or
 grid parents. The HTML is static: it updates when the server re-renders it, but nested Livewire
 components or Alpine behaviour inside it are not initialised. The [Slots guide](/docs/guides/slots) covers

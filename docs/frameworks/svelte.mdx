@@ -334,7 +334,7 @@ prop, keyed by name:
 </section>
 ```
 
-Each slot is a raw snippet that renders `<div style="display: contents">` around the server HTML.
+Each slot is a raw snippet that renders `<div style="display: contents" x-ignore>` around the server HTML.
 The wrapper creates no layout box. `SvelteSlot` (exported from `@mesh/svelte`) is an alias for
 `Snippet` if you prefer to name the type. `children` is absent when the default slot is empty, and
 `slots` is only passed when the tag has a named slot, so default `slots` to `{}` as above.

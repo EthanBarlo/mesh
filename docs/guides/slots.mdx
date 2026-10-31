@@ -139,10 +139,13 @@ Slots are mirrored as HTML. The island receives markup, not live components,
 so:
 
 - **Interactive Livewire components and Alpine directives inside a slot do
-  not work.** The copy in the island is plain HTML: Mesh tells Alpine to skip
-  it, so `wire:` and `x-` directives there are never initialised. The hidden
-  source copy is still live, so they initialise there, out of sight. An
-  `x-init` side effect, for example, runs once in the hidden holder.
+  not work.** The copy in the island is plain HTML in an `x-ignore` wrapper,
+  so `wire:` and `x-` directives there are never initialised, and a
+  `wire:navigate` link does a full page load. The hidden source copy is
+  still live, so they initialise there, out of sight. An `x-init` side
+  effect, for example, runs in the hidden holder each time the parent's
+  render puts that element there. Attribute changes Alpine makes there
+  (`wire:loading`, `x-transition`) re-render the slot in the island.
 - **The framework can't attach handlers** to elements inside a slot. Plain
   HTML behaviour, such as links, still works.
 

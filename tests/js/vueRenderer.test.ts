@@ -38,7 +38,7 @@ describe("vueRenderer", () => {
         rc.cleanup();
     });
 
-    it("renders the default slot HTML inside a display:contents wrapper", () => {
+    it("renders the default slot HTML inside a display:contents, x-ignore wrapper", () => {
         const lw = fakeLivewire();
         const Comp = defineComponent({
             setup: (_, { slots }) => () => h("section", slots.default?.()),
@@ -50,6 +50,7 @@ describe("vueRenderer", () => {
 
         const wrapper = meshRoot(lw).querySelector<HTMLElement>("section > div")!;
         expect(wrapper.style.display).toBe("contents");
+        expect(wrapper.hasAttribute("x-ignore")).toBe(true);
         expect(wrapper.innerHTML).toBe("<strong>blade</strong>");
         rc.cleanup();
     });
