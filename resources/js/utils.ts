@@ -147,3 +147,15 @@ export function getRenderer(type: string): Promise<MeshRenderer<any>> {
     }
     return pending;
 }
+
+// Detach an entangled value from Livewire's reactive state. Livewire patches
+// nested objects/arrays IN PLACE on a server response and $watch hands us that
+// same live proxy, so storing it in identity-compared framework state
+// (useState, shallowRef, $state.raw) would never re-render. A JSON round-trip
+// mirrors Livewire's own $entangle (`cloneIfObject`) and, unlike
+// structuredClone, works on Alpine's proxies. Primitives pass through.
+export function snapshot<T>(value: T): T {
+    return typeof value === "object" && value !== null
+        ? JSON.parse(JSON.stringify(value))
+        : value;
+}

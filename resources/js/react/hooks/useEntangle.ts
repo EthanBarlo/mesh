@@ -5,6 +5,7 @@ import {
     type Dispatch,
     type SetStateAction,
 } from "react";
+import { snapshot } from "../../utils";
 import useWire from "./useWire";
 
 // Two-way binding to a Livewire property, as a `useState`-style pair.
@@ -14,6 +15,9 @@ import useWire from "./useWire";
 // and a server-driven $watch update goes straight into React state, so it is
 // never echoed back (which would send another request in live mode).
 //
+// Inbound objects/arrays are snapshotted: Livewire patches them in place, so
+// the reference it hands us never changes and React would skip the render.
+//
 // The comparison is by identity: replace the value (objects included), don't
 // mutate it in place.
 export function useEntangle<T = string>(
@@ -22,7 +26,7 @@ export function useEntangle<T = string>(
 ): [T, Dispatch<SetStateAction<T>>] {
     const wire = useWire();
 
-    const [value, setValue] = useState<T>(() => wire.$get(key));
+    const [value, setValue] = useState<T>(() => snapshot(wire.$get(key)));
 
     // Inbound: keep our React state in sync with the Livewire property.
     // Reseeding after subscribing catches a change that landed between render
@@ -30,9 +34,9 @@ export function useEntangle<T = string>(
     // double mount and `key` changes from stacking watchers.
     useEffect(() => {
         const unwatch = wire.$watch(key, (next: T) => {
-            setValue(next);
+            setValue(snapshot(next));
         });
-        setValue(wire.$get(key));
+        setValue(snapshot(wire.$get(key)));
 
         return unwatch;
     }, [wire, key]);
