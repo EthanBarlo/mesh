@@ -4,7 +4,9 @@ description: The one function that boots Mesh in the browser, its options, the e
 ---
 
 `initMesh` builds the component registry and hooks Mesh into Livewire. Call it once, in the bundle
-that starts Livewire, before `Livewire.start()`.
+that starts Livewire, before `Livewire.start()`. A second call on the same page (for example Vite HMR
+re-running `app.ts`) logs a warning and does nothing, so islands never mount twice; reload the page
+to pick up a changed config.
 
 ```ts title="resources/js/app.ts"
 import { Livewire } from
@@ -43,7 +45,8 @@ function initMesh(Livewire: any, config: Config): void;
    `data-mesh-component` attribute, Mesh loads the component's chunk and, the first time an island
    of that type mounts, its renderer, in parallel. Then it mounts the island through the renderer
    and starts watching the slot holders. Components without the attribute are ignored.
-4. It registers a `morph.updated` hook that passes fresh props to mounted islands.
+4. It registers a `morphed` hook that passes fresh props to mounted islands, and mounts a lazy or
+   deferred component once the real markup replaces its placeholder.
 
 It returns nothing and does not throw for configuration mistakes. A bad registry entry or an invalid
 renderer is logged with `console.error` and skipped, so the rest of the page still mounts and your

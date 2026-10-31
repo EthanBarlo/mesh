@@ -9,9 +9,9 @@ import {
 } from "./types";
 import {
     debugLog,
+    findRenderedComponent,
     getComponentName,
     getProps,
-    getRenderedComponent,
     getRenderer,
     getSlots,
     removeRenderedComponent,
@@ -110,6 +110,17 @@ function indexRenderers(
 // entry or renderer is logged with console.error and skipped, so the rest of
 // the page's islands still mount. (`await initMesh(...)` still works.)
 export default function initMesh(Livewire: any, config: Config): void {
+    // Boot once per page. A second call (e.g. Vite HMR re-running app.ts)
+    // would register the Livewire hooks again and mount every island twice,
+    // so it only warns and keeps the first call's registry and config. The
+    // flag is `window.Mesh` rather than module state, which HMR resets.
+    if (window.Mesh) {
+        console.warn(
+            "Mesh: initMesh() was already called on this page; ignoring this call."
+        );
+        return;
+    }
+
     const { debug, sources } = config;
     const renderers = indexRenderers(config.renderers);
 
@@ -147,14 +158,57 @@ export default function initMesh(Livewire: any, config: Config): void {
 
     debugLog("Initialized Mesh", window.Mesh.config);
 
-    // Hook into Livewire component initialization
-    Livewire.hook("component.init", async ({ component, cleanup }: any) => {
-        const id = getComponentName(component.el);
+    // Livewire components a mount has been started for, so a morph that lands
+    // while the chunk is still loading (or after a failed mount) never starts
+    // a second one.
+    const mounting = new WeakSet<object>();
 
-        if (!id) {
-            return; // Not a Mesh component
+    // Hook into Livewire component initialization. A lazy or deferred
+    // component inits with its placeholder as the root, so it has no
+    // data-mesh-component yet; the morphed hook below mounts it once the real
+    // markup arrives.
+    Livewire.hook("component.init", ({ component }: any) => {
+        if (getComponentName(component.el)) {
+            return mountIsland(component);
         }
-        debugLog("component.init | " + id, { component });
+    });
+
+    // Hook into Livewire component updates. `morphed` fires once per full
+    // component morph (`morph.updated` fires once per morphed element), and
+    // the props live on the root element, which only changes in a full morph.
+    Livewire.hook("morphed", ({ component }: any) => {
+        const rendered = findRenderedComponent(component.id);
+        if (!rendered) {
+            // A lazy/deferred placeholder that just became the real markup.
+            if (getComponentName(component.el) && !mounting.has(component)) {
+                mountIsland(component);
+            }
+            return; // Not a Mesh component, or still mounting
+        }
+
+        // The handle dirty-checks the props itself, so a morph that didn't
+        // touch them is a no-op. Real update failures (e.g. a late
+        // reserved-prop collision) are logged, mirroring the slot path.
+        try {
+            rendered.updateProps(getProps(component.el));
+        } catch (e) {
+            console.error("Mesh: failed to update props", e);
+        }
+    });
+
+    // Load, mount and wire up the island of a Livewire component whose root
+    // has data-mesh-component. Teardown is registered on the component itself
+    // (what component.init's `cleanup` does), so this works the same when a
+    // later morph triggers the mount.
+    async function mountIsland(component: any): Promise<void> {
+        const id = getComponentName(component.el)!;
+        mounting.add(component);
+        debugLog("mount | " + id, { component });
+
+        // Drop markup left over from a page restored by wire:navigate
+        // back/forward now, rather than showing a non-interactive copy while
+        // the chunk loads. renderComponent clears it again before mounting.
+        component.el.querySelector(".mesh-root")?.replaceChildren();
 
         // Register teardown before any await: Livewire may remove the component
         // while the lazy chunk is loading or rendering. If that happens, mark the
@@ -162,7 +216,7 @@ export default function initMesh(Livewire: any, config: Config): void {
         // root that was already created before the dispose was observed.
         let disposed = false;
         let renderedComponent: RenderedComponent | undefined;
-        cleanup(() => {
+        component.addCleanup(() => {
             disposed = true;
             if (renderedComponent) {
                 removeRenderedComponent(component.id, renderedComponent);
@@ -242,29 +296,10 @@ export default function initMesh(Livewire: any, config: Config): void {
                     subtree: true,
                     characterData: true,
                 });
-                cleanup(() => observer.disconnect());
+                component.addCleanup(() => observer.disconnect());
             }
         } catch (e) {
             console.error("Mesh: failed to render \"" + id + "\"", e);
         }
-    });
-
-    // Hook into Livewire component updates
-    Livewire.hook("morph.updated", ({ component }: any) => {
-        let rendered: RenderedComponent;
-        try {
-            rendered = getRenderedComponent(component.id);
-        } catch {
-            return; // Not a Mesh component - silently ignore
-        }
-
-        // The handle dirty-checks the props itself, so a morph that didn't
-        // touch them is a no-op. Real update failures (e.g. a late
-        // reserved-prop collision) are logged, mirroring the slot path.
-        try {
-            rendered.updateProps(getProps(component.el));
-        } catch (e) {
-            console.error("Mesh: failed to update props", e);
-        }
-    });
+    }
 }
