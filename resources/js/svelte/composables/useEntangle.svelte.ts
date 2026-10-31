@@ -1,22 +1,25 @@
 import { onDestroy } from "svelte";
+import { snapshot } from "../../utils";
 import useWire from "./useWire";
 
 // Two-way binding to a Livewire property, as a writable `{ value }` box
 // (bind with `bind:value={x.value}`).
 //
 // The state is shallow ($state.raw): replace the value (objects included),
-// don't mutate it in place — mutations of nested fields won't sync.
+// don't mutate it in place — mutations of nested fields won't sync. Inbound
+// objects/arrays are snapshotted: Livewire patches them in place, so the
+// reference it hands us never changes and $state.raw would not update.
 export function useEntangle<T = string>(
     key: string,
     live: boolean = false
 ): { value: T } {
     const wire = useWire();
 
-    let value = $state.raw(wire.$get(key)) as T;
+    let value = $state.raw(snapshot(wire.$get(key))) as T;
 
     // Keep our state in sync with the livewire property
     const unwatch = wire.$watch(key, (next: T) => {
-        value = next;
+        value = snapshot(next);
     });
     onDestroy(unwatch);
 

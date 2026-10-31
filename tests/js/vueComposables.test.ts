@@ -9,7 +9,9 @@ import type { LivewireComponent } from "../../resources/js/types";
 
 // Fake $wire backed by a plain store. Mirrors the real semantics the
 // composables rely on: $set lands in the store (Livewire's reactive state),
-// and a server push updates the store BEFORE the $watch callback fires.
+// and a server push updates the store BEFORE the $watch callback fires. A
+// server patch mutates a stored object IN PLACE and notifies with that same
+// reference (Livewire's diffAndPatchRecursive + Alpine.watch).
 function fakeWire(initial: Record<string, any> = {}, errors: any = {}) {
     const store: Record<string, any> = { ...initial };
     const watchers: Record<string, (value: any) => void> = {};
@@ -38,26 +40,46 @@ function fakeWire(initial: Record<string, any> = {}, errors: any = {}) {
         watchers[key]?.(value);
     };
 
-    return { $wire, store, watchers, hooks, unwatch, unhook, serverPush };
+    const serverPatch = (key: string, mutate: (value: any) => void) => {
+        mutate(store[key]);
+        watchers[key]?.(store[key]);
+    };
+
+    return {
+        $wire,
+        store,
+        watchers,
+        hooks,
+        unwatch,
+        unhook,
+        serverPush,
+        serverPatch,
+    };
 }
 
 // Run a composable inside a mounted Mesh-like island (app-level provide of
 // the livewire component) and return its result plus an unmount handle.
-function withSetup<T>($wire: any, composable: () => T) {
+// `render` turns the result into the island's text, to assert re-renders.
+function withSetup<T>(
+    $wire: any,
+    composable: () => T,
+    render: (result: T) => string = () => ""
+) {
     let result!: T;
+    const el = document.createElement("div");
     const app = createApp(
         defineComponent({
             setup() {
                 result = composable();
-                return () => h("div");
+                return () => h("div", render(result));
             },
         })
     );
     app.provide(LivewireComponentKey, {
         $wire,
     } as unknown as LivewireComponent);
-    app.mount(document.createElement("div"));
-    return { result, unmount: () => app.unmount() };
+    app.mount(el);
+    return { result, el, unmount: () => app.unmount() };
 }
 
 describe("useWire", () => {
@@ -111,8 +133,50 @@ describe("useEntangle", () => {
         wire.serverPush("value", next);
         await nextTick();
 
-        expect(result.value).toBe(next);
+        expect(result.value).toEqual(next);
         expect(wire.$wire.$set).not.toHaveBeenCalled();
+    });
+
+    it.each([false, true])(
+        "re-renders when the server patches an object in place, without a write back (live: %s)",
+        async (live) => {
+            const wire = fakeWire({ board: { columns: [{ cards: ["a"] }] } });
+            const { el } = withSetup(
+                wire.$wire,
+                () => useEntangle<any>("board", live),
+                (board) => board.value.columns[0].cards.join()
+            );
+            expect(el.textContent).toBe("a");
+
+            wire.serverPatch("board", (board) => {
+                board.columns[0].cards.push("b");
+            });
+            await nextTick();
+
+            expect(el.textContent).toBe("a,b");
+            expect(wire.$wire.$set).not.toHaveBeenCalled();
+        }
+    );
+
+    it("still sends a user write that restores an earlier server value", async () => {
+        const wire = fakeWire({ tags: ["a"] });
+        const { result } = withSetup(wire.$wire, () =>
+            useEntangle<string[]>("tags", true)
+        );
+
+        wire.serverPush("tags", ["b"]);
+        await nextTick();
+        const fromServer = result.value;
+
+        result.value = ["c"];
+        await nextTick();
+        result.value = fromServer;
+        await nextTick();
+
+        expect(wire.$wire.$set.mock.calls).toEqual([
+            ["tags", ["c"], true],
+            ["tags", ["b"], true],
+        ]);
     });
 
     it("sends exactly one deferred $set on a user write", async () => {

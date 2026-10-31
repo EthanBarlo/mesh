@@ -37,7 +37,8 @@ setCount((c) => c + 1);
 ```
 
 - Returns a `useState`-style pair. The setter accepts a value or an updater function.
-- The initial state is `wire.$get(key)`.
+- The initial state is `wire.$get(key)`. Objects and arrays are copied on every read (here and on
+  each server update), so a nested change the server makes in place still re-renders.
 - **Inbound:** an effect registers `wire.$watch(key, …)`, so server changes re-render the
   component. The effect returns the unwatch function, so StrictMode's second mount and a changed
   `key` leave exactly one watcher.
@@ -72,7 +73,8 @@ const slug = useEntangle<string>('slug', true);
 </template>
 ```
 
-- Returns a `shallowRef`, seeded with `wire.$get(key)`.
+- Returns a `shallowRef`, seeded with `wire.$get(key)`. Objects and arrays are copied on every read
+  (here and on each server update), so a nested change the server makes in place still re-renders.
 - **Inbound:** `wire.$watch(key, …)` assigns the server value to the ref. The watcher is removed
   with `onScopeDispose`.
 - **Outbound:** a shallow `watch` calls `wire.$set(key, value, live)` when the ref changes, but only
@@ -101,7 +103,8 @@ function useEntangle<T = string>(
 ```
 
 - Returns a box with a `value` getter and setter, backed by `$state.raw`, seeded with
-  `wire.$get(key)`.
+  `wire.$get(key)`. Objects and arrays are copied on every read (here and on each server update), so
+  a nested change the server makes in place still re-renders.
 - **Inbound:** `wire.$watch(key, …)` assigns the server value. The watcher is removed with
   `onDestroy`.
 - **Outbound:** the setter calls `wire.$set(key, value, live)` only if the new value differs (`!==`)
