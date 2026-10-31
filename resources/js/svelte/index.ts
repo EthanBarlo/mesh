@@ -19,3 +19,4 @@ export {
     useErrorBag,
     type ErrorBagItem,
 } from "./composables/useErrorBag.svelte";
+export { useWireEvent } from "./composables/useWireEvent";

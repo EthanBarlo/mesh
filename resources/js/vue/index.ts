@@ -16,3 +16,4 @@ export { LivewireComponentKey, useLivewireComponent } from "./context";
 export { default as useWire } from "./composables/useWire";
 export { useEntangle } from "./composables/useEntangle";
 export { useErrorBag, type ErrorBagItem } from "./composables/useErrorBag";
+export { useWireEvent } from "./composables/useWireEvent";

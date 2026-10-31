@@ -1,9 +1,9 @@
 ---
 title: Hooks and composables
-description: Signatures, return shapes and exact behavior of useEntangle, useWire, useErrorBag and useLivewireComponent in React, Vue and Svelte.
+description: Signatures, return shapes and exact behavior of useEntangle, useWire, useErrorBag, useWireEvent and useLivewireComponent in React, Vue and Svelte.
 ---
 
-Each renderer package exports the same four functions, shaped for its framework. They read the
+Each renderer package exports the same five functions, shaped for its framework. They read the
 Livewire component that owns the island, so they only work inside a component Mesh mounted (or a
 test that provides one, see [Testing outside Mesh](#testing-outside-mesh)).
 
@@ -12,6 +12,7 @@ test that provides one, see [Testing outside Mesh](#testing-outside-mesh)).
 | `useEntangle<T>(key, live?)` | `[T, setter]` | `Ref<T>` | `{ value: T }` |
 | `useWire<T>()` | `Wire & T` | `Wire & T` | `Wire & T` |
 | `useErrorBag()` | `Record<string, string[]>` | `ShallowRef<…>` | `{ readonly value: … }` |
+| `useWireEvent(name, callback)` | `void` | `void` | `void` |
 | `useLivewireComponent()` | `LivewireComponent` | `LivewireComponent` | `LivewireComponent` |
 | Where to call it | Component body (a hook) | `setup` / `<script setup>` | Component initialisation |
 
@@ -233,18 +234,72 @@ function useErrorBag(): {
 
 - The initial value comes from the component's snapshot (`snapshot.memo.errors`), so errors from
   the server render show on mount.
-- It refreshes after **every** successful Livewire request for the component, through Livewire's
-  `commit` hook. A `$call` whose validation failed is still a successful request, so its messages
-  appear straight away.
+- It refreshes after **every** successful Livewire request for the component, through a
+  `$interceptMessage` interceptor that reads the bag in `onSync`, as soon as Livewire merges the new
+  snapshot (before the morph). A `$call` whose validation failed is still a successful request, so
+  its messages appear straight away.
 - The bag is replaced as a whole each time. Errors clear when the server validates again and the
   key is gone. There is no client-side `clear()`.
-- The `commit` hook is removed when the island unmounts: by the effect cleanup in React,
+- The interceptor is removed when the island unmounts: by the effect cleanup in React,
   `onScopeDispose` in Vue and `onDestroy` in Svelte.
 - Livewire only keeps errors whose key is a property of the component. An empty bag is serialized
   as `[]`, so test for a key (`errors.email`) rather than comparing with `{}`.
 - Each package also exports `type ErrorBagItem = string[] | null`.
 
 See [Forms and validation](/docs/guides/forms) for the full pattern.
+
+## useWireEvent
+
+Listens for a Livewire event on the component's root element and removes the listener when the
+caller goes away. Use it instead of `wire.$on`, whose listener can't be removed.
+
+```ts
+function useWireEvent(name: string, callback: (params: any) => void): void;
+```
+
+<Frameworks>
+<Tab value="React">
+
+```tsx
+useWireEvent('project-saved', ({ id }: { id: number }) => {
+    setNotice(`Saved project #${id}`);
+});
+```
+
+</Tab>
+<Tab value="Vue">
+
+```ts
+const notice = ref('');
+
+useWireEvent('project-saved', ({ id }: { id: number }) => {
+    notice.value = `Saved project #${id}`;
+});
+```
+
+</Tab>
+<Tab value="Svelte">
+
+```ts
+let notice = $state('');
+
+useWireEvent('project-saved', ({ id }: { id: number }) => {
+    notice = `Saved project #${id}`;
+});
+```
+
+</Tab>
+</Frameworks>
+
+- It behaves like `$on`: the listener sits on `wire.$el` and `callback` receives the event's
+  params (`event.detail`). It hears what reaches that element: events the component's PHP class
+  dispatches, `$dispatchSelf`, `$dispatchTo` aimed at this component, and events bubbling up from
+  inside it. See [Events](/docs/guides/events).
+- The listener is removed when the component that called it unmounts: by the effect cleanup in
+  React, `onScopeDispose` in Vue and `onDestroy` in Svelte. That matters for children shown with
+  `v-if` or `{#if}`, and for React's `StrictMode` double mount.
+- In React the latest `callback` is always used, so an inline arrow is fine; the listener only
+  moves when `name` changes. In Vue and Svelte, setup runs once, so `name` and `callback` are fixed.
 
 ## useLivewireComponent
 
@@ -295,11 +350,11 @@ Each framework reads it from its own context mechanism:
 | Svelte | `mount(…, { context })` with `LivewireComponentKey` | yes |
 
 Outside an island it throws `useLivewireComponent must be used within a Mesh component`. Because
-`useWire`, `useEntangle` and `useErrorBag` all call it, they throw the same error.
+`useWire`, `useEntangle`, `useErrorBag` and `useWireEvent` all call it, they throw the same error.
 
 ## Framework-specific exports
 
-Besides the four functions, each package exports what its renderer is built from.
+Besides the five functions, each package exports what its renderer is built from.
 
 | Export | React | Vue | Svelte |
 | --- | --- | --- | --- |
@@ -346,7 +401,7 @@ can reuse it.
 
 To render a Mesh component in a unit test or a component explorer, provide a stand-in Livewire
 component through the same context. Mesh's own test suite does this with a fake `$wire` whose
-`$get`, `$set`, `$watch` and `$hook` are stubs.
+`$get`, `$set`, `$watch` and `$interceptMessage` are stubs.
 
 <Frameworks>
 <Tab value="React">
@@ -401,5 +456,6 @@ mount(Counter, {
 </Tab>
 </Frameworks>
 
-`useErrorBag` also reads `fake.$wire.__instance.snapshot.memo.errors`, so give the fake `$wire` an
-`__instance` if the component uses it.
+`useErrorBag` also calls `fake.$wire.$interceptMessage` (return a no-op unsubscribe) and reads
+`fake.$wire.__instance.snapshot.memo.errors`, so give the fake `$wire` those if the component uses
+it. `useWireEvent` listens on `fake.$wire.$el`; any element works.

@@ -5,6 +5,7 @@ import { createRoot } from "react-dom/client";
 import LivewireContext from "../../resources/js/react/context";
 import { useEntangle } from "../../resources/js/react/hooks/useEntangle";
 import { useErrorBag } from "../../resources/js/react/hooks/useErrorBag";
+import { useWireEvent } from "../../resources/js/react/hooks/useWireEvent";
 import type { LivewireComponent } from "../../resources/js/types";
 
 // Tell React this is a test environment, so act() flushes without warnings.
@@ -15,19 +16,19 @@ import type { LivewireComponent } from "../../resources/js/types";
 // - $set lands in the store (Livewire's reactive state);
 // - a server push updates the store BEFORE the $watch callback fires;
 // - $watch also fires for local writes, a microtask later (Alpine.watch);
-// - $watch and $hook return a function that removes the listener.
+// - $watch and $interceptMessage return a function that removes the listener.
 // The live listener sets let the tests count what is still subscribed.
 function fakeWire(initial: Record<string, any> = {}, errors: any = {}) {
     const store: Record<string, any> = { ...initial };
     const watchers = new Map<string, Set<(value: any) => void>>();
-    const hooks = new Map<string, Set<(params: any) => void>>();
+    const interceptors = new Set<(context: any) => void>();
 
     const notify = (key: string, value: any) => {
         for (const cb of [...(watchers.get(key) ?? [])]) cb(value);
     };
 
     const unwatch = vi.fn();
-    const unhook = vi.fn();
+    const uninterceptMessage = vi.fn();
 
     const $wire: any = {
         $get: vi.fn((key: string) => store[key]),
@@ -44,41 +45,47 @@ function fakeWire(initial: Record<string, any> = {}, errors: any = {}) {
                 watchers.get(key)!.delete(cb);
             };
         }),
-        $hook: vi.fn((name: string, cb: (params: any) => void) => {
-            if (!hooks.has(name)) hooks.set(name, new Set());
-            hooks.get(name)!.add(cb);
+        $interceptMessage: vi.fn((cb: (context: any) => void) => {
+            interceptors.add(cb);
             return () => {
-                unhook(name);
-                hooks.get(name)!.delete(cb);
+                uninterceptMessage();
+                interceptors.delete(cb);
             };
         }),
+        $el: document.createElement("div"),
     };
     $wire.__instance = { snapshot: { memo: { errors } }, $wire };
 
     const activeWatchers = (key: string) => watchers.get(key)?.size ?? 0;
-    const activeHooks = (name: string) => hooks.get(name)?.size ?? 0;
+    const activeInterceptors = () => interceptors.size;
 
     const serverPush = (key: string, value: any) => {
         store[key] = value;
         notify(key, value);
     };
 
-    // A successful round-trip: Livewire swaps in the new snapshot, then runs
-    // every commit hook's succeed callbacks.
+    // A successful round-trip, in Livewire's order: each message interceptor
+    // registers its onSuccess stages, the new snapshot is merged, then the
+    // onSync callbacks run.
     const commit = (nextErrors: any) => {
-        $wire.__instance.snapshot.memo.errors = nextErrors;
-        for (const cb of [...(hooks.get("commit") ?? [])]) {
-            cb({ succeed: (done: () => void) => done() });
+        const synced: Array<() => void> = [];
+        for (const cb of [...interceptors]) {
+            cb({
+                onSuccess: (success: (context: any) => void) =>
+                    success({ onSync: (done: () => void) => synced.push(done) }),
+            });
         }
+        $wire.__instance.snapshot.memo.errors = nextErrors;
+        synced.forEach((done) => done());
     };
 
     return {
         $wire,
         store,
         unwatch,
-        unhook,
+        uninterceptMessage,
         activeWatchers,
-        activeHooks,
+        activeInterceptors,
         serverPush,
         commit,
     };
@@ -304,7 +311,7 @@ describe("useErrorBag", () => {
         expect(result.current).toEqual({ name: ["Required"] });
     });
 
-    it("refreshes the bag after a successful commit", () => {
+    it("refreshes the bag once the new snapshot is synced", () => {
         const wire = fakeWire({}, {});
         const { result } = renderHook(wire.$wire, errorBag, {});
 
@@ -313,15 +320,95 @@ describe("useErrorBag", () => {
         expect(result.current).toEqual({ email: ["Invalid"] });
     });
 
-    it("leaves one commit hook after StrictMode's double mount, none after unmount", () => {
+    it("leaves one interceptor after StrictMode's double mount, none after unmount", () => {
         const wire = fakeWire();
         const { unmount } = renderHook(wire.$wire, errorBag, {});
 
-        expect(wire.$wire.$hook).toHaveBeenCalledTimes(2);
-        expect(wire.activeHooks("commit")).toBe(1);
+        expect(wire.$wire.$interceptMessage).toHaveBeenCalledTimes(2);
+        expect(wire.activeInterceptors()).toBe(1);
 
         unmount();
-        expect(wire.activeHooks("commit")).toBe(0);
-        expect(wire.unhook).toHaveBeenCalledTimes(2);
+        expect(wire.activeInterceptors()).toBe(0);
+        expect(wire.uninterceptMessage).toHaveBeenCalledTimes(2);
+    });
+});
+
+describe("useWireEvent", () => {
+    type WireEventProps = { name: string; callback: (params: any) => void };
+    const wireEvent = ({ name, callback }: WireEventProps) =>
+        useWireEvent(name, callback);
+
+    const dispatch = (el: HTMLElement, name: string, detail: any) =>
+        el.dispatchEvent(new CustomEvent(name, { bubbles: true, detail }));
+
+    it("calls the callback with the event's params, once per event", () => {
+        const wire = fakeWire();
+        const callback = vi.fn();
+        renderHook(wire.$wire, wireEvent, { name: "saved", callback });
+
+        // StrictMode mounted twice; only one listener may remain.
+        dispatch(wire.$wire.$el, "saved", { id: 1 });
+
+        expect(callback).toHaveBeenCalledTimes(1);
+        expect(callback).toHaveBeenCalledWith({ id: 1 });
+    });
+
+    it("hears events bubbling up from inside the component", () => {
+        const wire = fakeWire();
+        const child = wire.$wire.$el.appendChild(document.createElement("span"));
+        const callback = vi.fn();
+        renderHook(wire.$wire, wireEvent, { name: "saved", callback });
+
+        dispatch(child, "saved", ["a"]);
+
+        expect(callback).toHaveBeenCalledWith(["a"]);
+    });
+
+    it("uses the latest callback without resubscribing", () => {
+        const wire = fakeWire();
+        const add = vi.spyOn(wire.$wire.$el, "addEventListener");
+        const first = vi.fn();
+        const second = vi.fn();
+        const { rerender } = renderHook(wire.$wire, wireEvent, {
+            name: "saved",
+            callback: first,
+        });
+        const subscriptions = add.mock.calls.length;
+
+        rerender({ name: "saved", callback: second });
+        dispatch(wire.$wire.$el, "saved", {});
+
+        expect(add).toHaveBeenCalledTimes(subscriptions);
+        expect(first).not.toHaveBeenCalled();
+        expect(second).toHaveBeenCalledTimes(1);
+    });
+
+    it("moves the listener when the event name changes", () => {
+        const wire = fakeWire();
+        const callback = vi.fn();
+        const { rerender } = renderHook(wire.$wire, wireEvent, {
+            name: "saved",
+            callback,
+        });
+
+        rerender({ name: "deleted", callback });
+        dispatch(wire.$wire.$el, "saved", {});
+        dispatch(wire.$wire.$el, "deleted", {});
+
+        expect(callback).toHaveBeenCalledTimes(1);
+    });
+
+    it("removes the listener on unmount", () => {
+        const wire = fakeWire();
+        const callback = vi.fn();
+        const { unmount } = renderHook(wire.$wire, wireEvent, {
+            name: "saved",
+            callback,
+        });
+
+        unmount();
+        dispatch(wire.$wire.$el, "saved", {});
+
+        expect(callback).not.toHaveBeenCalled();
     });
 });

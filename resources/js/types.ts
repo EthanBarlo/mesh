@@ -106,6 +106,130 @@ export type UploadProgressEvent = ProgressEvent & {
     detail: { progress: number };
 };
 
+// What `$errors` returns: Livewire's client-side take on Laravel's MessageBag
+// (`js/features/supportErrors.js`). Reads the last request's validation
+// errors; `clear()` only hides them locally until the next response.
+export type WireErrors = {
+    messages: () => Record<string, string[]>;
+    keys: () => string[];
+    // No keys: any error at all. Takes keys as arguments or one array.
+    has: (...keys: string[] | [string[]]) => boolean;
+    hasAny: (keys: string[]) => boolean;
+    missing: (...keys: string[] | [string[]]) => boolean;
+    // The first message for `key` (or overall), or "" when there is none.
+    first: (key?: string | null) => string;
+    get: (key: string) => string[];
+    all: () => string[];
+    isEmpty: () => boolean;
+    isNotEmpty: () => boolean;
+    any: () => boolean;
+    count: () => number;
+    // Clears one field, or every field when `field` is omitted.
+    clear: (field?: string | null) => void;
+};
+
+// What an `onError` callback receives (action, message and request level).
+// Calling `preventDefault` stops Livewire's default error modal.
+export type WireErrorContext = {
+    response: Response;
+    body: string;
+    preventDefault: () => void;
+};
+
+// The callback given to `$intercept` / `$interceptAction`, run once per
+// action (method call) on this component (`js/request/index.js`). Each `on*`
+// registers a lifecycle callback for that action.
+export type WireActionInterceptor = (context: {
+    // Livewire's internal Action (`name`, `params`, `metadata`, `cancel()`…).
+    action: any;
+    onSend: (callback: (context: { call: any }) => void) => void;
+    onCancel: (callback: () => void) => void;
+    // Receives the server method's return value.
+    onSuccess: (callback: (result: any) => void) => void;
+    onError: (callback: (context: WireErrorContext) => void) => void;
+    // Network failures (the fetch itself threw).
+    onFailure: (callback: (context: { error: any }) => void) => void;
+    onFinish: (callback: () => void) => void;
+}) => void;
+
+// The response stages a message interceptor's `onSuccess` can hook, in the
+// order Livewire runs them (`js/request/index.js`): `onSync` right after the
+// new snapshot is merged, `onEffect` after effects are processed, `onMorph`
+// (awaited) / `onMorphed` around the DOM morph, and `onRender` a
+// requestAnimationFrame later. Each holds one callback; a second call
+// replaces the first.
+export type WireMessageSuccessContext = {
+    // The response payload, with the snapshot already parsed.
+    payload: { snapshot: LivewireSnapshot; effects: Record<string, any> };
+    onSync: (callback: () => void) => void;
+    onEffect: (callback: () => void) => void;
+    onMorph: (callback: () => void | Promise<void>) => void;
+    onMorphed: (callback: () => void) => void;
+    onRender: (callback: () => void) => void;
+};
+
+// The callback given to `$interceptMessage`, run once per message (one
+// component's share of a request) for this component
+// (`js/request/interceptor.js`'s MessageInterceptor). Each `on*` holds one
+// callback; a second call replaces the first.
+export type WireMessageInterceptor = (context: {
+    // Livewire's internal Message (`component`, `actions`, `payload`…).
+    message: any;
+    cancel: () => void;
+    onSend: (callback: (context: { payload: any }) => void) => void;
+    onCancel: (callback: () => void) => void;
+    onFailure: (callback: (context: { error: any }) => void) => void;
+    onError: (callback: (context: WireErrorContext) => void) => void;
+    onStream: (
+        callback: (context: { json: any }) => void | Promise<void>
+    ) => void;
+    onSuccess: (callback: (context: WireMessageSuccessContext) => void) => void;
+    // A newer response superseded this one, so its payload was not applied.
+    onSkipped: (callback: () => void) => void;
+    onFinish: (callback: () => void) => void;
+}) => void;
+
+// The callback given to `$interceptRequest`, run once per HTTP request that
+// carries a message for this component (`js/request/interceptor.js`'s
+// RequestInterceptor). Each `on*` holds one callback.
+export type WireRequestInterceptor = (context: {
+    // Livewire's internal Request (`messages`, `uri`, `cancel()`…).
+    request: any;
+    onSend: (
+        callback: (context: { responsePromise: Promise<Response> }) => void
+    ) => void;
+    onCancel: (callback: () => void) => void;
+    onFailure: (callback: (context: { error: any }) => void) => void;
+    onResponse: (callback: (context: { response: Response }) => void) => void;
+    onParsed: (
+        callback: (context: { response: Response; body: string }) => void
+    ) => void;
+    onError: (callback: (context: WireErrorContext) => void) => void;
+    onStream: (callback: (context: { response: Response }) => void) => void;
+    onRedirect: (
+        callback: (context: { url: string; preventDefault: () => void }) => void
+    ) => void;
+    onDump: (
+        callback: (context: { html: string; preventDefault: () => void }) => void
+    ) => void;
+    onSuccess: (
+        callback: (context: {
+            response: Response;
+            body: string;
+            json: any;
+        }) => void
+    ) => void;
+    onFinish: (callback: () => void) => void;
+}) => void;
+
+// The `$intercept*` signature: intercept every action, or pass a method name
+// first to only intercept messages/requests that include that action.
+// Returns Livewire's unsubscribe function.
+export type WireIntercept<TCallback> = {
+    (callback: TCallback): () => void;
+    (action: string, callback: TCallback): () => void;
+};
+
 // Livewire's `$wire` proxy, typed from Livewire 4.3's `js/$wire.js`. Methods
 // that send a request return a Promise; the upload and dispatch helpers fire
 // and forget, so they return nothing — use their callbacks instead of `await`.
@@ -126,12 +250,53 @@ export type Wire = {
     $watch: (key: string, callback: (value: any) => void) => () => void;
     $refresh: () => Promise<void>;
     $commit: () => Promise<void>;
+    // Adds a listener on `$el` that is never removed, so it outlives an
+    // island that unmounts first. Prefer Mesh's `useWireEvent`.
     $on: (event: string, callback: (...args: any[]) => void) => void;
     // Returns Livewire's unhook function (also auto-cleaned on teardown).
     $hook: (event: string, callback: (...args: any[]) => void) => () => void;
+    // Component-scoped request interceptors. They are not cleaned up on
+    // teardown, so call the returned unsubscribe when you are done.
+    // `$intercept` is an alias of `$interceptAction`.
+    $intercept: WireIntercept<WireActionInterceptor>;
+    $interceptAction: WireIntercept<WireActionInterceptor>;
+    $interceptMessage: WireIntercept<WireMessageInterceptor>;
+    $interceptRequest: WireIntercept<WireRequestInterceptor>;
+    // The current validation errors (a fresh object per read).
+    $errors: WireErrors;
+    // Whether the property (any of the properties, or any property when
+    // omitted) differs from the last server value.
+    $dirty: (property?: string | string[]) => boolean;
+    // Call to register a JS action, read one as `$js.name(...)`, or assign
+    // `$js.name = fn`.
+    $js: ((name: string, action: (...args: any[]) => any) => void) & {
+        [name: string]: (...args: any[]) => any;
+    };
+    // `$refs('name')` or `$refs.name`: the element with `wire:ref="name"`
+    // inside this component, or undefined (Livewire logs an error).
+    $refs: ((name: string) => HTMLElement | undefined) & {
+        readonly [name: string]: HTMLElement | undefined;
+    };
+    // Scopes the next action to a named island and returns this wire for
+    // chaining: `$wire.$island("feed", { mode: "append" }).loadMore()`.
+    $island: (
+        name: string,
+        options?: { mode?: "morph" | "append" | "prepend"; [key: string]: any }
+    ) => Wire;
+    // Alpine-only: returns an Alpine interceptor meant for `x-data`. In an
+    // island use Mesh's `useEntangle` instead.
+    $entangle: (name: string, live?: boolean) => unknown;
+    // Runs an Alpine effect, disposed on component teardown. Returns
+    // Alpine's effect runner.
+    $effect: (callback: () => void) => unknown;
     $dispatch: (event: string, params?: object) => void;
     $dispatchTo: (component: string, event: string, params?: object) => void;
     $dispatchSelf: (event: string, params?: object) => void;
+    // Dispatches (non-bubbling) to every element inside this component
+    // matching `selector`.
+    $dispatchEl: (selector: string, event: string, params?: object) => void;
+    // Dispatches (non-bubbling) to this component's `wire:ref="ref"` element.
+    $dispatchRef: (ref: string, event: string, params?: object) => void;
     $upload: (
         name: string,
         file: File,

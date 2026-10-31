@@ -4,6 +4,7 @@ import { flushSync, mount, unmount } from "svelte";
 import { LivewireComponentKey } from "../../resources/js/svelte/context";
 import { useEntangle } from "../../resources/js/svelte/composables/useEntangle.svelte";
 import { useErrorBag } from "../../resources/js/svelte/composables/useErrorBag.svelte";
+import { useWireEvent } from "../../resources/js/svelte/composables/useWireEvent";
 import useWire from "../../resources/js/svelte/composables/useWire";
 import type { LivewireComponent } from "../../resources/js/types";
 import Harness from "./fixtures/Harness.svelte";
@@ -14,9 +15,9 @@ import Harness from "./fixtures/Harness.svelte";
 function fakeWire(initial: Record<string, any> = {}, errors: any = {}) {
     const store: Record<string, any> = { ...initial };
     const watchers: Record<string, (value: any) => void> = {};
-    const hooks: Record<string, (params: any) => void> = {};
+    let interceptor: ((context: any) => void) | undefined;
     const unwatch = vi.fn();
-    const unhook = vi.fn();
+    const uninterceptMessage = vi.fn();
 
     const $wire: any = {
         $get: vi.fn((key: string) => store[key]),
@@ -27,10 +28,11 @@ function fakeWire(initial: Record<string, any> = {}, errors: any = {}) {
             watchers[key] = cb;
             return unwatch;
         }),
-        $hook: vi.fn((name: string, cb: (params: any) => void) => {
-            hooks[name] = cb;
-            return unhook;
+        $interceptMessage: vi.fn((cb: (context: any) => void) => {
+            interceptor = cb;
+            return uninterceptMessage;
         }),
+        $el: document.createElement("div"),
     };
     $wire.__instance = { snapshot: { memo: { errors } }, $wire };
 
@@ -39,7 +41,20 @@ function fakeWire(initial: Record<string, any> = {}, errors: any = {}) {
         watchers[key]?.(value);
     };
 
-    return { $wire, store, watchers, hooks, unwatch, unhook, serverPush };
+    // A successful round-trip, in Livewire's order: the message interceptor
+    // registers its onSuccess stages, the new snapshot is merged, then the
+    // onSync callback runs.
+    const commit = (nextErrors: any) => {
+        let synced: (() => void) | undefined;
+        interceptor?.({
+            onSuccess: (success: (context: any) => void) =>
+                success({ onSync: (done: () => void) => (synced = done) }),
+        });
+        $wire.__instance.snapshot.memo.errors = nextErrors;
+        synced?.();
+    };
+
+    return { $wire, store, watchers, unwatch, uninterceptMessage, serverPush, commit };
 }
 
 // Run a composable inside a mounted Mesh-like island (the livewire component
@@ -151,23 +166,61 @@ describe("useErrorBag", () => {
         expect(result.value).toEqual({ name: ["Required"] });
     });
 
-    it("refreshes the bag after a successful commit", () => {
+    it("refreshes the bag once the new snapshot is synced", () => {
         const wire = fakeWire({}, {});
         const { result } = withSetup(wire.$wire, () => useErrorBag());
 
-        wire.$wire.__instance.snapshot.memo.errors = { email: ["Invalid"] };
-        // Simulate Livewire's commit hook: succeed(cb) runs cb after the
-        // round-trip completes and the snapshot has been swapped in.
-        wire.hooks.commit({ succeed: (cb: () => void) => cb() });
+        wire.commit({ email: ["Invalid"] });
 
         expect(result.value).toEqual({ email: ["Invalid"] });
     });
 
-    it("unhooks when the component is destroyed", () => {
+    it("removes its message interceptor when the component is destroyed", () => {
         const wire = fakeWire();
         const { unmount } = withSetup(wire.$wire, () => useErrorBag());
 
+        expect(wire.uninterceptMessage).not.toHaveBeenCalled();
         unmount();
-        expect(wire.unhook).toHaveBeenCalledTimes(1);
+        expect(wire.uninterceptMessage).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe("useWireEvent", () => {
+    const dispatch = (el: HTMLElement, name: string, detail: any) =>
+        el.dispatchEvent(new CustomEvent(name, { bubbles: true, detail }));
+
+    it("calls the callback with the event's params", () => {
+        const { $wire } = fakeWire();
+        const callback = vi.fn();
+        withSetup($wire, () => useWireEvent("saved", callback));
+
+        dispatch($wire.$el, "saved", { id: 1 });
+
+        expect(callback).toHaveBeenCalledTimes(1);
+        expect(callback).toHaveBeenCalledWith({ id: 1 });
+    });
+
+    it("hears events bubbling up from inside the component", () => {
+        const { $wire } = fakeWire();
+        const child = $wire.$el.appendChild(document.createElement("span"));
+        const callback = vi.fn();
+        withSetup($wire, () => useWireEvent("saved", callback));
+
+        dispatch(child, "saved", ["a"]);
+
+        expect(callback).toHaveBeenCalledWith(["a"]);
+    });
+
+    it("removes the listener when the component is destroyed", () => {
+        const { $wire } = fakeWire();
+        const callback = vi.fn();
+        const { unmount } = withSetup($wire, () =>
+            useWireEvent("saved", callback)
+        );
+
+        unmount();
+        dispatch($wire.$el, "saved", {});
+
+        expect(callback).not.toHaveBeenCalled();
     });
 });
