@@ -76,12 +76,13 @@ export function setRenderedComponent(
     window.Mesh.renderedComponents[livewire_id] = renderedComponent;
 }
 
-export function getRenderedComponent(livewire_id: string) {
-    const renderedComponent = window.Mesh?.renderedComponents[livewire_id];
-    if (!renderedComponent) {
-        throw new Error(`Mesh rendered component "${livewire_id}" not found`);
-    }
-    return renderedComponent;
+// The mounted island for a Livewire component id, or undefined when that
+// component isn't a (mounted) Mesh component. Non-throwing: the morph hook
+// runs for every Livewire component on the page.
+export function findRenderedComponent(
+    livewire_id: string
+): RenderedComponent | undefined {
+    return window.Mesh?.renderedComponents[livewire_id];
 }
 
 // Forget a torn-down island. Only removes the entry if it is still the given

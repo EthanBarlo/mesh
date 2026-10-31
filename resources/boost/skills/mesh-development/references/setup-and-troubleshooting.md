@@ -55,7 +55,7 @@ initMesh(Livewire, {
 Livewire.start() // Livewire 4 requires explicit start
 ```
 
-`initMesh` must run before `Livewire.start()` — it builds the registry synchronously and hooks `component.init` / `morph.updated`. It never throws for configuration mistakes: a bad entry or renderer is logged with a `Mesh:` console error and skipped, so the rest of the page still mounts.
+`initMesh` must run before `Livewire.start()` — it builds the registry synchronously and hooks `component.init` / `morphed`. A second call warns and is ignored. It never throws for configuration mistakes: a bad entry or renderer is logged with a `Mesh:` console error and skipped, so the rest of the page still mounts.
 
 The renderers are **lazy**: `@mesh/react` (and `@mesh/vue`, `@mesh/svelte`) export a small descriptor, so `app.ts` doesn't pull React DOM, Vue or Svelte into the main bundle. A framework's runtime downloads the first time an island of that kind mounts, and pages without islands load none of it.
 

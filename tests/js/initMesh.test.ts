@@ -9,19 +9,24 @@ import type {
 } from "../../resources/js/types";
 
 // A fake Livewire that records the hooks Mesh registers, so tests can drive
-// `component.init` (and the cleanup Livewire runs on teardown) by hand.
+// `component.init` and `morphed` (and the cleanup Livewire runs on teardown)
+// by hand. `calls` counts registrations per hook name.
 function fakeLivewire() {
     const hooks: Record<string, (params: any) => any> = {};
+    const calls: Record<string, number> = {};
     return {
         hook: (name: string, callback: (params: any) => any) => {
             hooks[name] = callback;
+            calls[name] = (calls[name] ?? 0) + 1;
         },
         hooks,
+        calls,
     };
 }
 
 // A Mesh component's root as the Blade view renders it, plus the Livewire
-// component object and its cleanup registry.
+// component object and its cleanup registry. `addCleanup` mirrors Livewire's
+// component.addCleanup, which is also what component.init's `cleanup` calls.
 function island(id: string, livewireId: string) {
     const el = document.createElement("div");
     el.dataset.meshComponent = id;
@@ -32,9 +37,13 @@ function island(id: string, livewireId: string) {
     document.body.appendChild(el);
 
     const cleanups: Array<() => void> = [];
+    const addCleanup = (fn: () => void) => {
+        cleanups.push(fn);
+        return () => {};
+    };
     return {
-        component: { id: livewireId, el },
-        cleanup: (fn: () => void) => cleanups.push(fn),
+        component: { id: livewireId, el, addCleanup },
+        cleanup: addCleanup,
         teardown: () => cleanups.forEach((fn) => fn()),
         root,
     };
@@ -70,6 +79,13 @@ const source = (...ids: string[]): GlobResult =>
 const init = (lw: ReturnType<typeof fakeLivewire>, i: ReturnType<typeof island>) =>
     lw.hooks["component.init"]({ component: i.component, cleanup: i.cleanup });
 
+// Run Livewire's morphed hook (once per full component morph).
+const morphed = (lw: ReturnType<typeof fakeLivewire>, i: ReturnType<typeof island>) =>
+    lw.hooks["morphed"]({ el: i.component.el, component: i.component });
+
+// Let pending chunk/renderer loads and the mount after them run.
+const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+
 let error: MockInstance;
 let warn: MockInstance;
 beforeEach(() => {
@@ -95,7 +111,26 @@ describe("initMesh", () => {
         expect(result).toBeUndefined();
         expect(Object.keys(window.Mesh!.registry)).toEqual(["Counter"]);
         expect(lw.hooks["component.init"]).toBeTypeOf("function");
-        expect(lw.hooks["morph.updated"]).toBeTypeOf("function");
+        expect(lw.hooks["morphed"]).toBeTypeOf("function");
+        expect(lw.hooks["morph.updated"]).toBeUndefined();
+    });
+
+    it("warns on a second call and does not register the hooks again", async () => {
+        const lw = fakeLivewire();
+        const renderer = { ...fakeRenderer(), extensions: ["fake"] };
+        initMesh(lw, { renderers: [renderer], sources: [source("Counter")] });
+        const first = window.Mesh;
+
+        initMesh(lw, { renderers: [renderer], sources: [source("Counter")] });
+
+        expect(window.Mesh).toBe(first);
+        expect(lw.calls).toEqual({ "component.init": 1, morphed: 1 });
+        expect(String(warn.mock.calls.at(-1)![0])).toMatch(
+            /initMesh\(\) was already called/
+        );
+
+        await init(lw, island("Counter", "lw-1"));
+        expect(renderer.mount).toHaveBeenCalledTimes(1);
     });
 
     it("logs bad registry entries and still mounts the other islands", async () => {
@@ -166,6 +201,28 @@ describe("initMesh", () => {
 
         expect(renderer.mount).not.toHaveBeenCalled();
         expect(window.Mesh!.renderedComponents["lw-1"]).toBeUndefined();
+    });
+
+    it("clears stale markup in .mesh-root before mounting", async () => {
+        const lw = fakeLivewire();
+        let childrenAtMount = -1;
+        const renderer = { ...fakeRenderer(), extensions: ["fake"] };
+        const mount = renderer.mount;
+        renderer.mount = vi.fn((args) => {
+            childrenAtMount = args.el.childNodes.length;
+            return mount(args);
+        });
+        initMesh(lw, { renderers: [renderer], sources: [source("Counter")] });
+
+        // As restored by wire:navigate back/forward: last visit's output.
+        const counter = island("Counter", "lw-1");
+        counter.root.innerHTML = "<button>stale</button>";
+        const pending = init(lw, counter);
+        expect(counter.root.innerHTML).toBe("");
+        await pending;
+
+        expect(childrenAtMount).toBe(0);
+        expect(counter.root.innerHTML).toBe("mounted Counter");
     });
 
     it("logs a missing renderer under the failed-render message", async () => {
@@ -282,5 +339,88 @@ describe("lazy renderers", () => {
                 message: expect.stringMatching(/did not resolve to a renderer/),
             })
         );
+    });
+});
+
+describe("morphed", () => {
+    it("ignores non-Mesh components without throwing", () => {
+        const lw = fakeLivewire();
+        initMesh(lw, {
+            renderers: [{ ...fakeRenderer(), extensions: ["fake"] }],
+            sources: [source("Counter")],
+        });
+
+        const plain = document.createElement("div");
+        expect(() =>
+            lw.hooks["morphed"]({
+                el: plain,
+                component: { id: "lw-9", el: plain, addCleanup: () => () => {} },
+            })
+        ).not.toThrow();
+        expect(error).not.toHaveBeenCalled();
+    });
+
+    it("passes the root's current props to the mounted island", async () => {
+        const lw = fakeLivewire();
+        const renderer = { ...fakeRenderer(), extensions: ["fake"] };
+        initMesh(lw, { renderers: [renderer], sources: [source("Counter")] });
+        const counter = island("Counter", "lw-1");
+        await init(lw, counter);
+        const handle = (renderer.mount as any).mock.results[0].value;
+
+        morphed(lw, counter);
+        expect(handle.update).not.toHaveBeenCalled(); // props unchanged
+
+        counter.component.el.dataset.meshProps = JSON.stringify({ label: "next" });
+        morphed(lw, counter);
+        expect(handle.update).toHaveBeenCalledTimes(1);
+        expect(handle.update.mock.calls[0][0].props).toEqual({ label: "next" });
+    });
+
+    it("mounts a lazy placeholder once its real markup is morphed in", async () => {
+        const lw = fakeLivewire();
+        const renderer = { ...fakeRenderer(), extensions: ["fake"] };
+        initMesh(lw, { renderers: [renderer], sources: [source("Counter")] });
+
+        // Livewire inits the component with its placeholder as the root.
+        const counter = island("Counter", "lw-1");
+        const { el } = counter.component;
+        const markup = el.innerHTML;
+        delete el.dataset.meshComponent;
+        el.innerHTML = "<div>Loading…</div>";
+        await init(lw, counter);
+        morphed(lw, counter); // a morph before the real markup: still nothing
+        expect(renderer.mount).not.toHaveBeenCalled();
+
+        // __lazyLoad morphs the real markup into the same component.
+        el.dataset.meshComponent = "Counter";
+        el.innerHTML = markup;
+        morphed(lw, counter);
+        morphed(lw, counter); // a second morph while the chunk loads
+        await settle();
+        morphed(lw, counter); // and one after it mounted
+
+        expect(renderer.mount).toHaveBeenCalledTimes(1);
+        expect(el.querySelector(".mesh-root")!.textContent).toBe("mounted Counter");
+        expect(window.Mesh!.renderedComponents["lw-1"]).toBeDefined();
+
+        // Teardown goes through the component's cleanups.
+        counter.teardown();
+        expect(renderer.unmount).toHaveBeenCalledTimes(1);
+        expect(window.Mesh!.renderedComponents["lw-1"]).toBeUndefined();
+    });
+
+    it("never mounts a lazy island torn down while its chunk loads", async () => {
+        const lw = fakeLivewire();
+        const renderer = { ...fakeRenderer(), extensions: ["fake"] };
+        initMesh(lw, { renderers: [renderer], sources: [source("Counter")] });
+
+        const counter = island("Counter", "lw-1");
+        morphed(lw, counter);
+        counter.teardown();
+        await settle();
+
+        expect(renderer.mount).not.toHaveBeenCalled();
+        expect(window.Mesh!.renderedComponents["lw-1"]).toBeUndefined();
     });
 });
