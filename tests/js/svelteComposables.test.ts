@@ -10,7 +10,9 @@ import Harness from "./fixtures/Harness.svelte";
 
 // Fake $wire backed by a plain store. Mirrors the real semantics the
 // composables rely on: $set lands in the store (Livewire's reactive state),
-// and a server push updates the store BEFORE the $watch callback fires.
+// and a server push updates the store BEFORE the $watch callback fires. A
+// server patch mutates a stored object IN PLACE and notifies with that same
+// reference (Livewire's diffAndPatchRecursive + Alpine.watch).
 function fakeWire(initial: Record<string, any> = {}, errors: any = {}) {
     const store: Record<string, any> = { ...initial };
     const watchers: Record<string, (value: any) => void> = {};
@@ -39,20 +41,41 @@ function fakeWire(initial: Record<string, any> = {}, errors: any = {}) {
         watchers[key]?.(value);
     };
 
-    return { $wire, store, watchers, hooks, unwatch, unhook, serverPush };
+    const serverPatch = (key: string, mutate: (value: any) => void) => {
+        mutate(store[key]);
+        watchers[key]?.(store[key]);
+    };
+
+    return {
+        $wire,
+        store,
+        watchers,
+        hooks,
+        unwatch,
+        unhook,
+        serverPush,
+        serverPatch,
+    };
 }
 
 // Run a composable inside a mounted Mesh-like island (the livewire component
 // provided via mount()'s context Map) and return its result plus an unmount
-// handle.
-function withSetup<T>($wire: any, composable: () => T) {
+// handle. `render` turns the result into the island's text, to assert
+// re-renders.
+function withSetup<T>(
+    $wire: any,
+    composable: () => T,
+    render?: (result: T) => string
+) {
     let result!: T;
+    const el = document.createElement("div");
     const app = mount(Harness, {
-        target: document.createElement("div"),
+        target: el,
         props: {
             run: () => {
                 result = composable();
             },
+            text: render && (() => render(result)),
         },
         context: new Map([
             [
@@ -64,7 +87,7 @@ function withSetup<T>($wire: any, composable: () => T) {
     // Flush the initial render: unmount only runs onDestroy teardown once the
     // component's effect tree has actually been created.
     flushSync();
-    return { result, unmount: () => unmount(app) };
+    return { result, el, unmount: () => unmount(app) };
 }
 
 describe("useWire", () => {
@@ -103,6 +126,40 @@ describe("useEntangle", () => {
         flushSync();
 
         expect(result.value).toBe(5);
+        expect(wire.$wire.$set).not.toHaveBeenCalled();
+    });
+
+    it.each([
+        ["object", { count: 5 }],
+        ["array", [1, 2, 3]],
+    ])("keeps a server-pushed %s without a live write back", (_kind, next) => {
+        const wire = fakeWire({ value: null });
+        const { result } = withSetup(wire.$wire, () =>
+            useEntangle<typeof next>("value", true)
+        );
+
+        wire.serverPush("value", next);
+        flushSync();
+
+        expect(result.value).toEqual(next);
+        expect(wire.$wire.$set).not.toHaveBeenCalled();
+    });
+
+    it("re-renders when the server patches an object in place, without a write back", () => {
+        const wire = fakeWire({ board: { columns: [{ cards: ["a"] }] } });
+        const { el } = withSetup(
+            wire.$wire,
+            () => useEntangle<any>("board", true),
+            (board) => board.value.columns[0].cards.join()
+        );
+        expect(el.textContent).toBe("a");
+
+        wire.serverPatch("board", (board) => {
+            board.columns[0].cards.push("b");
+        });
+        flushSync();
+
+        expect(el.textContent).toBe("a,b");
         expect(wire.$wire.$set).not.toHaveBeenCalled();
     });
 
