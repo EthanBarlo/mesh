@@ -43,12 +43,23 @@ export function stripFragmentMarkers(html: string): string {
     return html.replace(FRAGMENT_MARKER, "");
 }
 
+// First DIRECT child of `el` matching `selector`. Stands in for
+// `querySelector(":scope > ...")`, which happy-dom (the test DOM) lacks.
+export function directChild(el: Element, selector: string): HTMLElement | null {
+    for (const child of Array.from(el.children)) {
+        if (child.matches(selector)) {
+            return child as HTMLElement;
+        }
+    }
+    return null;
+}
+
 // Read the current slot content from a Mesh component's hidden slot holders.
 // Scoped to the wrapper's DIRECT children so nested mesh holders inside a slot
 // aren't mis-read. Returns {} when the component has no slots.
 export function getSlots(el: HTMLElement): MeshSlots {
     const slots: MeshSlots = {};
-    const wrapper = el.querySelector<HTMLElement>("[data-mesh-slots]");
+    const wrapper = directChild(el, "[data-mesh-slots]");
     if (!wrapper) {
         return slots;
     }

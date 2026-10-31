@@ -320,7 +320,7 @@ export default function Card({ variant, children, slots }: CardProps) {
 Each slot is a `MeshSlot` element: a `<div style="display: contents">` holding the server HTML via
 `dangerouslySetInnerHTML`. The wrapper does not create a layout box, so it does not disturb flex or
 grid parents. The HTML is static: it updates when the server re-renders it, but nested Livewire
-components or Alpine behaviour inside it will not work. The [Slots guide](/docs/guides/slots) covers
+components or Alpine behaviour inside it are not initialised. The [Slots guide](/docs/guides/slots) covers
 the details.
 
 `children` is `undefined` when the default slot is empty, and the `slots` prop is only passed when
