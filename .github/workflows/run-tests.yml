@@ -24,7 +24,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 5
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         os: [ubuntu-latest]
         php: [8.4, 8.3]
@@ -53,6 +53,9 @@ jobs:
 
       - name: Install dependencies
         run: |
+          # The matrix deliberately installs old releases (Laravel 11, prefer-lowest) that
+          # Composer now refuses because of security advisories; CI tests compatibility only.
+          composer config policy.advisories.block false
           composer require "laravel/framework:${{ matrix.laravel }}" "orchestra/testbench:${{ matrix.testbench }}" --no-interaction --no-update
           composer update --${{ matrix.stability }} --prefer-dist --no-interaction
 
