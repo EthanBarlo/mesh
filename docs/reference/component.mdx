@@ -43,6 +43,9 @@ abstract class Component extends \Livewire\Component
   }}
 />
 
+`props()` and `component()` are public so you can override them, but they can't be called from the
+browser as actions: a `$wire.props()` call fails with Livewire's `MethodNotFoundException`.
+
 ## props()
 
 `props()` returns the data your frontend component receives as props. The keys become prop names.
@@ -88,8 +91,8 @@ The array goes through `json_encode()` into the `data-mesh-props` attribute of t
 - Eloquent models, collections and other `JsonSerializable` objects are encoded the way they encode
   anywhere else in Laravel (models respect `$hidden`). Dates become strings.
 - An empty PHP array is encoded as `[]`, a JSON array, even when you meant an empty object.
-- If encoding fails (invalid UTF-8, a resource), `json_encode()` returns `false`, the attribute is
-  empty, and the frontend component receives no props at all.
+- If encoding fails (invalid UTF-8, `INF`/`NAN`, a resource), rendering throws a `JsonException`
+  instead of silently sending no props.
 
 <Callout type="warn" title="Props are public">
   Everything `props()` returns is written into the HTML and is visible in the page source, exactly

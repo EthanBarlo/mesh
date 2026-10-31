@@ -1,7 +1,7 @@
 @php $meshSlots = $this->getSlots(); @endphp
 <div
     data-mesh-component="{{ $this->component() }}"
-    data-mesh-props="{{ json_encode($this->props()) }}"
+    data-mesh-props="{{ json_encode($this->props(), JSON_THROW_ON_ERROR) }}"
     style="display: contents"
 >
     {{-- Hidden, Livewire-MORPHED source of truth for slot content. NOT wire:ignore: Livewire keeps it
