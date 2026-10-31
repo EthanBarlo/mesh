@@ -367,8 +367,9 @@ nothing to wait for.
 <Accordions type="multiple">
 <Accordion title="Alpine or a Livewire component inside a slot does nothing" id="interactive-slot">
 
-**Cause.** Slots reach the island as static HTML copied from a hidden holder. Nested Livewire
-components and Alpine behaviour inside a slot are not supported.
+**Cause.** Slots reach the island as static HTML copied from a hidden holder. Alpine and Livewire
+directives in that copy are not initialised; they only run in the hidden holder, out of sight.
+Nested Livewire components and Alpine behaviour inside a slot are not supported.
 
 **Fix.** Make the interactive part its own Mesh component, or pass the data as props and render it
 in the framework. See [Limitations](/docs/advanced/limitations#slots-are-static-html).

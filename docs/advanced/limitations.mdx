@@ -16,7 +16,13 @@ Svelte).
 - **It updates.** When the parent re-renders and the slot HTML changes, Mesh swaps the new HTML in
   place without remounting the island.
 - **It is not live.** Nested Livewire components and Alpine behaviour inside a slot are not
-  supported in this version. They render, but not as working components.
+  supported in this version. Each slot's visible copy sits in an `x-ignore` wrapper, so its `wire:`
+  and `x-` directives are never initialised; a `wire:navigate` link in a slot does a full page load.
+  The hidden source copy is live, so they still initialise there, out of sight: an `x-init` side
+  effect runs in the hidden holder each time the parent's render puts that element there.
+- **Attribute changes are mirrored.** When Alpine changes an attribute in the hidden holder
+  (`wire:loading`, `x-transition`, removing `x-cloak`), the island re-renders the slot to match,
+  which resets focus, selection and scroll inside it.
 - **It is trusted.** `{{ }}` output in a slot is escaped by Blade. `{!! !!}` output is injected as raw
   HTML, so never use it with user input.
 

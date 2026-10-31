@@ -6,6 +6,7 @@ import {
     RenderedComponent,
     SlotRenderer,
 } from "./types";
+import { directChild } from "./utils";
 
 // Internal core driver around a renderer. A renderer implements only the two
 // genuinely framework-specific operations — `renderSlot` (HTML string -> node)
@@ -64,10 +65,11 @@ export function assertNoReservedProps<T>(
     }
 }
 
-// Find the `.mesh-root` element a renderer mounts into.
+// Find the `.mesh-root` element a renderer mounts into. Scoped to the
+// wrapper's DIRECT children: the hidden slot holders come first, so a nested
+// Mesh component inside a slot would otherwise supply the first match.
 export function getMeshRoot(livewireComponent: LivewireComponent): HTMLElement {
-    const root =
-        livewireComponent.el.querySelector<HTMLElement>(".mesh-root");
+    const root = directChild(livewireComponent.el, ".mesh-root");
     if (!root) {
         throw new Error("Mesh root element not found");
     }

@@ -99,6 +99,7 @@ export function MeshSlot({ html }: { html: string }) {
     return (
         <div
             style={{ display: 'contents' }}
+            x-ignore=""
             dangerouslySetInnerHTML={{ __html: html }}
         />
     );
@@ -144,7 +145,8 @@ const reactRenderer: MeshRenderer<React.ReactNode> = {
 Reading it top to bottom:
 
 1. **`MeshSlot`** is the slot node. React fragments cannot take `dangerouslySetInnerHTML`, so the
-   HTML needs a host element; `display: contents` keeps that element out of layout.
+   HTML needs a host element; `display: contents` keeps that element out of layout, and `x-ignore`
+   stops Alpine from initialising the mirrored copy.
 2. **`renderSlot`** keys named slots by name so React keeps their identity across renders. The
    default slot becomes `children` and needs no key. It does nothing but build an element, which
    keeps it pure.
@@ -166,7 +168,7 @@ option is left out):
 export type VueSlot = () => VNodeChild;
 
 export const renderSlotHtml = (html: string): VueSlot => () =>
-    h('div', { style: 'display: contents', innerHTML: html });
+    h('div', { style: 'display: contents', 'x-ignore': '', innerHTML: html });
 
 const vueRenderer: MeshRenderer<VueSlot> = {
     type: 'vue',
@@ -226,7 +228,7 @@ option is left out):
 ```ts title="resources/js/svelte/slot.ts and renderer.svelte.ts (simplified)"
 export const renderSlotHtml = (html: string): SvelteSlot =>
     createRawSnippet(() => ({
-        render: () => `<div style="display: contents">${html}</div>`,
+        render: () => `<div style="display: contents" x-ignore>${html}</div>`,
     }));
 
 const flattenContext = (ctx: RenderContext<SvelteSlot>) => ({
@@ -338,7 +340,7 @@ hand-built context. They are a good template. A
 renderer should pass the same checks:
 
 - mounts a component with props;
-- renders the default slot HTML inside a `display: contents` wrapper;
+- renders the default slot HTML inside a `display: contents`, `x-ignore` wrapper;
 - exposes named slots the way your framework expects;
 - re-renders in place on a props update, without remounting;
 - swaps slot content on a slot update;

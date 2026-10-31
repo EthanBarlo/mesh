@@ -113,8 +113,8 @@ before they finish loading.
   [Composing islands](/docs/guides/composition).
 - **You need interactive Livewire or Alpine inside a slot.** Slot content is
   passed to the island as static server HTML. Nested Livewire components and
-  Alpine directives inside a slot don't run. Pass interactive pieces as
-  their own islands, or as props.
+  Alpine directives in the visible copy are not initialised. Pass interactive
+  pieces as their own islands, or as props.
 - **You are moving large data through props.** `props()` is serialized into
   the HTML on every render of the component. For big or fast-changing
   datasets, load them with an action (`$wire.$call`) instead.

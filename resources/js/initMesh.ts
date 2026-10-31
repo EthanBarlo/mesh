@@ -9,6 +9,7 @@ import {
 } from "./types";
 import {
     debugLog,
+    directChild,
     getComponentName,
     getProps,
     getRenderedComponent,
@@ -218,7 +219,7 @@ export default function initMesh(Livewire: any, config: Config): void {
             // Livewire keeps the hidden [data-mesh-slots] holders current via
             // fragment morphing; observe them (never .mesh-root, which React
             // owns) and replace the slot content when the server sends new HTML.
-            const slotsRoot = component.el.querySelector("[data-mesh-slots]");
+            const slotsRoot = directChild(component.el, "[data-mesh-slots]");
             if (slotsRoot) {
                 let last = JSON.stringify(getSlots(component.el));
                 const observer = new MutationObserver(() => {
@@ -241,6 +242,8 @@ export default function initMesh(Livewire: any, config: Config): void {
                     childList: true,
                     subtree: true,
                     characterData: true,
+                    // Alpine morph patches changed attributes in place.
+                    attributes: true,
                 });
                 cleanup(() => observer.disconnect());
             }

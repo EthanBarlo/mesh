@@ -330,8 +330,10 @@ comments before handing it to `renderSlot`.
 
 **`renderSlot` must be pure.** The core calls it once per slot, outside any mount, before the first
 `mount` and again for every slot whenever slot content changes. It cannot depend on per-mount
-state. Every built-in renderer wraps the HTML in `<div style="display: contents">` so the wrapper
-does not take part in layout.
+state. Every built-in renderer wraps the HTML in `<div style="display: contents" x-ignore>`:
+`display: contents` keeps the wrapper out of layout, and `x-ignore` stops Alpine from initialising
+the copy, whose directives would otherwise bind to the Mesh component instead of the slot's parent.
+A custom renderer should do the same.
 
 ## Reserved props and nativeSlots
 

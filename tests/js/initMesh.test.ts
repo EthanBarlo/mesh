@@ -191,6 +191,57 @@ describe("initMesh", () => {
     });
 });
 
+describe("slot mirroring", () => {
+    // Insert the hidden slot holder the Blade view renders ahead of .mesh-root.
+    function withDefaultSlot(i: ReturnType<typeof island>, html: string) {
+        const holders = document.createElement("div");
+        holders.setAttribute("data-mesh-slots", "");
+        holders.hidden = true;
+        const holder = document.createElement("div");
+        holder.dataset.meshSlot = "default";
+        holder.innerHTML = html;
+        holders.appendChild(holder);
+        i.component.el.insertBefore(holders, i.root);
+        return holder;
+    }
+
+    it("mirrors an attribute-only slot change into the island", async () => {
+        const lw = fakeLivewire();
+        const renderer = { ...fakeRenderer(), extensions: ["fake"] };
+        initMesh(lw, { renderers: [renderer], sources: [source("Counter")] });
+
+        const counter = island("Counter", "lw-1");
+        const holder = withDefaultSlot(counter, '<span class="off">x</span>');
+        await init(lw, counter);
+
+        // Alpine morph patches attributes in place via setAttribute.
+        holder.querySelector("span")!.setAttribute("class", "on");
+        await new Promise((resolve) => setTimeout(resolve));
+
+        const handle = (renderer.mount as any).mock.results[0].value;
+        expect(handle.update).toHaveBeenCalledTimes(1);
+        expect(handle.update.mock.calls[0][0].slots.children).toBe(
+            '<span class="on">x</span>'
+        );
+    });
+
+    it("mounts into its own .mesh-root, not one nested in a slot", async () => {
+        const lw = fakeLivewire();
+        const renderer = { ...fakeRenderer(), extensions: ["fake"] };
+        initMesh(lw, { renderers: [renderer], sources: [source("Counter")] });
+
+        const counter = island("Counter", "lw-1");
+        const holder = withDefaultSlot(
+            counter,
+            '<div data-mesh-component="Inner"><div class="mesh-root"></div></div>'
+        );
+        await init(lw, counter);
+
+        expect(counter.root.textContent).toBe("mounted Counter");
+        expect(holder.querySelector(".mesh-root")!.textContent).toBe("");
+    });
+});
+
 describe("lazy renderers", () => {
     function lazy(renderer = fakeRenderer()) {
         const descriptor: LazyMeshRenderer = {
