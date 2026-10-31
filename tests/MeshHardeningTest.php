@@ -15,7 +15,13 @@ it('refuses browser calls to props() and component() on mesh components', functi
 })->with([
     'Counter' => Counter::class,
     'TestComponent' => TestComponent::class,
-])->with(['props', 'component', 'Props']);
+])->with([
+    'props',
+    'component',
+    // Livewire's own public-method check is case-sensitive and already refuses this; the
+    // guard lowercases anyway because PHP method names are not, so it can't rely on that.
+    'Props',
+]);
 
 it('still allows ordinary public actions on mesh components', function () {
     Livewire::test(TestComponent::class)
