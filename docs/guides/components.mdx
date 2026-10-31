@@ -218,6 +218,13 @@ Because a Mesh component _is_ a Livewire component, the usual Livewire tag
 features apply: attributes, `wire:key`, and `wire:model`. The wrapper Mesh renders around the island uses `display: contents`, so it
 adds no box of its own to your grid or flex layout.
 
+### Lazy and deferred components
+
+Livewire's lazy loading works too: `<mesh:chart lazy />`, `<mesh:chart defer />`,
+or `#[Lazy]` / `#[Defer]` on the class. Livewire first renders the placeholder,
+then swaps in the component's markup; the island mounts at that point, and its
+chunk loads then too.
+
 ## Passing data in
 
 Tag attributes set public properties, or `mount()` parameters, when the
