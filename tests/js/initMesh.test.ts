@@ -377,6 +377,41 @@ describe("morphed", () => {
         expect(handle.update.mock.calls[0][0].props).toEqual({ label: "next" });
     });
 
+    it("does not mount twice when a morph lands while the chunk loads", async () => {
+        const lw = fakeLivewire();
+        const renderer = { ...fakeRenderer(), extensions: ["fake"] };
+        initMesh(lw, { renderers: [renderer], sources: [source("Counter")] });
+        const counter = island("Counter", "lw-1");
+
+        const pending = init(lw, counter);
+        counter.component.el.dataset.meshProps = JSON.stringify({ label: "next" });
+        morphed(lw, counter);
+        await pending;
+
+        expect(renderer.mount).toHaveBeenCalledTimes(1);
+        // The mount reads the props after loading, so it has the latest ones.
+        expect(counter.root.textContent).toBe("mounted next");
+    });
+
+    it("logs a failed props update and keeps the island mounted", async () => {
+        const lw = fakeLivewire();
+        const renderer = { ...fakeRenderer(), extensions: ["fake"] };
+        initMesh(lw, { renderers: [renderer], sources: [source("Counter")] });
+        const counter = island("Counter", "lw-1");
+        await init(lw, counter);
+        const handle = (renderer.mount as any).mock.results[0].value;
+        const failure = new Error("boom");
+        handle.update.mockImplementation(() => {
+            throw failure;
+        });
+
+        counter.component.el.dataset.meshProps = JSON.stringify({ label: "next" });
+        expect(() => morphed(lw, counter)).not.toThrow();
+
+        expect(error).toHaveBeenCalledWith("Mesh: failed to update props", failure);
+        expect(window.Mesh!.renderedComponents["lw-1"]).toBeDefined();
+    });
+
     it("mounts a lazy placeholder once its real markup is morphed in", async () => {
         const lw = fakeLivewire();
         const renderer = { ...fakeRenderer(), extensions: ["fake"] };

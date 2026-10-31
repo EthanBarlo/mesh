@@ -225,6 +225,10 @@ or `#[Lazy]` / `#[Defer]` on the class. Livewire first renders the placeholder,
 then swaps in the component's markup; the island mounts at that point, and its
 chunk loads then too.
 
+Give a custom `placeholder()` a `<div>` as its root element. Livewire morphs the
+real markup into that root, and Mesh's wrapper root is a `<div>`; a different
+root tag gets replaced rather than updated, and the island may not mount.
+
 ## Passing data in
 
 Tag attributes set public properties, or `mount()` parameters, when the

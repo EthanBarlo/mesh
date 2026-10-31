@@ -203,7 +203,7 @@ export default function initMesh(Livewire: any, config: Config): void {
     async function mountIsland(component: any): Promise<void> {
         const id = getComponentName(component.el)!;
         mounting.add(component);
-        debugLog("component.init | " + id, { component });
+        debugLog("mount | " + id, { component });
 
         // Drop markup left over from a page restored by wire:navigate
         // back/forward now, rather than showing a non-interactive copy while
