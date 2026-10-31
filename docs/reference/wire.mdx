@@ -216,10 +216,20 @@ Authorize and validate inside them. See [Server actions](/docs/guides/server-act
       type: '(event: string, params?: object) => void',
       description: "Dispatches only to this island's own component.",
     },
+    '$dispatchEl(selector, event, params?)': {
+      type: '(selector: string, event: string, params?: object) => void',
+      description:
+        'Dispatches (without bubbling) to every element inside this component that matches the selector.',
+    },
+    '$dispatchRef(ref, event, params?)': {
+      type: '(ref: string, event: string, params?: object) => void',
+      description:
+        'Dispatches (without bubbling) to the element with wire:ref="ref" inside this component.',
+    },
     '$on(event, callback)': {
       type: '(event, callback) => void',
       description:
-        "Listens on this component's root element. callback receives the params.",
+        "Listens on this component's root element. callback receives the params. The listener is never removed; prefer useWireEvent.",
     },
   }}
 />
@@ -245,8 +255,9 @@ The params object maps onto the listener's named parameters.
 bubbling up from components nested inside it. It does not hear events from sibling or parent
 components. To react to those, add an `#[On]` method to the PHP class and pass the result through
 `props()` or an entangled property, as the demo's `Wire/EventBridge` does. `$on` returns nothing, so
-in React add the listener to `wire.$el` yourself when you need cleanup (see
-[React gotchas](/docs/frameworks/react#strictmode-is-on-by-default)).
+its listener can't be removed: it outlives a `v-if` / `{#if}` child and registers twice under React's
+`StrictMode`. Use [`useWireEvent(event, callback)`](/docs/reference/hooks#usewireevent), which
+listens the same way and removes the listener on unmount.
 
 ## Uploads
 
@@ -335,21 +346,47 @@ See [File uploads](/docs/guides/uploads) for the full drop zone from the demo.
 `await wire.$parent?.$call('refreshTotals')`. Prefer events or `wire:model` with `#[Modelable]` when
 the two should stay loosely coupled.
 
-`$hook` is how `useErrorBag` works. It listens to the `commit` hook and reads the new error bag when
-the request succeeds:
+## Interceptors
+
+`$intercept` (alias `$interceptAction`), `$interceptMessage` and `$interceptRequest` hook into the
+lifecycle of this component's actions, messages and HTTP requests. Each takes a callback, or a method
+name and a callback to only see requests that call that method, and returns an unsubscribe
+function. Livewire does not remove them on teardown, so call it when the island unmounts.
+
+`useErrorBag` is built on `$interceptMessage`. It reads the new error bag in `onSync`, right after
+Livewire merges the response's snapshot:
 
 ```ts
-const unhook = wire.$hook('commit', ({ succeed }) => {
-    succeed(() => {
-        const errors = wire.__instance.snapshot.memo.errors;
+const unsubscribe = wire.$interceptMessage(({ onSuccess }) => {
+    onSuccess(({ onSync }) => {
+        onSync(() => {
+            const errors = wire.__instance.snapshot.memo.errors;
+        });
     });
 });
 ```
 
-## Beyond the Wire type
+`onSuccess` also offers `onEffect`, `onMorph`, `onMorphed` and `onRender` (a frame after the morph),
+plus the parsed `payload`. Message interceptors also get `onSend`, `onError`, `onFailure`,
+`onCancel`, `onSkipped`, `onFinish` and `cancel()`. The callback types are exported from `@mesh` as
+`WireActionInterceptor`, `WireMessageInterceptor` and `WireRequestInterceptor`.
 
-Livewire 4's `$wire` has more members than Mesh's `Wire` type lists, among them `$refs`, `$js`,
-`$dirty`, `$errors`, `$entangle`, `$effect`, `$intercept`, `$island`, `$dispatchEl` and
-`$dispatchRef`. They exist at runtime, and you can type the ones you use
-through `useWire<T>()`. Mesh does not use them, and most are aimed at Alpine and Blade, so check
-Livewire's documentation before relying on one in an island.
+Prefer these over `$hook('commit', …)`, which is Livewire 4's backwards-compatibility layer for the
+v3 hook and runs its `succeed` callbacks a frame after the morph.
+
+## Other members
+
+The `Wire` type also covers Livewire 4's other `$wire` members. Most are aimed at Alpine and Blade,
+so check Livewire's documentation before relying on one in an island.
+
+| Member | Type | What it does |
+| --- | --- | --- |
+| `$errors` | `WireErrors` | Livewire's client-side MessageBag (`has`, `first`, `get`, `all`, `clear`, …). `useErrorBag` is the reactive way to read errors in an island. |
+| `$dirty(property?)` | `boolean` | Whether the property (or any property) differs from the last server value. |
+| `$refs(name)` / `$refs.name` | `HTMLElement \| undefined` | The `wire:ref` element inside this component. |
+| `$js(name, fn)` / `$js.name` | callable | Registers or calls a component JS action. |
+| `$island(name, options?)` | `Wire` | Scopes the next action to a named island: `wire.$island('feed').$refresh()`. |
+| `$entangle(name, live?)` | `unknown` | Alpine-only. Use `useEntangle` in an island. |
+| `$effect(callback)` | `unknown` | Runs an Alpine effect, disposed on component teardown. |
+
+Anything else (your own properties and methods) can be typed through `useWire<T>()`.

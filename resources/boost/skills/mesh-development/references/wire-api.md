@@ -20,7 +20,7 @@ Low-level escape hatch: `useLivewireComponent()` returns the raw Livewire compon
 
 | Triggers a server request | Local (no request) |
 | --- | --- |
-| `$call`, `$refresh`, `$commit`, `$set(key, v, true)`, `$toggle(key, true)`, `$upload`, `$uploadMultiple`, `$removeUpload` | `$get`, `$set(key, v, false)`, `$toggle(key, false)`, `$watch`, `$on`, `$hook` |
+| `$call`, `$refresh`, `$commit`, `$set(key, v, true)`, `$toggle(key, true)`, `$upload`, `$uploadMultiple`, `$removeUpload` | `$get`, `$set(key, v, false)`, `$toggle(key, false)`, `$watch`, `$on`, `$hook`, `$intercept*` |
 
 `$dispatch` / `$dispatchTo` / `$dispatchSelf` fire on the client-side event bus immediately; a round-trip happens only for components with a server-side `#[On]` listener.
 
@@ -124,9 +124,13 @@ public function props(): array
 
 This is the default way to push something into an island: dispatch an event, handle it with `#[On]` on the island's own PHP class, and let `props()` carry the result.
 
-### `$on(event, callback)`
+### `useWireEvent(event, callback)` (instead of `$on`)
 
-Listens for a Livewire event in the browser; `callback` receives the event's params. It listens on **this component's own element**, so it only hears events that reach that element:
+Listens for a Livewire event in the browser; `callback` receives the event's params. Import it from `@mesh/react`, `@mesh/vue` or `@mesh/svelte`; it is `$on` with cleanup. Don't call `wire.$on` from an island: its listener is never removed, so it outlives a `v-if` / `{#if}` child (one more listener per remount) and registers twice under React's StrictMode. `useWireEvent` removes its listener on unmount, and in React always calls the latest callback without resubscribing.
+
+```tsx
+useWireEvent("project-saved", ({ id }: { id: number }) => setNotice(`Saved #${id}`));
+``` It listens on **this component's own element**, so it only hears events that reach that element:
 
 - events the component's PHP class dispatches (`$this->dispatch('saved')` in an action);
 - `$dispatchSelf`, and `$dispatchTo` aimed at this component;
@@ -142,7 +146,7 @@ useEffect(() => {
 }, []);
 ```
 
-`$on` returns nothing, so its listener can't be removed. In Vue and Svelte (setup runs once) that's fine. In React, StrictMode runs effects twice in development, so instead of `$on` inside `useEffect`, add the listener to `wire.$el` yourself and remove it in the cleanup. `$dispatchTo` and `$dispatchSelf` events don't bubble, so they never reach `window`.
+`$dispatchTo` and `$dispatchSelf` events don't bubble, so they never reach `window`.
 
 ### `$upload(name, file, finish?, error?, progress?)` / `$uploadMultiple(name, files, ...)` / `$removeUpload(name, tmpFilename, finish?)`
 
@@ -185,7 +189,9 @@ public $photo = null; // checked when the temp upload sets it; failures go to th
 
 ### Other members
 
-`$parent` (the closest parent component's wire, or `undefined` when there is none), `$el` (root element), `$id` (component ID), `$hook(event, callback)` (Livewire lifecycle hooks; returns an unhook function), `__instance` (the raw `LivewireComponent`). `$cancelUpload(name)` aborts an upload in progress.
+`$parent` (the closest parent component's wire, or `undefined` when there is none), `$el` (root element), `$id` (component ID), `$hook(event, callback)` (Livewire lifecycle hooks; returns an unhook function; the `commit` hook is Livewire's v3 compatibility layer, prefer the interceptors), `__instance` (the raw `LivewireComponent`). `$cancelUpload(name)` aborts an upload in progress.
+
+`$intercept` / `$interceptAction`, `$interceptMessage` and `$interceptRequest` (optionally with a method name first) hook a request's lifecycle and return an unsubscribe; Livewire never removes them, so call it on unmount. `useErrorBag` uses `$interceptMessage(({ onSuccess }) => onSuccess(({ onSync }) => onSync(...)))`. Also typed: `$errors` (client-side MessageBag), `$dirty(prop?)`, `$refs`, `$js`, `$island(name, { mode })`, `$dispatchEl(selector, event, params?)`, `$dispatchRef(ref, event, params?)`, and the Alpine-oriented `$entangle` / `$effect` (use `useEntangle` instead).
 
 ## Pattern: server action with loading state
 
