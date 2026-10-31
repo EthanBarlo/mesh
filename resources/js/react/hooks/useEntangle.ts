@@ -51,11 +51,14 @@ export function useEntangle<T = string>(
                     ? (action as (prev: T) => T)(current)
                     : action;
 
-            setValue(next);
-
-            if (next !== current) {
-                void wire.$set(key, next, live);
+            // React state already holds a copy of `current`; storing `current`
+            // itself would put Livewire's live object back into state.
+            if (next === current) {
+                return;
             }
+
+            setValue(next);
+            void wire.$set(key, next, live);
         },
         [wire, key, live]
     );

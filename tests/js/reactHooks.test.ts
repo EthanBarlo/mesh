@@ -270,6 +270,21 @@ describe("useEntangle", () => {
         expect(wire.$wire.$set).not.toHaveBeenCalled();
     });
 
+    it("keeps its own copy when an updater returns prev unchanged", async () => {
+        const wire = fakeWire({ board: { cards: ["a"] } });
+        const { result } = renderHook(wire.$wire, entangle<any>, {
+            name: "board",
+        });
+        const before = result.current[0];
+
+        act(() => result.current[1]((prev: any) => prev));
+        await flush();
+
+        expect(result.current[0]).toBe(before);
+        expect(result.current[0]).not.toBe(wire.store.board);
+        expect(wire.$wire.$set).not.toHaveBeenCalled();
+    });
+
     it("still sends a user write that follows a server push", async () => {
         const wire = fakeWire({ count: 1 });
         const { result } = renderHook(wire.$wire, entangle<number>, {
