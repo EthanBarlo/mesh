@@ -235,7 +235,7 @@ is never remounted.
 
 ## Composables
 
-All four composables come from `@mesh/svelte`. Call them while the component initialises (top level
+All five composables come from `@mesh/svelte`. Call them while the component initialises (top level
 of `<script>`), because they use `getContext` and `onDestroy`. Full signatures are in
 [Hooks and composables](/docs/reference/hooks).
 
@@ -244,6 +244,7 @@ of `<script>`), because they use `getContext` and `onDestroy`. Full signatures a
 | `useEntangle<T>(key, live?)` | `{ value: T }` | Writable box, bind with `bind:value={x.value}` |
 | `useWire<T>()` | `Wire & T` | Same object as in React and Vue |
 | `useErrorBag()` | `{ readonly value: Record<string, string[]> }` | Read-only box |
+| `useWireEvent(name, callback)` | `void` | `$on` with cleanup on destroy |
 | `useLivewireComponent()` | `LivewireComponent` | From mount-level context |
 
 The same form as in the React guide, in Svelte:

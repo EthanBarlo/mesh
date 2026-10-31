@@ -1,4 +1,4 @@
-import type { Wire } from "../../resources/js/types";
+import type { Wire, WireErrors } from "../../resources/js/types";
 
 // Type-level checks for Wire against Livewire 4.3's $wire (js/$wire.js).
 // Compiled by `npm run typecheck`; never executed.
@@ -55,6 +55,86 @@ function parent() {
     void p;
 }
 
+function interceptors() {
+    // Every $intercept* returns an unsubscribe and takes an optional action name.
+    const offAction: () => void = wire.$intercept(({ action, onSuccess, onError }) => {
+        void action;
+        onSuccess((result) => void result);
+        onError(({ response, body, preventDefault }) => {
+            const status: number = response.status;
+            void status;
+            void body;
+            preventDefault();
+        });
+    });
+    wire.$interceptAction("save", ({ onFinish }) => onFinish(() => {}));
+
+    const offMessage: () => void = wire.$interceptMessage(({ onSuccess, cancel }) => {
+        void cancel;
+        onSuccess(({ payload, onSync, onMorph, onMorphed, onRender }) => {
+            const errors: Record<string, string[]> = payload.snapshot.memo.errors;
+            void errors;
+            onSync(() => {});
+            onMorph(async () => {});
+            onMorphed(() => {});
+            onRender(() => {});
+        });
+    });
+    wire.$interceptMessage("save", ({ onSkipped }) => onSkipped(() => {}));
+
+    const offRequest: () => void = wire.$interceptRequest(({ onRedirect, onSend }) => {
+        onRedirect(({ url, preventDefault }) => {
+            const to: string = url;
+            void to;
+            preventDefault();
+        });
+        onSend(async ({ responsePromise }) => void (await responsePromise).ok);
+    });
+
+    // @ts-expect-error The action name comes before the callback.
+    wire.$interceptMessage(() => {}, "save");
+    // @ts-expect-error Message interceptors have no onRedirect.
+    wire.$interceptMessage(({ onRedirect }) => void onRedirect);
+
+    offAction();
+    offMessage();
+    offRequest();
+}
+
+function helpers() {
+    // $errors mirrors Laravel's MessageBag.
+    const errors: WireErrors = wire.$errors;
+    const first: string = errors.first("email");
+    const all: string[] = errors.get("email");
+    const any: boolean = errors.has() || errors.has("a", "b") || errors.has(["a", "b"]);
+    errors.clear("email");
+    errors.clear();
+
+    const dirty: boolean = wire.$dirty() || wire.$dirty("name") || wire.$dirty(["a", "b"]);
+
+    // $js and $refs are callable and also index by name.
+    wire.$js("bump", () => 1);
+    wire.$js.bump = () => 2;
+    wire.$js.bump();
+    const ref: HTMLElement | undefined = wire.$refs("input") ?? wire.$refs.input;
+
+    // $island returns the wire for chaining.
+    const chained: Wire = wire.$island("feed", { mode: "append" });
+    void chained.$refresh();
+    // @ts-expect-error Islands only morph, append or prepend.
+    wire.$island("feed", { mode: "replace" });
+
+    wire.$dispatchEl("input", "focus-me");
+    wire.$dispatchRef("modal", "open", { id: 1 });
+
+    // $on stays void: Livewire's listen() returns nothing to unsubscribe with.
+    const on: void = wire.$on("saved", () => {});
+
+    void [first, all, any, dirty, ref, on];
+}
+
 void requests;
 void fireAndForget;
 void parent;
+void interceptors;
+void helpers;

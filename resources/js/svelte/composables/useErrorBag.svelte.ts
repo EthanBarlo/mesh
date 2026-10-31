@@ -9,18 +9,19 @@ export function useErrorBag() {
     const wire = useWire();
     let errors = $state.raw(wire.__instance.snapshot.memo.errors);
 
-    // Listen to requests, and grab the error bag from them after completion
-    const unhook = wire.$hook(
-        "commit",
-        ({ succeed }: { succeed: (cb: () => void) => void }) => {
-            succeed(() => {
-                // The snapshot on wire.__instance is already parsed, so we read
-                // the errors from there rather than re-parsing the commit payload.
+    // Grab the error bag after each successful response. `onSync` runs right
+    // after Livewire merges the new snapshot, so the bag updates in the same
+    // frame as the morph.
+    const unsubscribe = wire.$interceptMessage(({ onSuccess }) => {
+        onSuccess(({ onSync }) => {
+            onSync(() => {
+                // The snapshot on wire.__instance is already parsed, so we
+                // read the errors from there.
                 errors = wire.__instance.snapshot.memo.errors;
             });
-        }
-    );
-    onDestroy(unhook);
+        });
+    });
+    onDestroy(unsubscribe);
 
     // Read-only box: the bag only changes when the server says so.
     return {

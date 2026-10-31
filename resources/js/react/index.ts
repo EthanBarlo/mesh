@@ -19,3 +19,4 @@ export {
 export { default as useWire } from "./hooks/useWire";
 export { useEntangle } from "./hooks/useEntangle";
 export { useErrorBag, type ErrorBagItem } from "./hooks/useErrorBag";
+export { useWireEvent } from "./hooks/useWireEvent";

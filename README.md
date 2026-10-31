@@ -95,7 +95,7 @@ Mesh ships AI guidelines and a `mesh-development` agent skill for [Laravel Boost
 ## Requirements
 
 - PHP 8.3+, Laravel 11, 12, or 13
-- Livewire 4
+- Livewire 4.4.8 or later
 - Node with Vite (host app)
 
 ## License
