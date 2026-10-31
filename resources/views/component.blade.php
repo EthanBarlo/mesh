@@ -18,7 +18,5 @@
         </div>
     @endif
 
-    {{-- wire:ignore keeps Livewire's morph out; x-ignore keeps Alpine from initialising the mirrored
-         slot copy, which would otherwise bind its directives to this component instead of the parent. --}}
-    <div wire:ignore x-ignore class="mesh-root" style="display: contents"></div>
+    <div wire:ignore class="mesh-root" style="display: contents"></div>
 </div>

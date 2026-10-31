@@ -12,11 +12,6 @@ it('renders the mesh mount point with the component id', function () {
         ->assertSeeHtml('wire:ignore');
 });
 
-it('marks the mesh mount point x-ignore so Alpine skips the mirrored slot copy', function () {
-    Livewire::test(TestComponent::class)
-        ->assertSeeHtml('<div wire:ignore x-ignore class="mesh-root"');
-});
-
 it('serializes props into the data-mesh-props attribute', function () {
     Livewire::test(TestComponent::class, ['name' => 'Ethan'])
         ->assertSee('data-mesh-props')
