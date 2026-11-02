@@ -214,7 +214,7 @@ PHP array is always encoded as `[]`, even where you meant an empty object, so ty
 
 ## Hooks
 
-All four hooks come from `@mesh/react` and only work inside a component that Mesh mounted (they read
+All five hooks come from `@mesh/react` and only work inside a component that Mesh mounted (they read
 the Livewire component from React context). Full signatures are in
 [Hooks and composables](/docs/reference/hooks).
 
@@ -223,6 +223,7 @@ the Livewire component from React context). Full signatures are in
 | `useEntangle<T>(key, live?)` | `[T, Dispatch<SetStateAction<T>>]` | Two-way binding to a public property |
 | `useWire<T>()` | `Wire & T` | Calling actions, events, uploads, `$watch` |
 | `useErrorBag()` | `Record<string, string[]>` | Validation messages after each request |
+| `useWireEvent(name, callback)` | `void` | `$on` with cleanup on unmount |
 | `useLivewireComponent()` | `LivewireComponent` | The raw Livewire component instance |
 
 A form shows three of them working together. This is the demo's project form, trimmed:
@@ -348,19 +349,13 @@ useEffect(
 );
 ```
 
-`$on` returns nothing. Its listener sits on the component's root element (`wire.$el`), which is
-where an event dispatched by your PHP class with `$this->dispatch('saved')` lands. When you need
-cleanup, listen there yourself:
+`$on` returns nothing, so its listener can't be removed, and a `$on` inside `useEffect` registers
+twice. Use `useWireEvent` instead. It listens on the same element (`wire.$el`, where an event
+dispatched by your PHP class with `$this->dispatch('saved')` lands) and removes the listener on
+unmount:
 
 ```tsx
-useEffect(() => {
-    const el = wire.$el;
-    const onSaved = (e: Event) => {
-        setSaved((e as CustomEvent).detail);
-    };
-    el.addEventListener('saved', onSaved);
-    return () => el.removeEventListener('saved', onSaved);
-}, [wire]);
+useWireEvent('saved', (params) => setSaved(params));
 ```
 
 To turn it off, build the renderer with `createReactRenderer({ strictMode: false })`.

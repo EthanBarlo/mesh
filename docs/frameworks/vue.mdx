@@ -223,7 +223,7 @@ objects. An empty PHP array always arrives as `[]`.
 
 ## Composables
 
-All four composables come from `@mesh/vue`. Call them in `<script setup>` (or `setup()`), because
+All five composables come from `@mesh/vue`. Call them in `<script setup>` (or `setup()`), because
 they use `inject` and `onScopeDispose`. Full signatures are in
 [Hooks and composables](/docs/reference/hooks).
 
@@ -232,6 +232,7 @@ they use `inject` and `onScopeDispose`. Full signatures are in
 | `useEntangle<T>(key, live?)` | `Ref<T>` (a `shallowRef`) | Works with `v-model` |
 | `useWire<T>()` | `Wire & T` | Same object as in React |
 | `useErrorBag()` | `ShallowRef<Record<string, string[]>>` | Read-only in practice |
+| `useWireEvent(name, callback)` | `void` | `$on` with cleanup on unmount |
 | `useLivewireComponent()` | `LivewireComponent` | Provided once per island |
 
 The same form as in the React guide, in Vue:
@@ -370,6 +371,10 @@ onUnmounted(unwatch);
 ```
 
 Livewire also removes watchers when the Livewire component itself is torn down.
+
+`$on` returns nothing, so its listener stays on the component's element after a `v-if` child
+unmounts, and each remount adds another. Use `useWireEvent(name, callback)`, which removes it for
+you.
 
 ### Reserved prop names
 

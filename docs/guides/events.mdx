@@ -107,10 +107,12 @@ This is the default way to push something into an island: dispatch an
 event, handle it on the island's class, and let `props()` carry the result.
 The data passes through PHP, where you can check and shape it.
 
-## Handle it in the island with $on
+## Handle it in the island with useWireEvent
 
-`wire.$on(name, callback)` runs the callback in the browser with the event's
-parameters. It listens on the component's own element, so it hears:
+`useWireEvent(name, callback)` runs the callback in the browser with the
+event's parameters, like Livewire's `wire.$on`, and removes its listener
+when the island unmounts. It listens on the component's own element, so it
+hears:
 
 - events the component's PHP class dispatches, like `$this->dispatch()` in
   an action;
@@ -139,25 +141,22 @@ The island shows it:
 <Tab value="React">
 
 ```tsx
-useEffect(() => {
-    const onSaved = (event: Event) => {
-        const { id } = (event as CustomEvent<{ id: number }>).detail;
-        setNotice(`Saved project #${id}`);
-    };
+import { useWireEvent } from "@mesh/react";
 
-    // What $on does, plus a cleanup for React's effects.
-    wire.$el.addEventListener("project-saved", onSaved);
-    return () => wire.$el.removeEventListener("project-saved", onSaved);
-}, [wire]);
+useWireEvent("project-saved", ({ id }: { id: number }) => {
+    setNotice(`Saved project #${id}`);
+});
 ```
 
 </Tab>
 <Tab value="Vue">
 
 ```ts
+import { useWireEvent } from "@mesh/vue";
+
 const notice = ref("");
 
-wire.$on("project-saved", ({ id }: { id: number }) => {
+useWireEvent("project-saved", ({ id }: { id: number }) => {
     notice.value = `Saved project #${id}`;
 });
 ```
@@ -166,9 +165,11 @@ wire.$on("project-saved", ({ id }: { id: number }) => {
 <Tab value="Svelte">
 
 ```ts
+import { useWireEvent } from "@mesh/svelte";
+
 let notice = $state("");
 
-wire.$on("project-saved", ({ id }: { id: number }) => {
+useWireEvent("project-saved", ({ id }: { id: number }) => {
     notice = `Saved project #${id}`;
 });
 ```
@@ -176,12 +177,15 @@ wire.$on("project-saved", ({ id }: { id: number }) => {
 </Tab>
 </Frameworks>
 
-`$on` returns nothing, so a listener can't be removed. That is fine in Vue
-and Svelte, where setup runs once per island. React is different: Mesh
-mounts React islands in `StrictMode`, which runs effects twice in
-development, so a `$on` inside `useEffect` would register twice. `$on` is a
-listener on `wire.$el`; adding that listener yourself, as above, gives the
-effect a cleanup.
+Why not `wire.$on` directly? It adds a listener to `wire.$el` and returns
+nothing, so the listener can never be removed. The component's element
+outlives anything inside the island, so a child component shown with
+`v-if` or `{#if}` leaves its listener behind on every unmount and adds
+another on every mount, and React's `StrictMode` (on by default in Mesh)
+registers a `$on` inside `useEffect` twice. `useWireEvent` listens on the
+same element and removes its listener when the component that called it
+goes away. In React it always calls the latest `callback`, so an inline
+arrow doesn't resubscribe on each render.
 
 ## Page-wide events in the browser
 
