@@ -21,4 +21,9 @@ class TestComponent extends Component
             'greeting' => "Hello {$this->name}",
         ];
     }
+
+    public function rename(string $name): void
+    {
+        $this->name = $name;
+    }
 }
