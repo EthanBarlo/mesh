@@ -1,6 +1,6 @@
 import type { Wire, WireErrors } from "../../resources/js/types";
 
-// Type-level checks for Wire against Livewire 4.3's $wire (js/$wire.js).
+// Type-level checks for Wire against Livewire 4.4.8's $wire (js/$wire.js).
 // Compiled by `npm run typecheck`; never executed.
 declare const wire: Wire;
 declare const file: File;

@@ -130,7 +130,9 @@ Listens for a Livewire event in the browser; `callback` receives the event's par
 
 ```tsx
 useWireEvent("project-saved", ({ id }: { id: number }) => setNotice(`Saved #${id}`));
-``` It listens on **this component's own element**, so it only hears events that reach that element:
+```
+
+It listens on **this component's own element**, so it only hears events that reach that element:
 
 - events the component's PHP class dispatches (`$this->dispatch('saved')` in an action);
 - `$dispatchSelf`, and `$dispatchTo` aimed at this component;

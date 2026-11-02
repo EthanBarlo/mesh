@@ -382,7 +382,7 @@ so check Livewire's documentation before relying on one in an island.
 | Member | Type | What it does |
 | --- | --- | --- |
 | `$errors` | `WireErrors` | Livewire's client-side MessageBag (`has`, `first`, `get`, `all`, `clear`, …). `useErrorBag` is the reactive way to read errors in an island. |
-| `$dirty(property?)` | `boolean` | Whether the property (or any property) differs from the last server value. |
+| `$dirty(property?)` | `boolean` | Whether the property (or any property) differs from the last server value. Each call registers an interceptor Livewire never removes, so call it from a handler or effect, not during render. |
 | `$refs(name)` / `$refs.name` | `HTMLElement \| undefined` | The `wire:ref` element inside this component. |
 | `$js(name, fn)` / `$js.name` | callable | Registers or calls a component JS action. |
 | `$island(name, options?)` | `Wire` | Scopes the next action to a named island: `wire.$island('feed').$refresh()`. |

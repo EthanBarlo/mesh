@@ -233,7 +233,7 @@ export type WireIntercept<TCallback> = {
     (action: string, callback: TCallback): () => void;
 };
 
-// Livewire's `$wire` proxy, typed from Livewire 4.3's `js/$wire.js`. Methods
+// Livewire's `$wire` proxy, typed from Livewire 4.4.8's `js/$wire.js`. Methods
 // that send a request return a Promise; the upload and dispatch helpers fire
 // and forget, so they return nothing — use their callbacks instead of `await`.
 // Every upload callback is optional (Livewire defaults each to a no-op).
