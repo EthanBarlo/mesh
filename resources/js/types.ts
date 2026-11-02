@@ -98,6 +98,9 @@ export type LivewireComponent = {
     children: any[];
     snapshot: LivewireSnapshot;
     snapshotEncoded: string;
+    // Runs `cleanup` when Livewire tears the component down; returns a
+    // function that unregisters it.
+    addCleanup: (cleanup: () => void) => () => void;
 };
 
 // What an upload's `progress` callback receives: the XHR progress event, with

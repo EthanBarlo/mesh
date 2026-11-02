@@ -102,7 +102,7 @@ nothing to mount into.
    `import.meta.glob` of `resources/js/mesh` (see
    [Ids and discovery](#ids-and-discovery)).
 2. Stores it, with the renderers, on `window.Mesh`.
-3. Registers two Livewire hooks: `component.init` and `morph.updated`.
+3. Registers two Livewire hooks: `component.init` and `morphed`.
 
 `component.init` fires for every Livewire component. For each one, Mesh:
 
@@ -115,7 +115,13 @@ nothing to mount into.
    failed load is dropped from the cache, so the next mount retries.
 4. **Mounts.** The registry entry names the renderer, and the renderer
    mounts the default export into `.mesh-root` with the parsed props and
-   slots.
+   slots. Mesh empties `.mesh-root` first, so a page restored by
+   `wire:navigate` back/forward never shows (or duplicates) the markup the
+   island rendered on the previous visit.
+
+A [lazy or deferred](/docs/guides/components#lazy-and-deferred-components)
+component inits with its placeholder, which has no `data-mesh-component`.
+Mesh mounts it on the `morphed` that swaps in the real markup instead.
 
 Each renderer mounts its own way, and each island is a separate tree:
 
@@ -132,7 +138,7 @@ the three share.
 ## Updates without remounting
 
 After every Livewire request that re-renders the component, Livewire
-morphs the wrapper and fires `morph.updated`. Mesh then:
+morphs the wrapper and fires `morphed`, once per component. Mesh then:
 
 1. Reads `data-mesh-props` again.
 2. Compares the JSON with the props it last rendered. If they match, it
