@@ -160,7 +160,9 @@ export default function initMesh(Livewire: any, config: Config): void {
 
     // Livewire components a mount has been started for, so a morph that lands
     // while the chunk is still loading (or after a failed mount) never starts
-    // a second one.
+    // a second one. A failed chunk or renderer load is the exception: it is
+    // dropped from the set so the next morph retries (both loads are uncached
+    // on failure).
     const mounting = new WeakSet<object>();
 
     // Hook into Livewire component initialization. A lazy or deferred
@@ -240,6 +242,7 @@ export default function initMesh(Livewire: any, config: Config): void {
         ]);
         if (loadedComponent.status === "rejected") {
             console.error(loadedComponent.reason);
+            mounting.delete(component);
             return;
         }
         if (loadedRenderer.status === "rejected") {
@@ -247,6 +250,7 @@ export default function initMesh(Livewire: any, config: Config): void {
                 "Mesh: failed to render \"" + id + "\"",
                 loadedRenderer.reason
             );
+            mounting.delete(component);
             return;
         }
         if (disposed) {

@@ -445,6 +445,47 @@ describe("morphed", () => {
         expect(window.Mesh!.renderedComponents["lw-1"]).toBeUndefined();
     });
 
+    it("retries a failed chunk load on the next morph", async () => {
+        const lw = fakeLivewire();
+        const renderer = { ...fakeRenderer(), extensions: ["fake"] };
+        const load = vi
+            .fn<() => Promise<any>>()
+            .mockRejectedValueOnce(new Error("offline"))
+            .mockResolvedValue({ default: Component });
+        initMesh(lw, {
+            renderers: [renderer],
+            sources: [{ "/vendor/acme/resources/js/mesh/Counter/index.fake": load }],
+        });
+        const counter = island("Counter", "lw-1");
+
+        await init(lw, counter);
+        expect(error).toHaveBeenCalledWith(expect.objectContaining({ message: "offline" }));
+        expect(renderer.mount).not.toHaveBeenCalled();
+
+        morphed(lw, counter);
+        await settle();
+
+        expect(load).toHaveBeenCalledTimes(2);
+        expect(renderer.mount).toHaveBeenCalledTimes(1);
+        expect(counter.root.textContent).toBe("mounted Counter");
+    });
+
+    it("does not retry a mount that threw", async () => {
+        const lw = fakeLivewire();
+        const renderer = { ...fakeRenderer(), extensions: ["fake"] };
+        renderer.mount = vi.fn(() => {
+            throw new Error("bad props");
+        });
+        initMesh(lw, { renderers: [renderer], sources: [source("Counter")] });
+        const counter = island("Counter", "lw-1");
+
+        await init(lw, counter);
+        morphed(lw, counter);
+        await settle();
+
+        expect(renderer.mount).toHaveBeenCalledTimes(1);
+    });
+
     it("never mounts a lazy island torn down while its chunk loads", async () => {
         const lw = fakeLivewire();
         const renderer = { ...fakeRenderer(), extensions: ["fake"] };
