@@ -34,7 +34,9 @@ jobs:
           - laravel: 13.*
             testbench: 11.*
           - laravel: 12.*
-            testbench: 10.*
+            # testbench-core < 10.6 breaks on the PHPUnit 12 that prefer-lowest picks;
+            # testbench 10.5 is the first release that requires 10.6.
+            testbench: ^10.5
           - laravel: 11.*
             testbench: 9.*
 
