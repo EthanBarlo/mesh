@@ -14,6 +14,8 @@ import type { LivewireComponent } from "../../resources/js/types";
 // rely on:
 // - $set lands in the store (Livewire's reactive state);
 // - a server push updates the store BEFORE the $watch callback fires;
+// - a server patch mutates a stored object IN PLACE and notifies with that
+//   same reference (Livewire's diffAndPatchRecursive + Alpine.watch);
 // - $watch also fires for local writes, a microtask later (Alpine.watch);
 // - $watch and $hook return a function that removes the listener.
 // The live listener sets let the tests count what is still subscribed.
@@ -63,6 +65,11 @@ function fakeWire(initial: Record<string, any> = {}, errors: any = {}) {
         notify(key, value);
     };
 
+    const serverPatch = (key: string, mutate: (value: any) => void) => {
+        mutate(store[key]);
+        notify(key, store[key]);
+    };
+
     // A successful round-trip: Livewire swaps in the new snapshot, then runs
     // every commit hook's succeed callbacks.
     const commit = (nextErrors: any) => {
@@ -80,6 +87,7 @@ function fakeWire(initial: Record<string, any> = {}, errors: any = {}) {
         activeWatchers,
         activeHooks,
         serverPush,
+        serverPatch,
         commit,
     };
 }
@@ -173,7 +181,29 @@ describe("useEntangle", () => {
         act(() => wire.serverPush("value", next));
         await flush();
 
-        expect(result.current[0]).toBe(next);
+        expect(result.current[0]).toEqual(next);
+        expect(wire.$wire.$set).not.toHaveBeenCalled();
+    });
+
+    it("re-renders when the server patches an object in place, without a write back", async () => {
+        const wire = fakeWire({ board: { columns: [{ cards: ["a"] }] } });
+        // Read the nested value during render: a skipped render leaves the
+        // stale one behind even though the stored object has changed.
+        const { result } = renderHook(
+            wire.$wire,
+            ({ name }: EntangleProps) =>
+                useEntangle<any>(name, true)[0].columns[0].cards.join(),
+            { name: "board" }
+        );
+
+        act(() =>
+            wire.serverPatch("board", (board) => {
+                board.columns[0].cards.push("b");
+            })
+        );
+        await flush();
+
+        expect(result.current).toBe("a,b");
         expect(wire.$wire.$set).not.toHaveBeenCalled();
     });
 
@@ -237,6 +267,21 @@ describe("useEntangle", () => {
         await flush();
 
         expect(result.current[0]).toBe(7);
+        expect(wire.$wire.$set).not.toHaveBeenCalled();
+    });
+
+    it("keeps its own copy when an updater returns prev unchanged", async () => {
+        const wire = fakeWire({ board: { cards: ["a"] } });
+        const { result } = renderHook(wire.$wire, entangle<any>, {
+            name: "board",
+        });
+        const before = result.current[0];
+
+        act(() => result.current[1]((prev: any) => prev));
+        await flush();
+
+        expect(result.current[0]).toBe(before);
+        expect(result.current[0]).not.toBe(wire.store.board);
         expect(wire.$wire.$set).not.toHaveBeenCalled();
     });
 
