@@ -59,9 +59,10 @@ describe("reactRenderer", () => {
 
         expect(meshRoot(lw).querySelector("p")!.textContent).toBe("hello react");
         expect(meshRoot(lw).querySelector("header")!.textContent).toBe("T");
-        expect(meshRoot(lw).querySelector("main > div")!.innerHTML).toBe(
-            "<strong>blade</strong>"
-        );
+        const wrapper = meshRoot(lw).querySelector<HTMLElement>("main > div")!;
+        expect(wrapper.innerHTML).toBe("<strong>blade</strong>");
+        expect(wrapper.style.display).toBe("contents");
+        expect(wrapper.hasAttribute("x-ignore")).toBe(true);
         act(() => rc.cleanup());
         expect(meshRoot(lw).innerHTML).toBe("");
     });

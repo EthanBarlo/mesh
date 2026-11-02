@@ -212,11 +212,11 @@ describe("assertNoReservedProps", () => {
 describe("mountComponent", () => {
     type Mark = { html: string; name: string };
 
-    // Fake livewire component: the driver only needs `.el` to resolve
-    // `.mesh-root`, so a stubbed querySelector suffices — no DOM required.
-    const meshRoot = {} as HTMLElement;
+    // Fake livewire component: the driver only needs `.el` to resolve its
+    // direct `.mesh-root` child, so a stubbed element suffices — no DOM required.
+    const meshRoot = { matches: () => true } as unknown as HTMLElement;
     const livewire = {
-        el: { querySelector: () => meshRoot },
+        el: { children: [meshRoot] },
     } as unknown as LivewireComponent;
 
     // Fake renderer recording every mount/update context.
@@ -325,7 +325,7 @@ describe("mountComponent", () => {
 
     it("throws when no .mesh-root element exists", () => {
         const rootless = {
-            el: { querySelector: () => null },
+            el: { children: [] },
         } as unknown as LivewireComponent;
 
         expect(() =>

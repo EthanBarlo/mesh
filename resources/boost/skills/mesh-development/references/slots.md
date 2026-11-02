@@ -99,7 +99,7 @@ The Blade view renders slot content into a hidden `[data-mesh-slots]` holder tha
 ## Limitations (v1)
 
 - Slot content is **static server HTML** — mirrored markup, not hydrated components. It updates on server re-renders but carries no client behaviour of its own.
-- **Nested interactive Livewire or Alpine inside a slot is NOT supported.** It would run in the hidden holder and render dead in the React copy. Decision rule: anything interactive inside a Mesh component goes in as **its own Mesh component** or as **props** — never inside a slot.
+- **Nested interactive Livewire or Alpine inside a slot is NOT supported.** Each mirrored slot sits in an `x-ignore` wrapper, so Alpine/Livewire directives in it are never initialised (a `wire:navigate` link does a full page load); they only initialise in the hidden source holder (an `x-init` side effect runs there, invisibly, each time the parent renders that element). Attribute changes Alpine makes in the holder (`wire:loading`, `x-transition`) are mirrored and re-render the slot. Decision rule: anything interactive inside a Mesh component goes in as **its own Mesh component** or as **props** — never inside a slot.
 - **Security:** slots are injected with `dangerouslySetInnerHTML`. Blade-escaped `{{ }}` content is safe; `{!! !!}` (or any unescaped output) lands as raw HTML — never put unsanitised user input in a slot.
 
 ## Reserved prop names: `children` and `slots`

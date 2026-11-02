@@ -312,13 +312,13 @@ defineProps<{ variant?: string }>();
 </template>
 ```
 
-Each slot renders as a `<div style="display: contents">` with the server HTML set through
+Each slot renders as a `<div style="display: contents" x-ignore>` with the server HTML set through
 `innerHTML`. The wrapper creates no layout box. Use `$slots.name` to test whether a slot was given.
 
 Because slots never travel as props, `children` and `slots` are ordinary prop names in Vue. The
 reserved-prop check that React and Svelte need does not run for Vue (the renderer sets
 `nativeSlots: true`). The HTML is static: it updates when the server re-renders it, but Livewire
-components or Alpine behaviour inside it will not work. See the [Slots guide](/docs/guides/slots).
+components or Alpine behaviour inside it are not initialised. See the [Slots guide](/docs/guides/slots).
 
 ## Gotchas
 

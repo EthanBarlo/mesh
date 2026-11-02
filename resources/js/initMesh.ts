@@ -9,6 +9,7 @@ import {
 } from "./types";
 import {
     debugLog,
+    directChild,
     findRenderedComponent,
     getComponentName,
     getProps,
@@ -210,7 +211,7 @@ export default function initMesh(Livewire: any, config: Config): void {
         // Drop markup left over from a page restored by wire:navigate
         // back/forward now, rather than showing a non-interactive copy while
         // the chunk loads. renderComponent clears it again before mounting.
-        component.el.querySelector(".mesh-root")?.replaceChildren();
+        directChild(component.el, ".mesh-root")?.replaceChildren();
 
         // Register teardown before any await: Livewire may remove the component
         // while the lazy chunk is loading or rendering. If that happens, mark the
@@ -276,7 +277,7 @@ export default function initMesh(Livewire: any, config: Config): void {
             // Livewire keeps the hidden [data-mesh-slots] holders current via
             // fragment morphing; observe them (never .mesh-root, which React
             // owns) and replace the slot content when the server sends new HTML.
-            const slotsRoot = component.el.querySelector("[data-mesh-slots]");
+            const slotsRoot = directChild(component.el, "[data-mesh-slots]");
             if (slotsRoot) {
                 let last = JSON.stringify(getSlots(component.el));
                 const observer = new MutationObserver(() => {
@@ -299,6 +300,8 @@ export default function initMesh(Livewire: any, config: Config): void {
                     childList: true,
                     subtree: true,
                     characterData: true,
+                    // Alpine morph patches changed attributes in place.
+                    attributes: true,
                 });
                 component.addCleanup(() => observer.disconnect());
             }

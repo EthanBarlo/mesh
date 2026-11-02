@@ -140,7 +140,7 @@ Content between a paired tag's opening and closing tags is the **default slot**.
 - Slot content is rendered by Blade in the **parent's** scope, so `$name` above is the parent
   component's property. When the parent re-renders, Mesh swaps the new HTML into the island in place.
 - The frontend receives static HTML. Nested Livewire components and Alpine behaviour inside a slot
-  are not supported.
+  are not supported: they are not initialised in the visible copy, only in the hidden source holder.
 - `{{ }}` output is escaped. `{!! !!}` output is injected as raw HTML, so never use it with user input
   in a slot.
 
